@@ -449,7 +449,7 @@ function showTab(id){
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
   if(id==='hq'){ renderAgenda(); renderMasterTasks(); }
-  if(id==='tracks'){ renderTracks(); }
+  if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
 }
 function showSub(tabId, subId){
   var tab = document.getElementById(tabId);
@@ -825,6 +825,11 @@ function renderTracks(){
   var container = document.getElementById('track-table-body');
   if(!container) return;
 
+  // Defensive: ensure tracks is always an array
+  if(!STATE.tracks) STATE.tracks = defaultTracks();
+  if(!Array.isArray(STATE.tracks)) STATE.tracks = Object.values(STATE.tracks);
+  if(STATE.tracks.length===0) STATE.tracks = defaultTracks();
+
   var tracks = STATE.tracks.slice();
   tracks.sort(function(a,b){
     var col = trackSort.col;
@@ -848,14 +853,15 @@ function renderTracks(){
     html += '<td>'+tr.type+'</td>';
     html += '<td>'+tr.genre+'</td>';
     html += '<td><span class="status-pill status-'+tr.status+'">'+tr.status+'</span></td>';
-    html += '<td><span class="stage-pill '+stagePillClass(tr.stage)+'">'+PRODUCTION_STAGES[tr.stage-1].name+'</span></td>';
-    html += '<td><span class="priority-dot pr-'+tr.priority+'"></span> '+tr.priority+'</td>';
-    html += '<td style="font-size:10px">'+tr.emotionalJob+'</td>';
+    var stageIdx = (tr.stage||1)-1; if(stageIdx<0) stageIdx=0; if(stageIdx>=PRODUCTION_STAGES.length) stageIdx=PRODUCTION_STAGES.length-1;
+    html += '<td><span class="stage-pill '+stagePillClass(tr.stage||1)+'">'+PRODUCTION_STAGES[stageIdx].name+'</span></td>';
+    html += '<td><span class="priority-dot pr-'+(tr.priority||'white')+'"></span> '+(tr.priority||'none')+'</td>';
+    html += '<td style="font-size:10px">'+(tr.emotionalJob||'—')+'</td>';
     html += '<td style="font-size:10px">'+(tr.nextAction||'—')+'</td>';
     html += '<td style="font-size:10px">'+(tr.dueDate||'—')+'</td>';
     html += '<td style="font-size:10px">'+(tr.lastWorkedOn||'—')+'</td>';
-    html += '<td style="text-align:center">'+tr.momentumScore+'</td>';
-    html += '<td style="text-align:center">'+tr.readinessScore+'</td>';
+    html += '<td style="text-align:center">'+(tr.momentumScore||0)+'</td>';
+    html += '<td style="text-align:center">'+(tr.readinessScore||0)+'</td>';
     html += '</tr>';
     // Detail row
     html += '<tr><td colspan="12" style="padding:0;border:none">';
@@ -878,6 +884,18 @@ function sortTracks(col){
 }
 
 function renderTrackDetail(tr){
+  // Safety: ensure nested objects/arrays exist
+  if(!tr.visionLock) tr.visionLock={hookIdentity:'',genreLane:'',emotionalJob:'',hardestHit:''};
+  if(!tr.references) tr.references={original:'',target1:'',target2:'',structure:''};
+  if(!tr.translationChecks) tr.translationChecks={phone:false,headphones:false,car:false,speakers:false,mono:false};
+  if(!tr.contentAssets) tr.contentAssets={studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false};
+  if(!tr.liveTests) tr.liveTests=[];
+  if(!Array.isArray(tr.liveTests)) tr.liveTests=Object.values(tr.liveTests);
+  if(!tr.relatedPosts) tr.relatedPosts=[];
+  if(!Array.isArray(tr.relatedPosts)) tr.relatedPosts=Object.values(tr.relatedPosts);
+  if(!tr.versions) tr.versions=[];
+  if(!Array.isArray(tr.versions)) tr.versions=Object.values(tr.versions);
+
   var html = '<div class="track-detail-grid">';
 
   // Col 1: Vision Lock + References
