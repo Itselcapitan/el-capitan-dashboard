@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00e5ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="El Capitán">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>EL CAPITÁN — DJ &amp; Producing Center</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -1009,7 +1015,7 @@ function init(){
 }
 </script>
 </head>
-<body onload="init()">
+<body onload="init();if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}">
 <script>if(new URLSearchParams(window.location.search).get('view')==='1'){document.body.classList.add('view-only');}</script>
 <div class="view-badge">&#128274; VIEW ONLY</div>
 <div class="app">
