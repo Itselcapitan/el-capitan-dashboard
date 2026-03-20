@@ -212,7 +212,7 @@ var MSE = {
   dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
   ig: { followers: 302, posts: 22, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo", views: 25697, interactions: 671, accountsReached: 4935, profileVisits: 852, externalLinkTaps: 7, followersNonFollowers: "31.9% / 68.1%", reelsViewShare: 46.9, postsViewShare: 37.9, storiesViewShare: 15.2, reelsInteractionShare: 62.4, postsInteractionShare: 33.7, storiesInteractionShare: 3.8, peakHour: "3pm", peakDay: "Friday" },
   sc: { followers: 41, plays: 603, tracks: 9, plays30d: 199, growth30d: "+84%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack: "Every 1s A Winner (238 plays)" },
-  tiktok: { active: false, handle: null },
+  tiktok: { active: true, handle: "@itselcapitan", followers: 0, posts: 3, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser"], joined: "2026-03-20" },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
   contentMix: {
     format: "60% Reels, 25% Carousels (event recaps), 15% Images (release art only)",
@@ -1042,7 +1042,7 @@ function init(){
   <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">What's Not Working</span></div>
   <div class="g">
     <div class="c x"><div class="cl">POSTING CADENCE</div><div class="cv">~3/mo</div><div class="cs">Competitors avg 8-10 reels/week. You're 10x below. #1 bottleneck.</div></div>
-    <div class="c x"><div class="cl">NO TIKTOK</div><div class="cv">0</div><div class="cs">Highest organic reach platform for DJ content. Lost discovery daily.</div></div>
+    <div class="c w"><div class="cl">TIKTOK</div><div class="cv">LIVE &#10003;</div><div class="cs">@itselcapitan — 3 posts up. Now cross-post all Reels here. Highest organic reach platform for DJ content.</div></div>
     <div class="c x"><div class="cl">NO WEEKLY FORMAT</div><div class="cv">&mdash;</div><div class="cs">Chalant posts "three heaters" every Monday (6/30 reels). You have no recurring format.</div></div>
   </div>
 </div>
@@ -1051,7 +1051,7 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn" style="color:var(--am)">!</span><span class="st">Focus Right Now</span></div>
   <div class="g">
-    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Release Pack Up Ya Bags on SC + post Reel 2 with "COMMENT remix" CTA<br><strong>2.</strong> Post first "Three Heaters Monday" roundup (tag 3 original artists)<br><strong>3.</strong> Post Wicked Game "should I drop this?" reel from Hunter Mtn footage<br><strong>4.</strong> Create TikTok account</div></div>
+    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Release Pack Up Ya Bags on SC + post Reel 2 with "COMMENT remix" CTA<br><strong>2.</strong> Post first "Three Heaters Monday" roundup (tag 3 original artists)<br><strong>3.</strong> Post Wicked Game "should I drop this?" reel from Hunter Mtn footage<br><strong>4.</strong> <s style="color:var(--dm)">Create TikTok account</s> <span style="color:var(--gn)">&#10003; DONE</span> — Cross-post all new Reels to TikTok</div></div>
     <div class="c p"><div class="cl">THIS MONTH</div><div class="cs"><strong>5.</strong> Record 60-min tech house mix (unlocks all outreach)<br><strong>6.</strong> DM @lowercase518 with mix link<br><strong>7.</strong> Email 518 Craft for Friday rotation<br><strong>8.</strong> Post 12+ reels total this month</div></div>
     <div class="c p"><div class="cl">90 DAYS</div><div class="cs"><strong>9.</strong> Submit demo to Votion Records<br><strong>10.</strong> Start Harry Styles "Aperture" bootleg<br><strong>11.</strong> Hit 500 IG followers<br><strong>12.</strong> Get first Boston-area booking</div></div>
   </div>
@@ -1242,6 +1242,7 @@ function init(){
 <div class="tc" id="t-growth">
 <div class="sub-tabs" id="growth-tabs">
   <button class="sub-btn on" data-sub="g-sc" onclick="showSub('t-growth','g-sc')">SoundCloud</button>
+  <button class="sub-btn" data-sub="g-tk" onclick="showSub('t-growth','g-tk')">TikTok</button>
   <button class="sub-btn" data-sub="g-comp" onclick="showSub('t-growth','g-comp')">Competitors</button>
   <button class="sub-btn" data-sub="g-cadence" onclick="showSub('t-growth','g-cadence')">Posting Cadence</button>
 </div>
@@ -1270,6 +1271,34 @@ function init(){
   <div style="display:flex;gap:6px;align-items:center">
     <input class="add-task-input" id="growth-task-input" placeholder="Add analytics task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('growth-task-input','Analytics')">
     <button class="add-task-btn" onclick="addTaskFromTab('growth-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+
+<div class="sub-c" id="g-tk">
+<div class="sec">
+  <div class="sh"><span class="sn" style="background:rgba(0,242,234,.08);color:#00f2ea">TK</span><span class="st">TikTok</span></div>
+  <div class="g">
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">ACCOUNT</div><div class="cv" style="font-size:14px">@itselcapitan</div><div class="cs">Created Mar 20, 2026</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">FOLLOWERS</div><div class="cv">0</div><div class="cs">Day 1 — building from scratch</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">POSTS</div><div class="cv">3</div><div class="cs">First batch uploaded today</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">STRATEGY</div><div class="cv" style="font-size:11px">CROSS-POST</div><div class="cs">Mirror all IG Reels here. TikTok has highest organic discovery for DJ content.</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn" style="background:rgba(0,242,234,.08);color:#00f2ea">&#127909;</span><span class="st">First Posts</span></div>
+  <div class="tw"><table><thead><tr><th>Post</th><th>Type</th><th>Related Track</th><th>Date</th><th>Views</th><th>Likes</th><th>Status</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">Hunter Mountain Reel</td><td><span class="tg tg-b">Event</span></td><td>—</td><td>Mar 20</td><td>—</td><td>—</td><td><span class="tg tg-g">LIVE</span></td></tr>
+    <tr><td style="font-weight:700">Pack Up Ya Bags Teaser</td><td><span class="tg tg-p">Teaser</span></td><td>Pack Up Ya Bags</td><td>Mar 20</td><td>—</td><td>—</td><td><span class="tg tg-g">LIVE</span></td></tr>
+    <tr><td style="font-weight:700">Money Teaser</td><td><span class="tg tg-p">Teaser</span></td><td>The Money</td><td>Mar 20</td><td>—</td><td>—</td><td><span class="tg tg-g">LIVE</span></td></tr>
+  </tbody></table></div>
+  <div class="cs" style="margin-top:8px;color:var(--dm)">Update views/likes once TikTok analytics become available (24-48 hrs after first post).</div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="tiktok-task-input" placeholder="Add TikTok task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('tiktok-task-input','Social Media')">
+    <button class="add-task-btn" onclick="addTaskFromTab('tiktok-task-input','Social Media')" style="font-size:9px;padding:5px 10px">+ ADD</button>
   </div>
 </div>
 </div>
@@ -1488,7 +1517,7 @@ function init(){
   <div class="g">
     <div class="c ig"><div class="cl">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs">Auto-scraped via Apify</div></div>
     <div class="c sc"><div class="cl">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:var(--ac)">soundcloud.com/itselcapitan</a></div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TIKTOK</div><div class="cv" style="font-size:13px">NOT CONNECTED</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs">Created Mar 20, 2026 &middot; 3 posts live</div></div>
   </div>
 </div>
 <div class="sec">
