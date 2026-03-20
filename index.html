@@ -202,6 +202,34 @@ tr:hover td{background:rgba(0,229,255,.015)}
 .ads-table td,.ads-table th{font-size:10px;padding:6px 8px}
 
 @media(max-width:768px){.g{grid-template-columns:1fr}.hd-logo{width:110px}.t-btn{padding:11px 14px;font-size:11px}.track-detail-grid{grid-template-columns:1fr}.agenda-grid{grid-template-columns:1fr}.add-task-bar{flex-direction:column}.add-task-input{min-width:100%}}
+
+/* ============================================================ */
+/*  VIEW-ONLY MODE  (?view=1)                                    */
+/* ============================================================ */
+.view-badge{display:none;position:fixed;top:12px;right:16px;z-index:999;font:700 9px/1 'Space Mono',monospace;letter-spacing:2px;color:var(--dm);background:var(--s2);border:1px solid var(--bd);border-radius:20px;padding:6px 14px;pointer-events:none}
+body.view-only .view-badge{display:block}
+body.view-only .add-task-bar,
+body.view-only .add-task-btn,
+body.view-only .add-task-input,
+body.view-only .add-task-select,
+body.view-only .mini-add-task,
+body.view-only .task-cb,
+body.view-only .task-subtask-toggle,
+body.view-only [onclick*="showTab('settings')"],
+body.view-only #t-settings,
+body.view-only .track-field input,
+body.view-only .track-field textarea,
+body.view-only .track-field select,
+body.view-only .track-check-item input,
+body.view-only [onclick*="addFeedback"],
+body.view-only [onclick*="addTrack"],
+body.view-only [onclick*="resetAll"],
+body.view-only [onclick*="addTaskFromTab"],
+body.view-only a[href="#"][onclick*="Reset"]{display:none!important}
+body.view-only .task-cb.checked{display:flex!important;pointer-events:none}
+body.view-only .track-field input,
+body.view-only .track-field textarea,
+body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!important}
 </style>
 <script>
 // =====================================================
@@ -982,6 +1010,8 @@ function init(){
 </script>
 </head>
 <body onload="init()">
+<script>if(new URLSearchParams(window.location.search).get('view')==='1'){document.body.classList.add('view-only');}</script>
+<div class="view-badge">&#128274; VIEW ONLY</div>
 <div class="app">
 
 <div class="hd">
