@@ -210,7 +210,7 @@ tr:hover td{background:rgba(0,229,255,.015)}
 var MSE = {
   lastUpdated: "2026-03-17",
   dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
-  ig: { followers: 278, posts: 22, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo" },
+  ig: { followers: 302, posts: 22, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo", views: 25697, interactions: 671, accountsReached: 4935, profileVisits: 852, externalLinkTaps: 7, followersNonFollowers: "31.9% / 68.1%", reelsViewShare: 46.9, postsViewShare: 37.9, storiesViewShare: 15.2, reelsInteractionShare: 62.4, postsInteractionShare: 33.7, storiesInteractionShare: 3.8, peakHour: "3pm", peakDay: "Friday" },
   sc: { followers: 41, plays: 603, tracks: 9, plays30d: 199, growth30d: "+84%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack: "Every 1s A Winner (238 plays)" },
   tiktok: { active: false, handle: null },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
@@ -1030,7 +1030,7 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn" style="color:var(--gn)">&#10003;</span><span class="st">What's Working</span></div>
   <div class="g">
-    <div class="c w"><div class="cl">ENGAGEMENT RATE</div><div class="cv">14.3%</div><div class="cs">278 followers. Industry avg 1-3%. Content quality is proven.</div></div>
+    <div class="c w"><div class="cl">ENGAGEMENT RATE</div><div class="cv">14.3%</div><div class="cs">302 followers (+8.6%). Industry avg 1-3%. Content quality is proven.</div></div>
     <div class="c w"><div class="cl">SOUNDCLOUD MOMENTUM</div><div class="cv">+84%</div><div class="cs">199 plays in 30d. "Every 1's A Winner" = 39.5% of all plays. Remixes work.</div></div>
     <div class="c w"><div class="cl">FIRST 2 REELS POSTED</div><div class="cv">51 + 25</div><div class="cs">"hunter mtn nights" 51 eng (above avg). "pack up ya bags" teaser 25 eng.</div></div>
     <div class="c w"><div class="cl">LABEL INTEREST</div><div class="cv">&#10003; EPK SENT</div><div class="cs">Label founder liked Pack Up Ya Bags. EPK delivered. Awaiting response.</div></div>
@@ -1078,10 +1078,14 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn">IG</span><span class="st">Instagram &mdash; @itselcapitan_</span></div>
   <div class="g">
-    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">278</div><div class="cs">+18 since Mar 12 (+6.9%) &middot; Following: 577</div></div>
-    <div class="c ig"><div class="cl">POSTS</div><div class="cv">22</div><div class="cs">Booking email in bio &#10003;</div></div>
+    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">302</div><div class="cs">+24 since Mar 12 (+8.6%) &middot; Following: 577</div></div>
+    <div class="c ig"><div class="cl">VIEWS</div><div class="cv">25,697</div><div class="cs">Followers 31.9% &middot; Non-followers 68.1%</div></div>
+    <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">4,935</div><div class="cs">68% discovery from non-followers</div></div>
+    <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">671</div><div class="cs">Reels 62.4% &middot; Posts 33.7% &middot; Stories 3.8%</div></div>
+    <div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">852</div><div class="cs">External link taps: 7</div></div>
     <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">14.3%</div><div class="cs">Avg 34.1 eng per post</div></div>
-    <div class="c ig"><div class="cl">NEW REELS</div><div class="cv">2</div><div class="cs">"hunter mtn nights" 51 eng &middot; "pack up ya bags" 25 eng</div></div>
+    <div class="c ig"><div class="cl">PEAK POSTING TIME</div><div class="cv">3pm</div><div class="cs">Peak hours: 9am-6pm &middot; Peak day: Friday</div></div>
+    <div class="c ig"><div class="cl">CONTENT MIX (BY VIEWS)</div><div class="cv">Reels 46.9%</div><div class="cs">Posts 37.9% &middot; Stories 15.2%</div></div>
   </div>
 </div>
 <div class="sec">
@@ -1403,17 +1407,66 @@ function init(){
 <div class="sub-c" id="trk-ads">
 <div class="sec">
   <div class="sh"><span class="sn">&#128176;</span><span class="st">Ads Performance</span></div>
-  <div class="nb">
-    <strong>No ad campaigns imported yet.</strong><br><br>
-    To populate this section:<br>
-    1. Export your Meta Ads Manager data as CSV<br>
-    2. Upload and the system will parse: campaign name, ad set, spend, impressions, reach, CPM, CPC, CTR, link clicks, landing page views, profile visits, follows, plays/views, cost per result<br>
-    3. Best creative, best hook, best CTA, and best audience will be auto-identified<br><br>
-    <strong>Recommended analytics tools:</strong><br>
-    &bull; <strong>Meta Business Suite</strong> &mdash; native IG analytics (free)<br>
-    &bull; <strong>Metricool</strong> &mdash; cross-platform analytics + scheduling<br>
-    &bull; <strong>Iconosquare</strong> &mdash; deep IG analytics + competitor benchmarking<br>
-    &bull; <strong>Apify Instagram scrapers</strong> &mdash; already integrated in this dashboard
+
+  <!-- Summary Cards -->
+  <div class="g" style="margin-bottom:16px">
+    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL SPEND</div><div class="cv">$26.38</div><div class="cs">2 campaigns &middot; Feb 18 - Mar 19, 2026</div></div>
+    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL IMPRESSIONS</div><div class="cv">1,873</div><div class="cs">Reach: 1,610 unique accounts</div></div>
+    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL RESULTS</div><div class="cv">15</div><div class="cs">12 link clicks + 3 profile visits</div></div>
+    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">AVG COST PER RESULT</div><div class="cv">$1.76</div><div class="cs">Pack Up Ya Bags: $1.71/click &middot; Hunter Mtn: $1.95/visit</div></div>
+  </div>
+
+  <!-- Campaign Table -->
+  <div class="tw"><table class="ads-table">
+    <thead><tr><th>Campaign</th><th>Status</th><th>Result Type</th><th>Results</th><th>CPR</th><th>Budget</th><th>Spent</th><th>Impressions</th><th>Reach</th><th>CPM</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:700">Pack Up Ya Bags</td>
+        <td><span class="tg tg-a">PENDING REVIEW</span></td>
+        <td>Link Clicks</td>
+        <td style="color:var(--ac);font-weight:700">12</td>
+        <td>$1.71</td>
+        <td>$24</td>
+        <td>$20.53</td>
+        <td>1,473</td>
+        <td>1,223</td>
+        <td>$13.94</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700">Hunter Mtn Nights</td>
+        <td><span class="tg tg-gr">INACTIVE</span></td>
+        <td>Profile Visits</td>
+        <td style="color:var(--ac)">3</td>
+        <td>$1.95</td>
+        <td>$35</td>
+        <td>$5.85</td>
+        <td>400</td>
+        <td>387</td>
+        <td>$14.63</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <!-- Insights -->
+  <div class="nb" style="margin-top:12px">
+    <strong>&#9889; Key Insights:</strong><br>
+    &bull; <strong>Pack Up Ya Bags is your best ad by far</strong> &mdash; 4x the results at lower CPR ($1.71 vs $1.95)<br>
+    &bull; <strong>Audience:</strong> "Tech House DJ Fans - Northeast" (PUYB) vs broad targeting (Hunter Mtn) &mdash; niche targeting wins<br>
+    &bull; <strong>CPM is reasonable</strong> ($13-15) for awareness at your scale<br>
+    &bull; <strong>Hunter Mtn underperformed</strong> &mdash; only spent $5.85 of $35 budget, profile visit objective is harder to optimize<br>
+    &bull; <strong>Recommendation:</strong> Run all future ads with link click objective + niche audience targeting. Double down on remix teasers as ad creative.<br>
+    &bull; <strong>Best creative:</strong> Pack Up Ya Bags teaser (remix content > event recap for ads)<br>
+    &bull; <strong>Best audience:</strong> Tech House DJ Fans - Northeast<br>
+    &bull; <strong>Best objective:</strong> Link Clicks (not Profile Visits)
+  </div>
+
+  <!-- Manage Ads Status -->
+  <div style="margin-top:12px">
+    <div class="sh"><span class="sn">&#128225;</span><span class="st">Active Campaigns (from Meta)</span></div>
+    <div class="g">
+      <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">PACK UP YA BAGS AD</div><div class="cv" style="font-size:14px">Finishing in 3hrs</div><div class="cs">1,733 views &middot; 398 engagements &middot; $23.12 of $24 spent<br>Audience: Tech House DJ Fans - Northeast</div></div>
+      <div class="c" style="border-left:3px solid var(--dm)"><div class="cl">HUNTER MTN NIGHTS AD</div><div class="cv" style="font-size:14px;color:var(--dm)">Paused</div><div class="cs">429 views &middot; 137 engagements &middot; $5.85 of $35 spent<br>Audience: Broad targeting</div></div>
+    </div>
   </div>
 </div>
 <!-- Add Task -->
