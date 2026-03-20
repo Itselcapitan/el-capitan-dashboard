@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EL CAPITÁN — DJ &amp; Producing Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyB-G9o5W9YcHTDZb1btABrl1wFUt0419Jc",
+    authDomain: "el-capitan-dashboard.firebaseapp.com",
+    databaseURL: "https://el-capitan-dashboard-default-rtdb.firebaseio.com",
+    projectId: "el-capitan-dashboard",
+    storageBucket: "el-capitan-dashboard.firebasestorage.app",
+    messagingSenderId: "53148407042",
+    appId: "1:53148407042:web:a1afd9442be57328649e1b"
+  });
+  var db = firebase.database();
+</script>
+<style>
+:root{--bg:#0a0a0f;--s:#12121a;--s2:#1a1a28;--bd:#2a2a3a;--ac:#00e5ff;--a2:#7b2ff7;--tx:#e8e8f0;--dm:#8888aa;--gn:#00e676;--am:#ffab00;--rd:#ff5252;--cy:#00bcd4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;line-height:1.6}
+.app{max-width:1400px;margin:0 auto}
+.hd{display:flex;flex-direction:column;align-items:center;padding:28px 24px 12px;position:relative;overflow:hidden}
+.hd-wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:440px;opacity:.05;filter:blur(14px);pointer-events:none}
+.hd-logo{width:140px;position:relative;z-index:1;margin-bottom:6px}
+.hd-sub{font:700 10px/1 'Space Mono',monospace;color:var(--ac);letter-spacing:3px}
+.tb{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);padding:0 24px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.tb::-webkit-scrollbar{display:none}
+.tb-in{display:flex;max-width:1400px;margin:0 auto}
+.t-btn{padding:13px 22px;font:700 12px/1 'Space Mono',monospace;letter-spacing:1px;color:var(--dm);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.t-btn:hover{color:var(--tx)}
+.t-btn.on{color:var(--ac);border-bottom-color:var(--ac)}
+.tc{display:none;padding:20px 24px;max-width:1400px;margin:0 auto}
+.tc.on{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.sec{margin-bottom:28px}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.sn{font:700 9px/1 'Space Mono',monospace;color:var(--ac);background:rgba(0,229,255,.08);padding:3px 7px;border-radius:4px;letter-spacing:2px}
+.st{font-size:16px;font-weight:700}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.c{background:var(--s);border:1px solid var(--bd);border-radius:9px;padding:16px;transition:.2s}
+.c:hover{border-color:var(--ac)}
+.cl{font:700 9px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.cv{font-size:24px;font-weight:700;color:var(--ac)}
+.cs{font-size:11px;color:var(--dm);margin-top:2px;line-height:1.5}
+.c.w{border-left:3px solid var(--gn)}
+.c.x{border-left:3px solid var(--rd)}
+.c.p{border-left:3px solid var(--am)}
+.c.i{border-left:3px solid var(--a2)}
+.c.ig{border-left:3px solid #E1306C}
+.c.sc{border-left:3px solid #ff5500}
+.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:9px;background:var(--s)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font:700 8px/1 'Space Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--dm);text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd);background:var(--s2)}
+td{padding:7px 10px;border-bottom:1px solid rgba(42,42,58,.3)}
+tr:hover td{background:rgba(0,229,255,.015)}
+.nb{background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.1);border-radius:7px;padding:12px;font-size:11px;color:var(--dm);line-height:1.7}
+.nb strong{color:var(--ac)}
+.tg{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin:1px}
+.tg-g{background:rgba(0,230,118,.1);color:var(--gn)}
+.tg-b{background:rgba(0,229,255,.1);color:var(--ac)}
+.tg-a{background:rgba(255,171,0,.1);color:var(--am)}
+.tg-r{background:rgba(255,82,82,.1);color:var(--rd)}
+.tg-p{background:rgba(123,47,247,.12);color:#b388ff}
+.tg-cy{background:rgba(0,188,212,.1);color:var(--cy)}
+.tg-gr{background:rgba(136,136,170,.1);color:var(--dm)}
+.sub-tabs{display:flex;gap:2px;margin-bottom:14px;flex-wrap:wrap}
+.sub-btn{padding:7px 12px;font:500 10px/1 'Space Mono',monospace;color:var(--dm);cursor:pointer;border:1px solid var(--bd);background:var(--s);border-radius:5px;transition:.2s;letter-spacing:.5px}
+.sub-btn:hover{border-color:var(--ac);color:var(--tx)}
+.sub-btn.on{background:rgba(0,229,255,.08);border-color:var(--ac);color:var(--ac)}
+.sub-c{display:none}
+.sub-c.on{display:block;animation:fi .15s ease}
+.geo{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:8px}
+.geo-i{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center}
+.geo-v{font-size:16px;font-weight:700;color:var(--ac)}
+.geo-l{font-size:10px}
+.ds{font:400 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1px;margin-top:5px;opacity:.4}
+.eng-tag{font:700 10px/1 'Space Mono',monospace;padding:3px 8px;border-radius:10px;display:inline-block}
+.eng-h{background:rgba(0,230,118,.12);color:var(--gn)}
+.eng-m{background:rgba(255,171,0,.12);color:var(--am)}
+.eng-l{background:rgba(255,82,82,.1);color:var(--rd)}
+
+/* ============================================================ */
+/*  TASK SYSTEM STYLES                                          */
+/* ============================================================ */
+.task-filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.task-filter-pill{padding:5px 10px;font:500 9px/1 'Space Mono',monospace;border:1px solid var(--bd);background:var(--s);border-radius:12px;cursor:pointer;color:var(--dm);transition:.2s;letter-spacing:.5px;user-select:none}
+.task-filter-pill:hover{border-color:var(--ac);color:var(--tx)}
+.task-filter-pill.on{background:rgba(0,229,255,.1);border-color:var(--ac);color:var(--ac)}
+.task-filter-pill[data-cat="Producing"].on{background:rgba(123,47,247,.12);border-color:#b388ff;color:#b388ff}
+.task-filter-pill[data-cat="Social Media"].on{background:rgba(225,48,108,.1);border-color:#E1306C;color:#E1306C}
+.task-filter-pill[data-cat="Outreach"].on{background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)}
+.task-filter-pill[data-cat="Admin"].on{background:rgba(255,171,0,.1);border-color:var(--am);color:var(--am)}
+.task-filter-pill[data-cat="Analytics"].on{background:rgba(0,229,255,.1);border-color:var(--ac);color:var(--ac)}
+.task-filter-pill[data-cat="Personal"].on{background:rgba(136,136,170,.1);border-color:var(--dm);color:var(--dm)}
+.task-filter-sep{width:1px;height:20px;background:var(--bd);margin:0 4px}
+.priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:2px}
+.priority-dot.pr-red{background:var(--rd)}
+.priority-dot.pr-yellow{background:var(--am)}
+.priority-dot.pr-blue{background:var(--ac)}
+.priority-dot.pr-white{background:var(--dm)}
+.task-group{margin-bottom:16px;background:var(--s);border:1px solid var(--bd);border-radius:9px;overflow:hidden}
+.task-group-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;transition:.15s;background:var(--s2)}
+.task-group-hdr:hover{background:rgba(0,229,255,.03)}
+.task-group-caret{font-size:10px;color:var(--dm);transition:transform .2s;width:14px;text-align:center}
+.task-group-caret.open{transform:rotate(90deg)}
+.task-group-label{font:700 10px/1 'Space Mono',monospace;letter-spacing:1.5px;text-transform:uppercase}
+.cat-Producing{color:#b388ff}
+.cat-Social-Media{color:#E1306C}
+.cat-Outreach{color:var(--gn)}
+.cat-Admin{color:var(--am)}
+.cat-Analytics{color:var(--ac)}
+.cat-Personal{color:var(--dm)}
+.task-group-count{font:400 9px/1 'Space Mono',monospace;color:var(--dm);margin-left:auto}
+.task-group-body{display:none;padding:0}
+.task-group-body.open{display:block}
+.task-item{display:flex;align-items:flex-start;gap:8px;padding:8px 14px 8px 20px;border-top:1px solid rgba(42,42,58,.2);transition:.15s;cursor:default}
+.task-item:hover{background:rgba(0,229,255,.015)}
+.task-item.subtask{padding-left:44px}
+.task-item.completed-task .task-title{text-decoration:line-through;opacity:.4}
+.task-item.completed-task .task-meta{opacity:.3}
+.task-item.all-done{background:rgba(0,230,118,.03)}
+.task-item.all-done .task-cb{border-color:var(--gn)!important;background:rgba(0,230,118,.15)}
+.task-cb{width:16px;height:16px;min-width:16px;border-radius:4px;border:2px solid var(--dm);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:.2s;font-size:9px;color:transparent}
+.task-cb:hover{transform:scale(1.15)}
+.task-cb.checked{color:#fff;background:var(--gn);border-color:var(--gn)}
+.task-cb.pr-red{border-color:var(--rd)}
+.task-cb.pr-yellow{border-color:var(--am)}
+.task-cb.pr-blue{border-color:var(--ac)}
+.task-cb.pr-white{border-color:var(--dm)}
+.task-content{flex:1;min-width:0}
+.task-title{font-size:12px;font-weight:500;line-height:1.4}
+.task-meta{display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap}
+.task-meta-tag{font:400 8px/1 'Space Mono',monospace;padding:2px 5px;border-radius:3px;background:rgba(136,136,170,.08);color:var(--dm)}
+.task-due{color:var(--rd);font-weight:700}
+.task-subtask-toggle{font-size:9px;color:var(--dm);cursor:pointer;padding:2px 4px;border-radius:3px;transition:.15s;user-select:none}
+.task-subtask-toggle:hover{background:rgba(0,229,255,.08);color:var(--ac)}
+.task-subtask-count{font:400 8px/1 'Space Mono',monospace;color:var(--dm)}
+.completed-section{margin-top:16px;background:var(--s);border:1px solid var(--bd);border-radius:9px;overflow:hidden}
+.completed-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;background:var(--s2)}
+.completed-hdr:hover{background:rgba(0,229,255,.03)}
+.completed-body{display:none;padding:0}
+.completed-body.open{display:block}
+.add-task-bar{display:flex;gap:6px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.add-task-input{flex:1;min-width:200px;background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;transition:.2s}
+.add-task-input:focus{border-color:var(--ac)}
+.add-task-input::placeholder{color:var(--dm);opacity:.5}
+.add-task-select{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:6px 8px;color:var(--tx);font-size:10px;font-family:'Space Mono',monospace;outline:none;cursor:pointer}
+.add-task-select:focus{border-color:var(--ac)}
+.add-task-btn{padding:7px 14px;font:700 10px/1 'Space Mono',monospace;background:rgba(0,229,255,.1);border:1px solid var(--ac);border-radius:7px;color:var(--ac);cursor:pointer;transition:.2s;letter-spacing:.5px}
+.add-task-btn:hover{background:rgba(0,229,255,.2)}
+
+/* Daily Agenda */
+.agenda-card{background:linear-gradient(135deg,rgba(0,229,255,.06),rgba(123,47,247,.06));border:1px solid rgba(0,229,255,.15);border-radius:12px;padding:18px;margin-bottom:20px}
+.agenda-title{font:700 11px/1 'Space Mono',monospace;color:var(--ac);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase}
+.agenda-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.agenda-item{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:10px}
+.agenda-item-label{font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.agenda-item-value{font-size:12px;font-weight:500;line-height:1.4}
+
+/* Track Detail */
+.track-row{cursor:pointer;transition:.15s}
+.track-row:hover td{background:rgba(0,229,255,.03)!important}
+.track-detail{display:none;background:var(--s2);border:1px solid var(--bd);border-radius:9px;margin:8px 10px 14px;padding:16px}
+.track-detail.open{display:block;animation:fi .2s ease}
+.track-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.track-field{margin-bottom:10px}
+.track-field-label{font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.track-field-value{font-size:11px;line-height:1.5}
+.track-field input,.track-field textarea,.track-field select{background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:5px 8px;color:var(--tx);font:400 11px/1.4 'DM Sans',sans-serif;width:100%;outline:none}
+.track-field input:focus,.track-field textarea:focus,.track-field select:focus{border-color:var(--ac)}
+.track-field textarea{min-height:50px;resize:vertical}
+.track-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px}
+.track-check-item{display:flex;align-items:center;gap:5px;font-size:10px;cursor:pointer;padding:3px 6px;border-radius:4px;transition:.15s}
+.track-check-item:hover{background:rgba(0,229,255,.05)}
+.track-check-item input{accent-color:var(--ac)}
+.stage-pill{font:700 9px/1 'Space Mono',monospace;padding:3px 8px;border-radius:10px;display:inline-block;letter-spacing:.5px}
+.stage-gray{background:rgba(136,136,170,.12);color:var(--dm)}
+.stage-blue{background:rgba(0,229,255,.1);color:var(--ac)}
+.stage-purple{background:rgba(123,47,247,.12);color:#b388ff}
+.stage-amber{background:rgba(255,171,0,.1);color:var(--am)}
+.stage-cyan{background:rgba(0,188,212,.12);color:var(--cy)}
+.stage-green{background:rgba(0,230,118,.1);color:var(--gn)}
+.stage-red{background:rgba(255,82,82,.1);color:var(--rd)}
+.status-pill{font:700 10px/1 'Space Mono',monospace;padding:3px 8px;border-radius:10px;display:inline-block}
+.status-PUSH{background:rgba(0,230,118,.12);color:var(--gn)}
+.status-FINISH{background:rgba(0,229,255,.12);color:var(--ac)}
+.status-HOLD{background:rgba(255,171,0,.12);color:var(--am)}
+.status-KILL{background:rgba(255,82,82,.12);color:var(--rd)}
+.feedback-entry{background:var(--s);border:1px solid var(--bd);border-radius:7px;padding:10px;margin-bottom:6px;font-size:11px}
+.feedback-entry-hdr{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.mini-add-task{margin-top:16px;padding-top:12px;border-top:1px solid var(--bd)}
+.sort-btn{cursor:pointer;user-select:none}
+.sort-btn:hover{color:var(--ac)}
+.sort-indicator{font-size:8px;margin-left:2px}
+
+/* Ads section */
+.ads-table td,.ads-table th{font-size:10px;padding:6px 8px}
+
+@media(max-width:768px){.g{grid-template-columns:1fr}.hd-logo{width:110px}.t-btn{padding:11px 14px;font-size:11px}.track-detail-grid{grid-template-columns:1fr}.agenda-grid{grid-template-columns:1fr}.add-task-bar{flex-direction:column}.add-task-input{min-width:100%}}
+</style>
+<script>
+// =====================================================
+// MASTER STRATEGY ENGINE — SINGLE SOURCE OF TRUTH
+// =====================================================
+var MSE = {
+  lastUpdated: "2026-03-17",
+  dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
+  ig: { followers: 278, posts: 22, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo" },
+  sc: { followers: 41, plays: 603, tracks: 9, plays30d: 199, growth30d: "+84%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack: "Every 1s A Winner (238 plays)" },
+  tiktok: { active: false, handle: null },
+  primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
+  contentMix: {
+    format: "60% Reels, 25% Carousels (event recaps), 15% Images (release art only)",
+    frequency: "4-5 reels/week. Daily during release weeks.",
+    audio: "ALWAYS use your own music/remixes as reel audio. Never use trending sounds.",
+    hashtags: "#techhouse #dj #housemusic #remix (same 4, every post)",
+    topics: "30% gig/event, 25% remix/music, 20% BTS/studio, 15% lifestyle, 10% engagement"
+  },
+  priorityFormats: [
+    { name: "Remix teaser with recognizable hook", evidence: "Wally 14K, Chalant model, NIIKO 519K" },
+    { name: "Co-authored event promos", evidence: "Your #1 at 72 avg eng" },
+    { name: "Three heaters weekly roundup", evidence: "Chalant 6/30 reels, avg 460 likes" },
+    { name: "Bigger DJ playing your track", evidence: "Austin Ashtin FISHER 3K, Chalant Bolo 1.5K" },
+    { name: "Should I drop this? gauge CTA", evidence: "NIIKO 162C, Bolo 90C, DANSYN confirmed" },
+    { name: "COMMENT keyword CTA (release day)", evidence: "Zachh 1,013C, Luke 160C" },
+    { name: "Journey narrative / origin story", evidence: "Wally 304, DANSYN 138C" },
+    { name: "Talking head DJ life take", evidence: "Luke 3,920 (10x avg)" }
+  ],
+  avoid: ["Captionless single images","Trending audio","Hashtag spam","Single-post releases","Meme-first content","Bar/drink promo content","Long posting gaps"],
+  rules: ["Every reel opens on hook — first 2 sec = payoff","Every reel uses own music as audio","Same 4 hashtags every post","3-reel minimum per release","Tag original artists on remix clips","Co-author every event post with venue"],
+  datasets: ["WrwLABGVcPGpMFEuV","bgc7XdP0IIexl1gDD","fypmt26TUtE0KawEP","5XRX4HzWS9F1WY82g","diquoIcUI9wZeYHyk","Svx9Gx8MJyVjyU3dj"]
+};
+
+// =====================================================
+// PRODUCTION STAGES
+// =====================================================
+var PRODUCTION_STAGES = [
+  { id:1,  name:"Anchor Defined",       color:"gray" },
+  { id:2,  name:"8-Bar Loop Built",     color:"gray" },
+  { id:3,  name:"Vocal Prep",           color:"blue" },
+  { id:4,  name:"Breakdown Sketch",     color:"blue" },
+  { id:5,  name:"Full Arrangement",     color:"blue" },
+  { id:6,  name:"Production Polish",    color:"purple" },
+  { id:7,  name:"Mix Prep",             color:"purple" },
+  { id:8,  name:"Mixing",               color:"purple" },
+  { id:9,  name:"Premaster Check",      color:"amber" },
+  { id:10, name:"Mastering",            color:"amber" },
+  { id:11, name:"Demo Out / Feedback",  color:"amber" },
+  { id:12, name:"Revision Round",       color:"amber" },
+  { id:13, name:"Teaser Ready",         color:"cyan" },
+  { id:14, name:"Rollout Active",       color:"cyan" },
+  { id:15, name:"Released",             color:"green" },
+  { id:16, name:"Archived / Hold",      color:"red" }
+];
+
+var SUBTASK_TEMPLATES = [
+  "Define anchor","Build 8-bar loop","Vocal prep","Breakdown sketch",
+  "Full arrangement","Production polish","Mix prep","Mixing",
+  "Premaster check","Mastering","Demo out","Revision round",
+  "Teaser ready","Rollout active"
+];
+
+var CATEGORIES = ['Producing','Social Media','Outreach','Admin','Analytics','Personal'];
+var PRIORITIES = ['red','yellow','blue','white'];
+var TRACK_TYPES = ['Remix','Original','Mashup'];
+var GENRES = ['Tech House','Progressive House','Bass House','Minimal','Other'];
+var EMOTIONAL_JOBS = ['More clubby','Darker','More euphoric','More minimal','More emotional','More energetic','Other'];
+var HARDEST_HITS = ['Drop Groove','Breakdown Emotion','Vocal Payoff','Hook Synth','Call-and-Response'];
+var STATUSES = ['PUSH','FINISH','HOLD','KILL'];
+var BOTTLENECKS = ['none','arrangement','groove','mix','vocal','marketing'];
+var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Producer flex','Crowd reaction','Viral audio angle','Social-proof angle'];
+
+// =====================================================
+// STATE
+// =====================================================
+var _uid = 1000;
+function uid(){ return 't'+(++_uid); }
+
+var STATE = { tracks:[], tasks:[], feedback:[], ads:[] };
+
+function defaultTracks(){
+  return [
+    { id:'tr1', name:'Pack Up Ya Bags', type:'Remix', genre:'Tech House', emotionalJob:'More clubby', hardestHit:'Drop Groove', status:'PUSH', stage:13, priority:'red', demoLink:'', notes:'Label responded positively. VO/founder asked for EPK.', feedbackSummary:'Label interest from VO/founder', bestHookTimestamp:'', nextAction:'Release on SC + Reel 2 COMMENT CTA', dueDate:'2026-03-25', lastWorkedOn:'2026-03-17', relatedPosts:[{url:'#',date:'Mar 17',likes:24,comments:1,views:0,type:'Teaser reel'}], bestPost:'Teaser reel (25 eng)', rolloutStatus:'Teaser', visionLock:{hookIdentity:'Recognizable vocal hook',genreLane:'Tech House',emotionalJob:'More clubby',hardestHit:'Drop Groove'}, references:{original:'Pack Up Ya Bags (Original)',target1:'',target2:'',structure:''}, translationChecks:{phone:false,headphones:true,car:false,speakers:true,mono:false}, contentAssets:{studioClip:true,teaserClip:true,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'none', versions:[], liveTests:[], momentumScore:85, readinessScore:80, marketingAngle:'Nostalgia flip' },
+    { id:'tr2', name:'Wicked Game', type:'Remix', genre:'Progressive House', emotionalJob:'More emotional', hardestHit:'Breakdown Emotion', status:'PUSH', stage:11, priority:'red', demoLink:'', notes:'Played at Hunter Mtn. In background of reel.', feedbackSummary:'Crowd reaction positive at Hunter Mtn', bestHookTimestamp:'', nextAction:'"Should I drop this?" reel from gig footage', dueDate:'2026-03-28', lastWorkedOn:'2026-03-16', relatedPosts:[{url:'#',date:'Mar 16',likes:44,comments:7,views:0,type:'Event recap (bg audio)'}], bestPost:'hunter mtn nights (51 eng)', rolloutStatus:'Not Started', visionLock:{hookIdentity:'Wicked Game vocal melody',genreLane:'Progressive House',emotionalJob:'More emotional',hardestHit:'Breakdown Emotion'}, references:{original:'Wicked Game (Chris Isaak)',target1:'',target2:'',structure:''}, translationChecks:{phone:false,headphones:true,car:false,speakers:false,mono:false}, contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:true,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'none', versions:[], liveTests:[{where:'Hunter Mtn',date:'2026-03-16',reaction:'positive',idRequests:false,playAgain:true}], momentumScore:70, readinessScore:60, marketingAngle:'Emotional remix' },
+    { id:'tr3', name:'The Money', type:'Remix', genre:'Tech House', emotionalJob:'Darker', hardestHit:'Drop Groove', status:'PUSH', stage:6, priority:'yellow', demoLink:'', notes:'Pink Floyd remix. Studio teaser recorded.', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Post teaser with "should I finish this one?" caption', dueDate:null, lastWorkedOn:'2026-03-19', relatedPosts:[], bestPost:null, rolloutStatus:'Not Started', visionLock:{hookIdentity:'Money cash register / bass line',genreLane:'Tech House',emotionalJob:'Darker',hardestHit:'Drop Groove'}, references:{original:'Money (Pink Floyd)',target1:'',target2:'',structure:''}, translationChecks:{phone:false,headphones:false,car:false,speakers:false,mono:false}, contentAssets:{studioClip:true,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'none', versions:[], liveTests:[], momentumScore:50, readinessScore:30, marketingAngle:'Nostalgia flip' },
+    { id:'tr4', name:"Every 1's A Winner", type:'Remix', genre:'Tech House', emotionalJob:'More euphoric', hardestHit:'Vocal Payoff', status:'HOLD', stage:15, priority:'blue', demoLink:'', notes:'On SoundCloud. 238 plays. Top track.', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Post clip to IG with original artist tag', dueDate:null, lastWorkedOn:null, relatedPosts:[], bestPost:null, rolloutStatus:'Released', visionLock:{hookIdentity:'Everyone is a winner vocal',genreLane:'Tech House',emotionalJob:'More euphoric',hardestHit:'Vocal Payoff'}, references:{original:"Every 1's A Winner (Hot Chocolate)",target1:'',target2:'',structure:''}, translationChecks:{phone:true,headphones:true,car:true,speakers:true,mono:true}, contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'marketing', versions:[], liveTests:[], momentumScore:40, readinessScore:100, marketingAngle:'Nostalgia flip' },
+    { id:'tr5', name:'Sports Car', type:'Remix', genre:'Tech House', emotionalJob:'More energetic', hardestHit:'Hook Synth', status:'HOLD', stage:15, priority:'blue', demoLink:'', notes:'On SoundCloud. 185 plays.', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Consider promo reel', dueDate:null, lastWorkedOn:null, relatedPosts:[], bestPost:null, rolloutStatus:'Released', visionLock:{hookIdentity:'',genreLane:'Tech House',emotionalJob:'More energetic',hardestHit:'Hook Synth'}, references:{original:'Sports Car (Original)',target1:'',target2:'',structure:''}, translationChecks:{phone:true,headphones:true,car:true,speakers:true,mono:true}, contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'marketing', versions:[], liveTests:[], momentumScore:30, readinessScore:100, marketingAngle:'' },
+    { id:'tr6', name:'DANCE.', type:'Original', genre:'Tech House', emotionalJob:'More clubby', hardestHit:'Drop Groove', status:'HOLD', stage:15, priority:'white', demoLink:'', notes:'On SoundCloud. 112 plays. Steady performer.', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Steady performer', dueDate:null, lastWorkedOn:null, relatedPosts:[], bestPost:null, rolloutStatus:'Released', visionLock:{hookIdentity:'',genreLane:'Tech House',emotionalJob:'More clubby',hardestHit:'Drop Groove'}, references:{original:'',target1:'',target2:'',structure:''}, translationChecks:{phone:true,headphones:true,car:true,speakers:true,mono:true}, contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'none', versions:[], liveTests:[], momentumScore:20, readinessScore:100, marketingAngle:'' },
+    { id:'tr7', name:'Harry Styles Aperture Bootleg', type:'Mashup', genre:'Tech House', emotionalJob:'More euphoric', hardestHit:'Vocal Payoff', status:'PUSH', stage:1, priority:'yellow', demoLink:'', notes:'Biggest TikTok audio March 2026. High viral potential.', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Start production', dueDate:null, lastWorkedOn:null, relatedPosts:[], bestPost:null, rolloutStatus:'Not Started', visionLock:{hookIdentity:'Aperture vocal/melody',genreLane:'Tech House',emotionalJob:'More euphoric',hardestHit:'Vocal Payoff'}, references:{original:'Aperture (Harry Styles)',target1:'',target2:'',structure:''}, translationChecks:{phone:false,headphones:false,car:false,speakers:false,mono:false}, contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false}, bottleneck:'none', versions:[], liveTests:[], momentumScore:60, readinessScore:0, marketingAngle:'Viral audio angle' }
+  ];
+}
+
+function defaultTasks(){
+  var tasks = [];
+  // Generate per-track subtasks
+  defaultTracks().forEach(function(tr){
+    var parentId = 'task_'+tr.id;
+    tasks.push({id:parentId, title:tr.name, category:'Producing', priority:tr.priority, status:'active', parentId:null, trackId:tr.id, dueDate:tr.dueDate, createdFrom:'tracks', completedAt:null, collapsed:true, notes:''});
+    SUBTASK_TEMPLATES.forEach(function(st,i){
+      var done = (i+1) < tr.stage;
+      tasks.push({id:uid(), title:st, category:'Producing', priority:tr.priority, status:done?'completed':'active', parentId:parentId, trackId:tr.id, dueDate:null, createdFrom:'tracks', completedAt:done?Date.now():null, collapsed:true, notes:''});
+    });
+  });
+  // Producing tasks
+  tasks.push({id:uid(), title:'Release Pack Up Ya Bags on SoundCloud', category:'Producing', priority:'red', status:'active', parentId:null, trackId:'tr1', dueDate:'2026-03-25', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Pack Up Ya Bags Reel 2 — "COMMENT remix" CTA', category:'Producing', priority:'red', status:'active', parentId:null, trackId:'tr1', dueDate:'2026-03-26', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Wicked Game — "Should I drop this?" reel from gig footage', category:'Producing', priority:'red', status:'active', parentId:null, trackId:'tr2', dueDate:'2026-03-28', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'The Money — finish studio teaser post', category:'Producing', priority:'yellow', status:'active', parentId:null, trackId:'tr3', dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Harry Styles Aperture — start production', category:'Producing', priority:'yellow', status:'active', parentId:null, trackId:'tr7', dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:"Every 1's A Winner — post clip to IG with artist tag", category:'Producing', priority:'blue', status:'active', parentId:null, trackId:'tr4', dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Sports Car — consider promo reel', category:'Producing', priority:'blue', status:'active', parentId:null, trackId:'tr5', dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  // Social Media
+  tasks.push({id:uid(), title:'First "Three Heaters Monday" post', category:'Social Media', priority:'red', status:'active', parentId:null, trackId:null, dueDate:'2026-03-23', createdFrom:'hq', completedAt:null, collapsed:true, notes:'Tag 3 original artists'});
+  tasks.push({id:uid(), title:'Create TikTok account', category:'Social Media', priority:'red', status:'active', parentId:null, trackId:null, dueDate:'2026-03-22', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Dashboard walkthrough reel (already filmed)', category:'Social Media', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Film Santello reacting to remix at gig', category:'Social Media', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Post 12+ reels this month', category:'Social Media', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:'2026-03-31', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  // Outreach
+  tasks.push({id:uid(), title:'Follow up on label EPK response (VO/founder)', category:'Outreach', priority:'red', status:'active', parentId:null, trackId:'tr1', dueDate:'2026-03-21', createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'DM @lowercase518 with mix link', category:'Outreach', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Email 518 Craft for Friday rotation', category:'Outreach', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Record 60-min tech house mix', category:'Outreach', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:'Unlocks all outreach'});
+  tasks.push({id:uid(), title:'Submit demo to Votion Records', category:'Outreach', priority:'blue', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  // Admin
+  tasks.push({id:uid(), title:'Buy Insta360 X2 ($150)', category:'Admin', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Buy GoPro Hero 12 ($315)', category:'Admin', priority:'yellow', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Find DJI Pocket 3 on Marketplace', category:'Admin', priority:'blue', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:'Target $250-350 used'});
+  // Analytics
+  tasks.push({id:uid(), title:'Re-scrape Instagram analytics', category:'Analytics', priority:'blue', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  tasks.push({id:uid(), title:'Get new SoundCloud Artist Pro screenshots', category:'Analytics', priority:'blue', status:'active', parentId:null, trackId:null, dueDate:null, createdFrom:'hq', completedAt:null, collapsed:true, notes:''});
+  return tasks;
+}
+
+var _saveTimeout = null;
+var _firebaseReady = false;
+
+function loadState(){
+  // Load from localStorage immediately for fast first paint
+  try {
+    var saved = localStorage.getItem('elcap_v6_state');
+    if(saved){ STATE = JSON.parse(saved); _uid = STATE._uid || 1000; }
+    else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid }; }
+  } catch(e){
+    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid };
+  }
+
+  // Then listen to Firebase for real-time sync
+  db.ref('state').on('value', function(snapshot){
+    var data = snapshot.val();
+    if(data && data._uid){
+      // Only accept Firebase data if it's newer (higher _uid = more changes made)
+      if(data._uid >= (_uid || 0)){
+        STATE = data;
+        _uid = STATE._uid || 1000;
+        // Cache locally too
+        try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
+        _firebaseReady = true;
+        renderAgenda();
+        renderMasterTasks();
+        if(document.getElementById('t-tracks') && document.getElementById('t-tracks').classList.contains('on')){
+          renderTracks();
+        }
+      }
+    } else if(!data){
+      // Firebase is empty — push our local state up
+      _firebaseReady = true;
+      saveState();
+    } else {
+      _firebaseReady = true;
+    }
+  });
+}
+
+function saveState(){
+  STATE._uid = _uid;
+  // Save to localStorage immediately
+  try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
+  // Debounce Firebase writes (300ms)
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(function(){
+    db.ref('state').set(STATE);
+  }, 300);
+}
+
+// =====================================================
+// TAB NAVIGATION
+// =====================================================
+function showTab(id){
+  document.querySelectorAll('.tc').forEach(function(el){ el.classList.remove('on'); });
+  document.querySelectorAll('.t-btn').forEach(function(el){ el.classList.remove('on'); });
+  var tab = document.getElementById('t-'+id);
+  if(tab) tab.classList.add('on');
+  document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
+  if(id==='hq'){ renderAgenda(); renderMasterTasks(); }
+  if(id==='tracks'){ renderTracks(); }
+}
+function showSub(tabId, subId){
+  var tab = document.getElementById(tabId);
+  if(!tab) return;
+  tab.querySelectorAll('.sub-c').forEach(function(el){ el.classList.remove('on'); });
+  tab.querySelectorAll('.sub-btn').forEach(function(el){ el.classList.remove('on'); });
+  var sub = document.getElementById(subId);
+  if(sub) sub.classList.add('on');
+  tab.querySelectorAll('.sub-btn').forEach(function(b){ if(b.getAttribute('data-sub')===subId) b.classList.add('on'); });
+}
+
+// =====================================================
+// TASK SYSTEM
+// =====================================================
+var taskFilters = { categories: [], priorities: [], showCompleted: false };
+
+function priorityOrder(p){ return p==='red'?0:p==='yellow'?1:p==='blue'?2:3; }
+
+function getActiveTasks(){ return STATE.tasks.filter(function(t){ return t.status==='active'; }); }
+function getCompletedTasks(){ return STATE.tasks.filter(function(t){ return t.status==='completed' && !t.parentId; }); }
+function getSubtasks(parentId){ return STATE.tasks.filter(function(t){ return t.parentId===parentId; }); }
+
+function toggleTask(taskId){
+  var task = STATE.tasks.find(function(t){ return t.id===taskId; });
+  if(!task) return;
+  if(task.status==='active'){
+    task.status = 'completed';
+    task.completedAt = Date.now();
+    // If parent task, complete all subtasks too
+    if(!task.parentId){
+      getSubtasks(taskId).forEach(function(st){ st.status='completed'; st.completedAt=Date.now(); });
+    }
+  } else {
+    task.status = 'active';
+    task.completedAt = null;
+    // If parent task, re-activate all subtasks
+    if(!task.parentId){
+      getSubtasks(taskId).forEach(function(st){ st.status='active'; st.completedAt=null; });
+    }
+  }
+  saveState();
+  renderMasterTasks();
+  renderAgenda();
+}
+
+function toggleTaskCollapse(taskId){
+  var task = STATE.tasks.find(function(t){ return t.id===taskId; });
+  if(task){ task.collapsed = !task.collapsed; }
+  saveState();
+  renderMasterTasks();
+}
+
+function addTask(title, category, priority, parentId, trackId, dueDate, createdFrom){
+  if(!title.trim()) return;
+  var task = {
+    id: uid(), title: title.trim(), category: category||'Producing',
+    priority: priority||'white', status:'active', parentId: parentId||null,
+    trackId: trackId||null, dueDate: dueDate||null, createdFrom: createdFrom||'hq',
+    completedAt:null, collapsed:true, notes:''
+  };
+  STATE.tasks.push(task);
+  saveState();
+  renderMasterTasks();
+  renderAgenda();
+  return task;
+}
+
+function toggleCategoryFilter(cat){
+  var idx = taskFilters.categories.indexOf(cat);
+  if(idx>-1) taskFilters.categories.splice(idx,1);
+  else taskFilters.categories.push(cat);
+  renderMasterTasks();
+}
+function togglePriorityFilter(pr){
+  var idx = taskFilters.priorities.indexOf(pr);
+  if(idx>-1) taskFilters.priorities.splice(idx,1);
+  else taskFilters.priorities.push(pr);
+  renderMasterTasks();
+}
+function toggleCompletedFilter(){
+  taskFilters.showCompleted = !taskFilters.showCompleted;
+  renderMasterTasks();
+}
+
+function taskPassesFilter(task){
+  if(taskFilters.categories.length > 0 && taskFilters.categories.indexOf(task.category)===-1) return false;
+  if(taskFilters.priorities.length > 0 && taskFilters.priorities.indexOf(task.priority)===-1) return false;
+  return true;
+}
+
+// Track-group collapse state
+var groupCollapsed = {};
+
+function toggleGroupCollapse(cat){
+  groupCollapsed[cat] = !groupCollapsed[cat];
+  renderMasterTasks();
+}
+
+function renderMasterTasks(){
+  var container = document.getElementById('master-tasks');
+  if(!container) return;
+
+  // Filter bar
+  var html = '<div class="task-filters">';
+  CATEGORIES.forEach(function(cat){
+    var on = taskFilters.categories.indexOf(cat)>-1 ? ' on' : '';
+    html += '<span class="task-filter-pill'+on+'" data-cat="'+cat+'" onclick="toggleCategoryFilter(\''+cat+'\')">'+cat+'</span>';
+  });
+  html += '<span class="task-filter-sep"></span>';
+  PRIORITIES.forEach(function(pr){
+    var on = taskFilters.priorities.indexOf(pr)>-1 ? ' on' : '';
+    html += '<span class="task-filter-pill'+on+'" onclick="togglePriorityFilter(\''+pr+'\')"><span class="priority-dot pr-'+pr+'"></span> '+pr.charAt(0).toUpperCase()+pr.slice(1)+'</span>';
+  });
+  html += '<span class="task-filter-sep"></span>';
+  html += '<span class="task-filter-pill'+(taskFilters.showCompleted?' on':'')+'" onclick="toggleCompletedFilter()">Completed</span>';
+  html += '</div>';
+
+  // Add task bar
+  html += '<div class="add-task-bar">';
+  html += '<input class="add-task-input" id="new-task-input" placeholder="Add a new task..." onkeydown="if(event.key===\'Enter\')addTaskFromBar()">';
+  html += '<select class="add-task-select" id="new-task-cat">';
+  CATEGORIES.forEach(function(c){ html += '<option value="'+c+'">'+c+'</option>'; });
+  html += '</select>';
+  html += '<select class="add-task-select" id="new-task-pri">';
+  html += '<option value="red">Red</option><option value="yellow">Yellow</option><option value="blue" selected>Blue</option><option value="white">White</option>';
+  html += '</select>';
+  html += '<input class="add-task-input" id="new-task-due" type="date" style="min-width:120px;max-width:140px">';
+  html += '<button class="add-task-btn" onclick="addTaskFromBar()">+ ADD</button>';
+  html += '</div>';
+
+  // Group by category
+  var parentTasks = STATE.tasks.filter(function(t){ return !t.parentId && t.status==='active' && taskPassesFilter(t); });
+  var grouped = {};
+  CATEGORIES.forEach(function(c){ grouped[c] = []; });
+  parentTasks.forEach(function(t){
+    if(!grouped[t.category]) grouped[t.category] = [];
+    grouped[t.category].push(t);
+  });
+  // Sort within group
+  Object.keys(grouped).forEach(function(cat){
+    grouped[cat].sort(function(a,b){
+      var pa = priorityOrder(a.priority), pb = priorityOrder(b.priority);
+      if(pa!==pb) return pa-pb;
+      if(a.dueDate && b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+      if(a.dueDate) return -1;
+      if(b.dueDate) return 1;
+      return 0;
+    });
+  });
+
+  CATEGORIES.forEach(function(cat){
+    var items = grouped[cat];
+    if(!items || items.length===0) return;
+    var collapsed = groupCollapsed[cat];
+    var catClass = 'cat-'+cat.replace(/\s/g,'-');
+    html += '<div class="task-group">';
+    html += '<div class="task-group-hdr" onclick="toggleGroupCollapse(\''+cat+'\')">';
+    html += '<span class="task-group-caret'+(collapsed?'':' open')+'">&#9654;</span>';
+    html += '<span class="task-group-label '+catClass+'">'+cat+'</span>';
+    html += '<span class="task-group-count">'+items.length+' task'+(items.length>1?'s':'')+'</span>';
+    html += '</div>';
+    html += '<div class="task-group-body'+(collapsed?'':' open')+'">';
+    items.forEach(function(task){
+      html += renderTaskItem(task, false);
+      // Subtasks
+      var subs = getSubtasks(task.id);
+      if(subs.length > 0){
+        var activeSubs = subs.filter(function(s){ return s.status==='active'; });
+        var completedSubs = subs.filter(function(s){ return s.status==='completed'; });
+        if(!task.collapsed){
+          activeSubs.sort(function(a,b){ return priorityOrder(a.priority)-priorityOrder(b.priority); });
+          activeSubs.forEach(function(sub){ html += renderTaskItem(sub, true); });
+          completedSubs.forEach(function(sub){ html += renderTaskItem(sub, true); });
+        }
+      }
+    });
+    html += '</div></div>';
+  });
+
+  // Completed section
+  if(taskFilters.showCompleted){
+    var completed = STATE.tasks.filter(function(t){ return !t.parentId && t.status==='completed' && taskPassesFilter(t); });
+    completed.sort(function(a,b){ return (b.completedAt||0)-(a.completedAt||0); });
+    if(completed.length > 0){
+      html += '<div class="completed-section">';
+      html += '<div class="completed-hdr" onclick="toggleCompletedSection()">';
+      html += '<span class="task-group-caret" id="completed-caret">&#9654;</span>';
+      html += '<span class="task-group-label" style="color:var(--gn)">COMPLETED</span>';
+      html += '<span class="task-group-count">'+completed.length+'</span>';
+      html += '</div>';
+      html += '<div class="completed-body" id="completed-body">';
+      completed.forEach(function(task){ html += renderTaskItem(task, false); });
+      html += '</div></div>';
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+function renderTaskItem(task, isSubtask){
+  var subs = getSubtasks(task.id);
+  var allSubsDone = subs.length > 0 && subs.every(function(s){ return s.status==='completed'; });
+  var isDone = task.status === 'completed';
+  var classes = 'task-item';
+  if(isSubtask) classes += ' subtask';
+  if(isDone) classes += ' completed-task';
+  if(isDone && allSubsDone && subs.length>0) classes += ' all-done';
+
+  var html = '<div class="'+classes+'">';
+  html += '<div class="task-cb pr-'+task.priority+(isDone?' checked':'')+'" onclick="toggleTask(\''+task.id+'\')">'+(isDone?'&#10003;':'')+'</div>';
+  html += '<div class="task-content">';
+  html += '<div class="task-title">'+task.title+'</div>';
+  html += '<div class="task-meta">';
+  if(task.dueDate){
+    var overdue = task.status==='active' && task.dueDate < new Date().toISOString().split('T')[0];
+    html += '<span class="task-meta-tag'+(overdue?' task-due':'')+'">'+task.dueDate+'</span>';
+  }
+  if(task.trackId){
+    var track = STATE.tracks.find(function(tr){ return tr.id===task.trackId; });
+    if(track) html += '<span class="task-meta-tag" style="color:#b388ff">'+track.name+'</span>';
+  }
+  if(subs.length > 0 && !isSubtask){
+    var doneSubs = subs.filter(function(s){ return s.status==='completed'; }).length;
+    html += '<span class="task-subtask-count">'+doneSubs+'/'+subs.length+'</span>';
+    html += '<span class="task-subtask-toggle" onclick="event.stopPropagation();toggleTaskCollapse(\''+task.id+'\')">'+(task.collapsed?'&#9654; expand':'&#9660; collapse')+'</span>';
+  }
+  html += '</div></div></div>';
+  return html;
+}
+
+var completedSectionOpen = false;
+function toggleCompletedSection(){
+  completedSectionOpen = !completedSectionOpen;
+  var body = document.getElementById('completed-body');
+  var caret = document.getElementById('completed-caret');
+  if(body){ body.classList.toggle('open', completedSectionOpen); }
+  if(caret){ caret.classList.toggle('open', completedSectionOpen); }
+}
+
+function addTaskFromBar(){
+  var input = document.getElementById('new-task-input');
+  var cat = document.getElementById('new-task-cat');
+  var pri = document.getElementById('new-task-pri');
+  var due = document.getElementById('new-task-due');
+  if(!input||!input.value.trim()) return;
+  addTask(input.value, cat.value, pri.value, null, null, due.value||null, 'hq');
+  input.value = '';
+  due.value = '';
+}
+
+// Mini add-task from other tabs
+function addTaskFromTab(inputId, category){
+  var input = document.getElementById(inputId);
+  if(!input||!input.value.trim()) return;
+  addTask(input.value, category, 'blue', null, null, null, category.toLowerCase());
+  input.value = '';
+}
+
+// =====================================================
+// DAILY AGENDA
+// =====================================================
+function renderAgenda(){
+  var container = document.getElementById('daily-agenda');
+  if(!container) return;
+
+  var today = new Date().toISOString().split('T')[0];
+  var activeTasks = STATE.tasks.filter(function(t){ return t.status==='active' && !t.parentId; });
+
+  // Rank tasks
+  activeTasks.sort(function(a,b){
+    // Overdue first
+    var aOver = a.dueDate && a.dueDate < today ? 1 : 0;
+    var bOver = b.dueDate && b.dueDate < today ? 1 : 0;
+    if(aOver!==bOver) return bOver-aOver;
+    // Priority
+    var pa = priorityOrder(a.priority), pb = priorityOrder(b.priority);
+    if(pa!==pb) return pa-pb;
+    // Due date sooner
+    if(a.dueDate && b.dueDate) return a.dueDate<b.dueDate?-1:1;
+    if(a.dueDate) return -1;
+    if(b.dueDate) return 1;
+    return 0;
+  });
+
+  var top3 = activeTasks.slice(0,3);
+
+  // Best track to focus on
+  var pushTracks = STATE.tracks.filter(function(tr){ return tr.status==='PUSH'; });
+  pushTracks.sort(function(a,b){
+    var pa = priorityOrder(a.priority), pb = priorityOrder(b.priority);
+    if(pa!==pb) return pa-pb;
+    return b.stage-a.stage; // higher stage = closer to done
+  });
+  var focusTrack = pushTracks[0];
+
+  // Blocked
+  var blocked = STATE.tracks.filter(function(tr){ return tr.bottleneck && tr.bottleneck!=='none'; });
+
+  // Closest to teaser-ready
+  var nearTeaser = STATE.tracks.filter(function(tr){ return tr.stage>=9 && tr.stage<=12 && tr.status!=='KILL'; });
+  nearTeaser.sort(function(a,b){ return b.stage-a.stage; });
+
+  // Closest to release
+  var nearRelease = STATE.tracks.filter(function(tr){ return tr.stage>=13 && tr.stage<=14; });
+
+  // Next post
+  var nextPost = activeTasks.find(function(t){ return t.category==='Social Media'; });
+
+  var html = '<div class="agenda-title">What Should I Do Today?</div>';
+  html += '<div class="agenda-grid">';
+
+  // Top 3
+  html += '<div class="agenda-item" style="grid-column:span 2"><div class="agenda-item-label">TOP 3 TASKS TODAY</div><div class="agenda-item-value">';
+  if(top3.length===0) html += '<span style="color:var(--dm)">No active tasks</span>';
+  top3.forEach(function(t,i){
+    var color = t.priority==='red'?'var(--rd)':t.priority==='yellow'?'var(--am)':t.priority==='blue'?'var(--ac)':'var(--dm)';
+    html += '<div style="margin-bottom:4px"><span style="color:'+color+';font-weight:700">'+(i+1)+'.</span> '+t.title;
+    if(t.dueDate) html += ' <span style="font-size:9px;color:var(--dm)">('+t.dueDate+')</span>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // Focus track
+  html += '<div class="agenda-item"><div class="agenda-item-label">FOCUS TRACK</div><div class="agenda-item-value">';
+  if(focusTrack){
+    html += '<span style="font-weight:700;color:var(--ac)">'+focusTrack.name+'</span><br>';
+    html += '<span style="font-size:10px;color:var(--dm)">Stage: '+PRODUCTION_STAGES[focusTrack.stage-1].name+'</span>';
+  } else { html += '<span style="color:var(--dm)">No PUSH tracks</span>'; }
+  html += '</div></div>';
+
+  // Blocked
+  html += '<div class="agenda-item"><div class="agenda-item-label">BLOCKED</div><div class="agenda-item-value">';
+  if(blocked.length===0) html += '<span style="color:var(--gn)">Nothing blocked</span>';
+  blocked.forEach(function(tr){ html += '<div>'+tr.name+' <span style="color:var(--rd);font-size:10px">('+tr.bottleneck+')</span></div>'; });
+  html += '</div></div>';
+
+  // Near teaser
+  html += '<div class="agenda-item"><div class="agenda-item-label">CLOSEST TO TEASER-READY</div><div class="agenda-item-value">';
+  if(nearTeaser.length===0) html += '<span style="color:var(--dm)">None in range</span>';
+  nearTeaser.forEach(function(tr){ html += '<div>'+tr.name+' <span style="font-size:10px;color:var(--cy)">('+PRODUCTION_STAGES[tr.stage-1].name+')</span></div>'; });
+  html += '</div></div>';
+
+  // Near release
+  html += '<div class="agenda-item"><div class="agenda-item-label">CLOSEST TO RELEASE</div><div class="agenda-item-value">';
+  if(nearRelease.length===0) html += '<span style="color:var(--dm)">None in range</span>';
+  nearRelease.forEach(function(tr){ html += '<div style="color:var(--gn)">'+tr.name+' <span style="font-size:10px">('+PRODUCTION_STAGES[tr.stage-1].name+')</span></div>'; });
+  html += '</div></div>';
+
+  // Next post
+  html += '<div class="agenda-item"><div class="agenda-item-label">NEXT POST</div><div class="agenda-item-value">';
+  if(nextPost) html += nextPost.title;
+  else html += '<span style="color:var(--dm)">No social tasks</span>';
+  html += '</div></div>';
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// =====================================================
+// TRACKS SYSTEM
+// =====================================================
+var trackSort = { col: 'priority', dir: 'asc' };
+var openTrackDetail = null;
+
+function stageColor(stage){
+  var s = PRODUCTION_STAGES[stage-1];
+  if(!s) return 'gray';
+  return s.color;
+}
+function stagePillClass(stage){ return 'stage-'+stageColor(stage); }
+
+function renderTracks(){
+  var container = document.getElementById('track-table-body');
+  if(!container) return;
+
+  var tracks = STATE.tracks.slice();
+  tracks.sort(function(a,b){
+    var col = trackSort.col;
+    var dir = trackSort.dir==='asc'?1:-1;
+    if(col==='priority') return dir*(priorityOrder(a.priority)-priorityOrder(b.priority));
+    if(col==='stage') return dir*(a.stage-b.stage);
+    if(col==='name') return dir*a.name.localeCompare(b.name);
+    if(col==='status'){
+      var order = {PUSH:0,FINISH:1,HOLD:2,KILL:3};
+      return dir*((order[a.status]||0)-(order[b.status]||0));
+    }
+    if(col==='momentum') return dir*(b.momentumScore-a.momentumScore);
+    if(col==='readiness') return dir*(b.readinessScore-a.readinessScore);
+    return 0;
+  });
+
+  var html = '';
+  tracks.forEach(function(tr){
+    html += '<tr class="track-row" onclick="toggleTrackDetail(\''+tr.id+'\')">';
+    html += '<td style="font-weight:700">'+tr.name+'</td>';
+    html += '<td>'+tr.type+'</td>';
+    html += '<td>'+tr.genre+'</td>';
+    html += '<td><span class="status-pill status-'+tr.status+'">'+tr.status+'</span></td>';
+    html += '<td><span class="stage-pill '+stagePillClass(tr.stage)+'">'+PRODUCTION_STAGES[tr.stage-1].name+'</span></td>';
+    html += '<td><span class="priority-dot pr-'+tr.priority+'"></span> '+tr.priority+'</td>';
+    html += '<td style="font-size:10px">'+tr.emotionalJob+'</td>';
+    html += '<td style="font-size:10px">'+(tr.nextAction||'—')+'</td>';
+    html += '<td style="font-size:10px">'+(tr.dueDate||'—')+'</td>';
+    html += '<td style="font-size:10px">'+(tr.lastWorkedOn||'—')+'</td>';
+    html += '<td style="text-align:center">'+tr.momentumScore+'</td>';
+    html += '<td style="text-align:center">'+tr.readinessScore+'</td>';
+    html += '</tr>';
+    // Detail row
+    html += '<tr><td colspan="12" style="padding:0;border:none">';
+    html += '<div class="track-detail'+(openTrackDetail===tr.id?' open':'')+'" id="detail-'+tr.id+'">';
+    html += renderTrackDetail(tr);
+    html += '</div></td></tr>';
+  });
+  container.innerHTML = html;
+}
+
+function toggleTrackDetail(trackId){
+  openTrackDetail = openTrackDetail===trackId ? null : trackId;
+  renderTracks();
+}
+
+function sortTracks(col){
+  if(trackSort.col===col) trackSort.dir = trackSort.dir==='asc'?'desc':'asc';
+  else { trackSort.col=col; trackSort.dir='asc'; }
+  renderTracks();
+}
+
+function renderTrackDetail(tr){
+  var html = '<div class="track-detail-grid">';
+
+  // Col 1: Vision Lock + References
+  html += '<div>';
+  html += '<div class="track-field"><div class="track-field-label">VISION LOCK</div>';
+  html += '<div style="font-size:11px;line-height:1.6">';
+  html += '<strong>Hook:</strong> '+(tr.visionLock.hookIdentity||'<em style="color:var(--dm)">Not set</em>')+'<br>';
+  html += '<strong>Genre Lane:</strong> '+tr.visionLock.genreLane+'<br>';
+  html += '<strong>Emotional Job:</strong> '+tr.visionLock.emotionalJob+'<br>';
+  html += '<strong>Hardest-Hit:</strong> '+tr.visionLock.hardestHit;
+  html += '</div></div>';
+
+  html += '<div class="track-field"><div class="track-field-label">REFERENCE TRACKS</div>';
+  html += '<div style="font-size:11px;line-height:1.6">';
+  html += '<strong>Original:</strong> '+(tr.references.original||'—')+'<br>';
+  html += '<strong>Target 1:</strong> '+(tr.references.target1||'—')+'<br>';
+  html += '<strong>Target 2:</strong> '+(tr.references.target2||'—')+'<br>';
+  html += '<strong>Structure:</strong> '+(tr.references.structure||'—');
+  html += '</div></div>';
+
+  html += '<div class="track-field"><div class="track-field-label">BOTTLENECK</div>';
+  html += '<div style="font-size:11px">';
+  if(tr.bottleneck==='none') html += '<span style="color:var(--gn)">No bottleneck</span>';
+  else html += '<span style="color:var(--rd);font-weight:700">'+tr.bottleneck.toUpperCase()+'</span>';
+  html += '</div></div>';
+
+  html += '<div class="track-field"><div class="track-field-label">MARKETING ANGLE</div>';
+  html += '<div style="font-size:11px">'+(tr.marketingAngle||'—')+'</div></div>';
+
+  html += '<div class="track-field"><div class="track-field-label">NOTES</div>';
+  html += '<div style="font-size:11px;color:var(--dm)">'+(tr.notes||'—')+'</div></div>';
+
+  html += '</div>';
+
+  // Col 2: Checks + Assets + Live Tests
+  html += '<div>';
+
+  html += '<div class="track-field"><div class="track-field-label">TRANSLATION CHECKS</div>';
+  html += '<div class="track-check-grid">';
+  ['phone','headphones','car','speakers','mono'].forEach(function(k){
+    var checked = tr.translationChecks[k];
+    html += '<label class="track-check-item"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleTranslation(\''+tr.id+'\',\''+k+'\')"> '+k.charAt(0).toUpperCase()+k.slice(1)+'</label>';
+  });
+  html += '</div></div>';
+
+  html += '<div class="track-field"><div class="track-field-label">CONTENT ASSETS</div>';
+  html += '<div class="track-check-grid">';
+  var assetLabels = {studioClip:'Studio Clip',teaserClip:'Teaser Clip',dropClip:'Drop Clip',crowdClip:'Crowd Clip',reactionClip:'Reaction Clip',artwork:'Artwork',releasePost:'Release Post',followUp:'Follow-Up'};
+  Object.keys(assetLabels).forEach(function(k){
+    var checked = tr.contentAssets[k];
+    html += '<label class="track-check-item"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleAsset(\''+tr.id+'\',\''+k+'\')"> '+assetLabels[k]+'</label>';
+  });
+  html += '</div></div>';
+
+  // Live Test Log
+  html += '<div class="track-field"><div class="track-field-label">LIVE TEST LOG</div>';
+  if(tr.liveTests.length===0) html += '<div style="font-size:10px;color:var(--dm)">No live tests logged</div>';
+  tr.liveTests.forEach(function(lt){
+    html += '<div class="feedback-entry"><strong>'+lt.where+'</strong> ('+lt.date+') — Reaction: '+lt.reaction+(lt.idRequests?' | ID requests':'')+(lt.playAgain?' | Would play again':'')+'</div>';
+  });
+  html += '</div>';
+
+  // Related Posts
+  html += '<div class="track-field"><div class="track-field-label">RELATED POSTS</div>';
+  if(tr.relatedPosts.length===0) html += '<div style="font-size:10px;color:var(--dm)">No linked posts</div>';
+  tr.relatedPosts.forEach(function(p){
+    html += '<div style="font-size:10px;margin-bottom:3px">'+p.type+' ('+p.date+') — '+p.likes+'L / '+p.comments+'C</div>';
+  });
+  html += '</div>';
+
+  html += '</div>';
+  html += '</div>'; // end grid
+
+  // Production subtasks for this track
+  var trackTasks = STATE.tasks.filter(function(t){ return t.trackId===tr.id; });
+  var parentTask = trackTasks.find(function(t){ return !t.parentId; });
+  if(parentTask){
+    var subs = getSubtasks(parentTask.id);
+    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
+    html += '<div class="track-field-label" style="margin-bottom:8px">PRODUCTION SUBTASKS ('+subs.filter(function(s){return s.status==='completed'}).length+'/'+subs.length+')</div>';
+    subs.forEach(function(sub){
+      var done = sub.status==='completed';
+      html += '<div style="display:flex;align-items:center;gap:6px;padding:3px 0">';
+      html += '<div class="task-cb pr-'+sub.priority+(done?' checked':'')+'" onclick="event.stopPropagation();toggleTask(\''+sub.id+'\');renderTracks()" style="width:14px;height:14px;min-width:14px;font-size:8px">'+(done?'&#10003;':'')+'</div>';
+      html += '<span style="font-size:11px;'+(done?'text-decoration:line-through;opacity:.4;':'')+'">'+sub.title+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Feedback log
+  var trackFeedback = STATE.feedback.filter(function(f){ return f.trackId===tr.id; });
+  html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
+  html += '<div class="track-field-label" style="margin-bottom:8px">FEEDBACK LOG</div>';
+  if(trackFeedback.length===0) html += '<div style="font-size:10px;color:var(--dm)">No feedback logged</div>';
+  trackFeedback.forEach(function(fb){
+    html += '<div class="feedback-entry">';
+    html += '<div class="feedback-entry-hdr"><span style="font-weight:700">'+fb.source+'</span><span style="color:var(--dm);font-size:9px">'+fb.date+'</span>';
+    html += '<span class="tg tg-'+(fb.impact==='high'?'g':fb.impact==='medium'?'a':'r')+'">'+fb.impact+'</span></div>';
+    html += '<div>'+fb.summary+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Decision Engine
+  html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
+  html += '<div class="track-field-label" style="margin-bottom:8px">DECISION ENGINE</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  STATUSES.forEach(function(s){
+    var active = tr.status===s;
+    html += '<button onclick="event.stopPropagation();setTrackStatus(\''+tr.id+'\',\''+s+'\')" class="status-pill status-'+s+'" style="cursor:pointer;border:none;'+(active?'box-shadow:0 0 0 2px var(--tx);':'opacity:.4;')+'">'+s+'</button>';
+  });
+  html += '</div></div>';
+
+  // Add custom task
+  html += '<div class="mini-add-task">';
+  html += '<div style="display:flex;gap:6px;align-items:center">';
+  html += '<input class="add-task-input" id="track-task-'+tr.id+'" placeholder="Add custom task for '+tr.name+'..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addTrackTask(\''+tr.id+'\')}">';
+  html += '<button class="add-task-btn" onclick="event.stopPropagation();addTrackTask(\''+tr.id+'\')" style="font-size:9px;padding:5px 10px">+ ADD</button>';
+  html += '</div></div>';
+
+  return html;
+}
+
+function toggleTranslation(trackId, key){
+  var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
+  if(tr){ tr.translationChecks[key] = !tr.translationChecks[key]; saveState(); }
+}
+function toggleAsset(trackId, key){
+  var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
+  if(tr){ tr.contentAssets[key] = !tr.contentAssets[key]; saveState(); }
+}
+function setTrackStatus(trackId, status){
+  var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
+  if(tr){ tr.status = status; saveState(); renderTracks(); renderAgenda(); }
+}
+function addTrackTask(trackId){
+  var input = document.getElementById('track-task-'+trackId);
+  if(!input||!input.value.trim()) return;
+  var parentTask = STATE.tasks.find(function(t){ return t.trackId===trackId && !t.parentId; });
+  addTask(input.value, 'Producing', 'blue', parentTask?parentTask.id:null, trackId, null, 'tracks');
+  input.value = '';
+  renderTracks();
+}
+
+// =====================================================
+// INIT
+// =====================================================
+function init(){
+  loadState();
+  renderAgenda();
+  renderMasterTasks();
+}
+</script>
+</head>
+<body onload="init()">
+<div class="app">
+
+<div class="hd">
+  <div class="hd-sub">DJ &amp; PRODUCING CENTER V6</div>
+</div>
+
+<div class="tb"><div class="tb-in">
+  <button class="t-btn on" onclick="showTab('hq')">HQ</button>
+  <button class="t-btn" onclick="showTab('content')">CONTENT</button>
+  <button class="t-btn" onclick="showTab('growth')">GROWTH</button>
+  <button class="t-btn" onclick="showTab('outreach')">OUTREACH</button>
+  <button class="t-btn" onclick="showTab('tracks')">TRACKS</button>
+  <button class="t-btn" onclick="showTab('settings')">SETTINGS</button>
+</div></div>
+
+<!-- ============================================================ -->
+<!--  HQ — Executive Dashboard                                    -->
+<!-- ============================================================ -->
+<div class="tc on" id="t-hq">
+
+<!-- Daily Agenda -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#9733;</span><span class="st">Daily Agenda</span></div>
+  <div class="agenda-card" id="daily-agenda"></div>
+</div>
+
+<!-- Master Task Tracker -->
+<div class="sec">
+  <div class="sh"><span class="sn">TASKS</span><span class="st">Master Task Tracker</span></div>
+  <div id="master-tasks"></div>
+</div>
+
+<!-- Master Strategy -->
+<div class="sec">
+  <div class="sh"><span class="sn">ENGINE</span><span class="st">Master Strategy</span></div>
+  <div class="nb">
+    <strong>PRIMARY FOCUS:</strong> Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.<br><br>
+    <strong>FORMAT:</strong> 60% Reels, 25% Carousels, 15% Images (release art only)<br>
+    <strong>FREQUENCY:</strong> 4-5 reels/week. Daily during release weeks.<br>
+    <strong>AUDIO:</strong> Always your own music. Never trending sounds.<br>
+    <strong>HASHTAGS:</strong> #techhouse #dj #housemusic #remix (same 4, every post)
+  </div>
+</div>
+
+<!-- What's Working -->
+<div class="sec">
+  <div class="sh"><span class="sn" style="color:var(--gn)">&#10003;</span><span class="st">What's Working</span></div>
+  <div class="g">
+    <div class="c w"><div class="cl">ENGAGEMENT RATE</div><div class="cv">14.3%</div><div class="cs">278 followers. Industry avg 1-3%. Content quality is proven.</div></div>
+    <div class="c w"><div class="cl">SOUNDCLOUD MOMENTUM</div><div class="cv">+84%</div><div class="cs">199 plays in 30d. "Every 1's A Winner" = 39.5% of all plays. Remixes work.</div></div>
+    <div class="c w"><div class="cl">FIRST 2 REELS POSTED</div><div class="cv">51 + 25</div><div class="cs">"hunter mtn nights" 51 eng (above avg). "pack up ya bags" teaser 25 eng.</div></div>
+    <div class="c w"><div class="cl">LABEL INTEREST</div><div class="cv">&#10003; EPK SENT</div><div class="cs">Label founder liked Pack Up Ya Bags. EPK delivered. Awaiting response.</div></div>
+  </div>
+</div>
+
+<!-- What's Not Working -->
+<div class="sec">
+  <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">What's Not Working</span></div>
+  <div class="g">
+    <div class="c x"><div class="cl">POSTING CADENCE</div><div class="cv">~3/mo</div><div class="cs">Competitors avg 8-10 reels/week. You're 10x below. #1 bottleneck.</div></div>
+    <div class="c x"><div class="cl">NO TIKTOK</div><div class="cv">0</div><div class="cs">Highest organic reach platform for DJ content. Lost discovery daily.</div></div>
+    <div class="c x"><div class="cl">NO WEEKLY FORMAT</div><div class="cv">&mdash;</div><div class="cs">Chalant posts "three heaters" every Monday (6/30 reels). You have no recurring format.</div></div>
+  </div>
+</div>
+
+<!-- Focus Right Now -->
+<div class="sec">
+  <div class="sh"><span class="sn" style="color:var(--am)">!</span><span class="st">Focus Right Now</span></div>
+  <div class="g">
+    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Release Pack Up Ya Bags on SC + post Reel 2 with "COMMENT remix" CTA<br><strong>2.</strong> Post first "Three Heaters Monday" roundup (tag 3 original artists)<br><strong>3.</strong> Post Wicked Game "should I drop this?" reel from Hunter Mtn footage<br><strong>4.</strong> Create TikTok account</div></div>
+    <div class="c p"><div class="cl">THIS MONTH</div><div class="cs"><strong>5.</strong> Record 60-min tech house mix (unlocks all outreach)<br><strong>6.</strong> DM @lowercase518 with mix link<br><strong>7.</strong> Email 518 Craft for Friday rotation<br><strong>8.</strong> Post 12+ reels total this month</div></div>
+    <div class="c p"><div class="cl">90 DAYS</div><div class="cs"><strong>9.</strong> Submit demo to Votion Records<br><strong>10.</strong> Start Harry Styles "Aperture" bootleg<br><strong>11.</strong> Hit 500 IG followers<br><strong>12.</strong> Get first Boston-area booking</div></div>
+  </div>
+</div>
+
+<div class="ds">All derived from MASTER_STRATEGY_ENGINE. Last updated: March 17, 2026. Source: Apify live scrape + SoundCloud Artist Pro + 200 competitor reels</div>
+</div>
+
+<!-- ============================================================ -->
+<!--  CONTENT — Analytics + Strategy + Reels Intel + Libraries    -->
+<!-- ============================================================ -->
+<div class="tc" id="t-content">
+<div class="sub-tabs" id="content-tabs">
+  <button class="sub-btn on" data-sub="c-analytics" onclick="showSub('t-content','c-analytics')">Analytics</button>
+  <button class="sub-btn" data-sub="c-strategy" onclick="showSub('t-content','c-strategy')">Strategy</button>
+  <button class="sub-btn" data-sub="c-reels" onclick="showSub('t-content','c-reels')">Reels Intel</button>
+  <button class="sub-btn" data-sub="c-hooks" onclick="showSub('t-content','c-hooks')">Hook Library</button>
+  <button class="sub-btn" data-sub="c-scenes" onclick="showSub('t-content','c-scenes')">Scene Library</button>
+  <button class="sub-btn" data-sub="c-pipeline" onclick="showSub('t-content','c-pipeline')">Idea Pipeline</button>
+</div>
+
+<!-- ANALYTICS -->
+<div class="sub-c on" id="c-analytics">
+<div class="sec">
+  <div class="sh"><span class="sn">IG</span><span class="st">Instagram &mdash; @itselcapitan_</span></div>
+  <div class="g">
+    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">278</div><div class="cs">+18 since Mar 12 (+6.9%) &middot; Following: 577</div></div>
+    <div class="c ig"><div class="cl">POSTS</div><div class="cv">22</div><div class="cs">Booking email in bio &#10003;</div></div>
+    <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">14.3%</div><div class="cs">Avg 34.1 eng per post</div></div>
+    <div class="c ig"><div class="cl">NEW REELS</div><div class="cv">2</div><div class="cs">"hunter mtn nights" 51 eng &middot; "pack up ya bags" 25 eng</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#9733;</span><span class="st">Top Posts</span></div>
+  <div class="tw"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody>
+    <tr><td>Hunter Mtn lineup (co-author)</td><td>Image</td><td>Feb 18</td><td style="color:var(--ac);font-weight:700">117</td></tr>
+    <tr><td>(no caption) sidecar</td><td>Sidecar</td><td>Feb 2</td><td style="color:var(--ac)">84</td></tr>
+    <tr><td>"post more" sidecar</td><td>Sidecar</td><td>Nov 27</td><td style="color:var(--ac)">73</td></tr>
+    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">hunter mtn nights (NEW)</td><td>Reel</td><td>Mar 16</td><td style="color:var(--gn);font-weight:700">51</td></tr>
+    <tr><td>Chibiza set on SC</td><td>Sidecar</td><td>May 13</td><td style="color:var(--ac)">52</td></tr>
+    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">pack up ya bags (NEW)</td><td>Reel</td><td>Mar 17</td><td style="color:var(--gn)">25</td></tr>
+  </tbody></table></div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="content-task-input" placeholder="Add social media task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('content-task-input','Social Media')">
+    <button class="add-task-btn" onclick="addTaskFromTab('content-task-input','Social Media')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+
+<!-- STRATEGY -->
+<div class="sub-c" id="c-strategy">
+<div class="sec">
+  <div class="sh"><span class="sn">&#9650;</span><span class="st">Priority Formats (from Master Strategy Engine)</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Format</th><th>Evidence</th><th>Impact</th></tr></thead><tbody>
+    <tr><td>1</td><td style="font-weight:700">Remix teaser with recognizable hook</td><td>Wally 14K, Chalant model, NIIKO 519K</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>2</td><td style="font-weight:700">Co-authored event promos</td><td>Your #1 at 72 avg eng</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>3</td><td style="font-weight:700">Three heaters weekly roundup</td><td>Chalant 6/30 reels, avg 460 likes</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>4</td><td style="font-weight:700">Bigger DJ playing your track</td><td>Austin Ashtin FISHER 3K, Chalant Bolo 1.5K</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>5</td><td style="font-weight:700">"Should I drop this?" gauge CTA</td><td>NIIKO 162C, Bolo 90C, DANSYN confirmed</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>6</td><td style="font-weight:700">COMMENT keyword CTA (release day)</td><td>Zachh 1,013C, Luke 160C</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td>7</td><td style="font-weight:700">Journey narrative / origin story</td><td>Wally 304, DANSYN 138C (20.6% rate)</td><td><span class="tg tg-a">MED</span></td></tr>
+    <tr><td>8</td><td style="font-weight:700">Talking head DJ life take</td><td>Luke 3,920 (10x avg)</td><td><span class="tg tg-a">MED</span></td></tr>
+  </tbody></table></div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">Avoid</span></div>
+  <div class="g">
+    <div class="c x"><div class="cl">CAPTIONLESS IMAGES</div><div class="cs">Avg 15 eng. Worst format.</div></div>
+    <div class="c x"><div class="cl">TRENDING AUDIO</div><div class="cs">Every 10K+ account uses original audio.</div></div>
+    <div class="c x"><div class="cl">HASHTAG SPAM</div><div class="cs">Top performers: 3-4 focused tags.</div></div>
+    <div class="c x"><div class="cl">SINGLE-POST RELEASES</div><div class="cs">3-reel minimum per release.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- REELS INTEL -->
+<div class="sub-c" id="c-reels">
+<div class="sec">
+  <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (~200 scraped)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Key Pattern</th></tr></thead><tbody>
+    <tr><td>@domdolla</td><td>rhyme dust interlude</td><td style="color:var(--ac);font-weight:700">736K</td><td>9M</td><td>Raw studio + casual caption</td></tr>
+    <tr><td>@niikoxswae</td><td>Rule The World w/ Tiesto</td><td style="color:var(--ac)">519K</td><td>8.5M</td><td>Major collab + nostalgia flip</td></tr>
+    <tr><td>@domdolla</td><td>made this on the plane</td><td>196K</td><td>3.2M</td><td>Studio-on-the-go</td></tr>
+    <tr><td>@zachhzachhzachh</td><td>fredagain/skepta mashup</td><td>145K</td><td>&mdash;</td><td>Meme + artist tag bait</td></tr>
+    <tr><td>@bolothedj</td><td>taco shop rave</td><td>139K</td><td>2.9M</td><td>Unexpected venue, energy</td></tr>
+    <tr><td>@sidequestdj</td><td>Day 6/10 remix challenge</td><td>120K</td><td>&mdash;</td><td>Serial format, daily challenge</td></tr>
+    <tr><td>@domdolla</td><td>totally addicted to bass</td><td>76K</td><td>1.4M</td><td>Release day, massive crowd</td></tr>
+    <tr><td>@niikoxswae</td><td>Disco Inferno flip</td><td>24K</td><td>613K</td><td>Nostalgia flip + artist tag</td></tr>
+    <tr><td>@wally_sounds</td><td>Peg (Wally Remix)</td><td>14K</td><td>&mdash;</td><td>Recognizable hook first 2sec</td></tr>
+    <tr><td>@zachhzachhzachh</td><td>COMMENT 4 RAWS</td><td>8.3K</td><td>&mdash;</td><td>Keyword CTA = 1,013 comments</td></tr>
+    <tr><td>@chalantmusic</td><td>Legendary b3b</td><td>4.7K</td><td>165K</td><td>Live energy, tagged artists</td></tr>
+    <tr><td>@lukealexvnder</td><td>a business idea</td><td>3.9K</td><td>94K</td><td>Talking head DJ life take</td></tr>
+    <tr><td>@austinashtinmusic</td><td>FISHER playing Caramel</td><td>3.1K</td><td>40K</td><td>Bigger DJ social proof</td></tr>
+  </tbody></table></div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#128269;</span><span class="st">Universal Patterns (3+ accounts)</span></div>
+  <div class="tw"><table><thead><tr><th>Pattern</th><th>Accounts</th><th>Frequency</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">Original audio on every reel</td><td>ALL 14</td><td>190+/200</td></tr>
+    <tr><td style="font-weight:700">Hook in first 2 seconds</td><td>Wally, SQ, Dom Dolla, NIIKO</td><td>Universal</td></tr>
+    <tr><td style="font-weight:700">Same 3-4 hashtags every post</td><td>Wally, Teeb, Chalant, Zachh</td><td>~170/200</td></tr>
+    <tr><td style="font-weight:700">"Should I drop this?" CTA</td><td>NIIKO, Bolo, DANSYN</td><td>3 accounts</td></tr>
+    <tr><td style="font-weight:700">Multi-reel release rollout</td><td>Wally (3), Zachh (6), SQ (8+)</td><td>Every major release</td></tr>
+    <tr><td style="font-weight:700">Other DJs playing your track</td><td>Austin Ashtin, Chalant, Bolo</td><td>Top for emerging</td></tr>
+    <tr><td style="font-weight:700">Weekly recurring format</td><td>Chalant ("three heaters" 6/30)</td><td>Anchor content</td></tr>
+    <tr><td style="font-weight:700">Tag original artists on remix clips</td><td>ALL remix-focused</td><td>~30%</td></tr>
+  </tbody></table></div>
+</div>
+</div>
+
+<!-- HOOK LIBRARY -->
+<div class="sub-c" id="c-hooks">
+<div class="sec">
+  <div class="sh"><span class="sn">&#127907;</span><span class="st">Hook Library</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>First 2 Seconds</th><th>Source</th><th>Status</th></tr></thead><tbody>
+    <tr><td>1</td><td>Recognizable melody/vocal from original</td><td>Wally (8/10)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+    <tr><td>2</td><td>Bass drop hits frame 1</td><td>SideQuest, Dom Dolla</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+    <tr><td>3</td><td>Crowd reaction shot</td><td>Bolo 139K, Dom Dolla 102K</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+    <tr><td>4</td><td>Friend's face as drop hits</td><td>Your @twindiplomacy (37 eng)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+    <tr><td>5</td><td>DAW screen: empty to full</td><td>Dom Dolla plane (196K)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+    <tr><td>6</td><td>Talking head: compelling first sentence</td><td>Luke Alexander (3,920)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+  </tbody></table></div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#128172;</span><span class="st">Caption Templates</span></div>
+  <div class="tw"><table><thead><tr><th>Template</th><th>Source</th><th>When to Use</th></tr></thead><tbody>
+    <tr><td>"[song lyric fragment]"</td><td>Wally</td><td>Remix teasers</td></tr>
+    <tr><td>[2-4 word cryptic reaction]</td><td>Teeb</td><td>Gig clips, BTS</td></tr>
+    <tr><td>ALL CAPS + "OUT NOW"</td><td>Zachh, SQ</td><td>Release day only</td></tr>
+    <tr><td>"should I drop this?"</td><td>NIIKO, Bolo</td><td>Unreleased teasers</td></tr>
+    <tr><td>"COMMENT [keyword] for download"</td><td>Zachh, Luke</td><td>Release day CTA</td></tr>
+    <tr><td>"three heaters to kick off the week"</td><td>Chalant</td><td>Monday roundup</td></tr>
+  </tbody></table></div>
+</div>
+</div>
+
+<!-- SCENE LIBRARY -->
+<div class="sub-c" id="c-scenes">
+<div class="sec">
+  <div class="sh"><span class="sn">&#127916;</span><span class="st">Scene Library</span></div>
+  <div class="tw"><table><thead><tr><th>Scene</th><th>Why It Works</th><th>Frequency</th><th>Fit</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">DJ booth / behind decks</td><td>Universal top performer. Crowd visible.</td><td>~60/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">Crowd reaction moment</td><td>Bolo 139K, Dom Dolla 102K. Energy = shares.</td><td>~40/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">Studio / DAW screen</td><td>Dom Dolla 196K. Producer credibility.</td><td>~30/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">Unexpected location</td><td>Dom Dolla plane 196K. Surprise = retention.</td><td>~10/200</td><td><span class="tg tg-a">TEST</span></td></tr>
+    <tr><td style="font-weight:700">Talking head</td><td>Luke 3,920 (10x avg). DANSYN 670.</td><td>~15/200</td><td><span class="tg tg-a">TEST</span></td></tr>
+    <tr><td style="font-weight:700">Event recap montage</td><td>Your Hunter Mtn (51 eng, above avg).</td><td>~25/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">Friend/crew reaction</td><td>Your @twindiplomacy (37). Authentic proof.</td><td>~10/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+  </tbody></table></div>
+</div>
+</div>
+
+<!-- IDEA PIPELINE -->
+<div class="sub-c" id="c-pipeline">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128161;</span><span class="st">Idea Pipeline</span></div>
+  <div class="tw"><table><thead><tr><th>Idea</th><th>Format</th><th>Track</th><th>Priority</th><th>Status</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">Pack Up Ya Bags Reel 2 &mdash; "COMMENT remix"</td><td>Release CTA</td><td>PUYB</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-a">PLANNED</span></td></tr>
+    <tr><td style="font-weight:700">Wicked Game "should I drop this?"</td><td>Gauge CTA</td><td>WG</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-a">PLANNED</span></td></tr>
+    <tr><td style="font-weight:700">First "Three Heaters Monday"</td><td>Weekly roundup</td><td>&mdash;</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+    <tr><td style="font-weight:700">Dashboard walkthrough reel</td><td>Talking head</td><td>&mdash;</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-p">FILMED</span></td></tr>
+    <tr><td style="font-weight:700">Studio remix session unexpected location</td><td>Studio on-the-go</td><td>Next</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+    <tr><td style="font-weight:700">Film Santello reacting at gig</td><td>Social proof</td><td>Any</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+    <tr><td style="font-weight:700">"Started making remixes X months ago"</td><td>Journey montage</td><td>&mdash;</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+    <tr><td style="font-weight:700">Every 1's A Winner clip + artist tag</td><td>Remix promo</td><td>E1AW</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+  </tbody></table></div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="pipeline-task-input" placeholder="Add social media task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('pipeline-task-input','Social Media')">
+    <button class="add-task-btn" onclick="addTaskFromTab('pipeline-task-input','Social Media')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!--  GROWTH — SC + Competitors + Cadence                         -->
+<!-- ============================================================ -->
+<div class="tc" id="t-growth">
+<div class="sub-tabs" id="growth-tabs">
+  <button class="sub-btn on" data-sub="g-sc" onclick="showSub('t-growth','g-sc')">SoundCloud</button>
+  <button class="sub-btn" data-sub="g-comp" onclick="showSub('t-growth','g-comp')">Competitors</button>
+  <button class="sub-btn" data-sub="g-cadence" onclick="showSub('t-growth','g-cadence')">Posting Cadence</button>
+</div>
+
+<div class="sub-c on" id="g-sc">
+<div class="sec">
+  <div class="sh"><span class="sn">SC</span><span class="st">SoundCloud</span></div>
+  <div class="g">
+    <div class="c sc"><div class="cl">FOLLOWERS</div><div class="cv">41</div></div>
+    <div class="c sc"><div class="cl">TOTAL PLAYS</div><div class="cv">603</div><div class="cs">30d: 199 <span style="color:var(--gn)">(+84%)</span></div></div>
+    <div class="c sc"><div class="cl">TRACKS</div><div class="cv">9</div></div>
+    <div class="c sc"><div class="cl">ENGAGEMENT</div><div class="cv">85</div><div class="cs">37 likes &middot; 22 reposts &middot; 26 comments</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#127760;</span><span class="st">Geography</span></div>
+  <div class="geo">
+    <div class="geo-i"><div class="geo-v">52</div><div class="geo-l">Schenectady</div></div>
+    <div class="geo-i"><div class="geo-v">11</div><div class="geo-l">Wayland</div></div>
+    <div class="geo-i"><div class="geo-v">10</div><div class="geo-l">New York</div></div>
+    <div class="geo-i"><div class="geo-v">5</div><div class="geo-l">Sydney, AU</div></div>
+  </div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="growth-task-input" placeholder="Add analytics task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('growth-task-input','Analytics')">
+    <button class="add-task-btn" onclick="addTaskFromTab('growth-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+
+<div class="sub-c" id="g-comp">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (14 scraped)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">@chalantmusic</td><td>8,984</td><td>30</td><td>638</td><td>"Three heaters" Monday, other DJs playing tracks</td><td><span class="tg tg-g">HIGHEST</span></td></tr>
+    <tr><td style="font-weight:700">@wally_sounds</td><td>10,213</td><td>10</td><td>1,963</td><td>Recognizable hook remix, 3-reel rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@zachhzachhzachh</td><td>10,280</td><td>10</td><td>17,775</td><td>COMMENT keyword CTA, release rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@teeeebbbbb</td><td>7,355</td><td>10</td><td>454</td><td>Ultra-short captions, daily posting</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@keepdansyn</td><td>~5K</td><td>15</td><td>273</td><td>John Summit connection, journey narrative</td><td><span class="tg tg-a">MED</span></td></tr>
+    <tr><td style="font-weight:700">@austinashtinmusic</td><td>~15K</td><td>12</td><td>573</td><td>FISHER playing tracks, Catch&amp;Release</td><td><span class="tg tg-a">MED</span></td></tr>
+    <tr><td style="font-weight:700">@niikoxswae</td><td>202K</td><td>15</td><td>37,777</td><td>Same audio/diff visual, nostalgia flips</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@domdolla</td><td>800K+</td><td>12</td><td>122,945</td><td>Raw studio, casual captions</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@bolothedj</td><td>100K+</td><td>14</td><td>21,419</td><td>Fan competitions, "should I drop" CTA</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@sidequestdj</td><td>339K</td><td>10</td><td>33,019</td><td>DM keyword CTA, Day X/10 challenge</td><td><span class="tg tg-b">STUDY</span></td></tr>
+  </tbody></table></div>
+</div>
+</div>
+
+<div class="sub-c" id="g-cadence">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Posting Cadence vs Competitors</span></div>
+  <div class="g">
+    <div class="c x"><div class="cl">YOU</div><div class="cv">~3/mo</div><div class="cs">Target: 16-20/mo (4-5/week)</div></div>
+    <div class="c w"><div class="cl">CHALANT</div><div class="cv">~8/wk</div><div class="cs">30 reels in ~5 weeks. Near-daily.</div></div>
+    <div class="c w"><div class="cl">TEEB</div><div class="cv">~7/wk</div><div class="cs">10 reels in 10 days. Daily poster.</div></div>
+    <div class="c w"><div class="cl">WALLY</div><div class="cv">~6/wk</div><div class="cs">10 reels in 12 days. Near-daily.</div></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!--  OUTREACH — Venues + Labels                                   -->
+<!-- ============================================================ -->
+<div class="tc" id="t-outreach">
+<div class="sub-tabs" id="outreach-tabs">
+  <button class="sub-btn on" data-sub="o-venues" onclick="showSub('t-outreach','o-venues')">Venues</button>
+  <button class="sub-btn" data-sub="o-labels" onclick="showSub('t-outreach','o-labels')">Labels</button>
+</div>
+
+<div class="sub-c on" id="o-venues">
+<div class="sec">
+  <div class="sh"><span class="sn">&#127927;</span><span class="st">Venue Queue</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Venue</th><th>Market</th><th>Contact</th></tr></thead><tbody>
+    <tr><td>1</td><td style="font-weight:700">lowercase</td><td>Capital Region</td><td>DM @lowercase518</td></tr>
+    <tr><td>2</td><td style="font-weight:700">518 Craft</td><td>Capital Region</td><td>&#116;&#114;&#111;&#121;&#64;&#53;&#49;&#56;&#99;&#114;&#97;&#102;&#116;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>3</td><td style="font-weight:700">Votion Records</td><td>Boston</td><td>&#118;&#111;&#116;&#105;&#111;&#110;&#114;&#101;&#99;&#111;&#114;&#100;&#115;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>4</td><td style="font-weight:700">No Fun (Troy)</td><td>Capital Region</td><td>&#110;&#111;&#102;&#117;&#110;&#116;&#114;&#111;&#121;&#98;&#111;&#111;&#107;&#105;&#110;&#103;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>5</td><td style="font-weight:700">Eastcoast UDM</td><td>Boston</td><td>&#69;&#97;&#115;&#116;&#99;&#111;&#97;&#115;&#116;&#85;&#68;&#77;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>6</td><td style="font-weight:700">All of Us Events</td><td>Capital Region</td><td>&#115;&#104;&#97;&#110;&#101;&#64;&#115;&#104;&#97;&#110;&#101;&#115;&#116;&#105;&#101;&#108;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>7</td><td style="font-weight:700">Keep On Boston</td><td>Boston</td><td>DM @keeponboston</td></tr>
+    <tr><td>8</td><td style="font-weight:700">Flora Collective</td><td>Boston</td><td>&#102;&#108;&#111;&#114;&#97;&#109;&#117;&#115;&#105;&#99;&#99;&#111;&#108;&#108;&#101;&#99;&#116;&#105;&#118;&#101;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
+  </tbody></table></div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="outreach-task-input" placeholder="Add outreach task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('outreach-task-input','Outreach')">
+    <button class="add-task-btn" onclick="addTaskFromTab('outreach-task-input','Outreach')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+
+<div class="sub-c" id="o-labels">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128191;</span><span class="st">Label Queue</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Label</th><th>Contact</th></tr></thead><tbody>
+    <tr><td>1</td><td style="font-weight:700">Votion Records</td><td>&#118;&#111;&#116;&#105;&#111;&#110;&#114;&#101;&#99;&#111;&#114;&#100;&#115;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>2</td><td style="font-weight:700">Shall Not Fade</td><td>Linktree form</td></tr>
+    <tr><td>3</td><td style="font-weight:700">Yoshitoshi</td><td>&#100;&#101;&#109;&#111;&#115;&#64;&#121;&#111;&#115;&#104;&#105;&#116;&#111;&#115;&#104;&#105;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>4</td><td style="font-weight:700">Ovum Recordings</td><td>joshwink.com form</td></tr>
+    <tr><td>5</td><td style="font-weight:700">Moon Harbour</td><td>&#100;&#101;&#109;&#111;&#64;&#109;&#111;&#111;&#110;&#104;&#97;&#114;&#98;&#111;&#117;&#114;&#46;&#99;&#111;&#109;</td></tr>
+    <tr><td>6</td><td style="font-weight:700">Studio Barnhus</td><td>&#100;&#101;&#109;&#111;&#64;&#115;&#116;&#117;&#100;&#105;&#111;&#98;&#97;&#114;&#110;&#104;&#117;&#115;&#46;&#115;&#101;</td></tr>
+    <tr><td>7</td><td style="font-weight:700">Lobster Theremin</td><td>&#100;&#101;&#109;&#111;&#115;&#64;&#108;&#111;&#98;&#115;&#116;&#101;&#114;&#116;&#104;&#101;&#114;&#101;&#109;&#105;&#110;&#46;&#99;&#111;&#109;</td></tr>
+  </tbody></table></div>
+  <div class="nb" style="margin-top:10px"><strong>Path:</strong> Votion &rarr; Shall Not Fade + Yoshitoshi &rarr; Moon Harbour &rarr; Diynamic &rarr; Innervisions (3-5yr)</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!--  TRACKS — Production Pipeline + Rollout + Execution          -->
+<!-- ============================================================ -->
+<div class="tc" id="t-tracks">
+<div class="sub-tabs" id="tracks-tabs">
+  <button class="sub-btn on" data-sub="trk-table" onclick="showSub('t-tracks','trk-table')">Track Pipeline</button>
+  <button class="sub-btn" data-sub="trk-perf" onclick="showSub('t-tracks','trk-perf')">Track Performance</button>
+  <button class="sub-btn" data-sub="trk-ads" onclick="showSub('t-tracks','trk-ads')">Ads &amp; Analytics</button>
+</div>
+
+<div class="sub-c on" id="trk-table">
+<div class="sec">
+  <div class="sh"><span class="sn">&#127925;</span><span class="st">Track Pipeline</span></div>
+  <div class="tw"><table>
+    <thead><tr>
+      <th class="sort-btn" onclick="sortTracks('name')">Track <span class="sort-indicator">&#8645;</span></th>
+      <th>Type</th>
+      <th>Genre</th>
+      <th class="sort-btn" onclick="sortTracks('status')">Status <span class="sort-indicator">&#8645;</span></th>
+      <th class="sort-btn" onclick="sortTracks('stage')">Stage <span class="sort-indicator">&#8645;</span></th>
+      <th class="sort-btn" onclick="sortTracks('priority')">Priority <span class="sort-indicator">&#8645;</span></th>
+      <th>Emotional Job</th>
+      <th>Next Action</th>
+      <th>Due</th>
+      <th>Last Worked</th>
+      <th class="sort-btn" onclick="sortTracks('momentum')">Momentum <span class="sort-indicator">&#8645;</span></th>
+      <th class="sort-btn" onclick="sortTracks('readiness')">Ready <span class="sort-indicator">&#8645;</span></th>
+    </tr></thead>
+    <tbody id="track-table-body"></tbody>
+  </table></div>
+  <div class="nb" style="margin-top:10px"><strong>Click any row</strong> to expand track detail — vision lock, production subtasks, feedback log, content assets, translation checks, live test log, and decision engine.</div>
+</div>
+</div>
+
+<!-- TRACK PERFORMANCE -->
+<div class="sub-c" id="trk-perf">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Track Performance</span></div>
+  <div class="tw"><table><thead><tr><th>Track</th><th>SC Plays</th><th>IG Posts</th><th>Best Post Eng</th><th>Best Format</th></tr></thead><tbody>
+    <tr><td>Every 1's A Winner</td><td style="color:var(--ac);font-weight:700">238</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
+    <tr><td>Sports Car</td><td style="color:var(--ac)">185</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
+    <tr><td>DANCE.</td><td>112</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
+    <tr><td>Pack Up Ya Bags</td><td>&mdash;</td><td>1</td><td>25</td><td>Teaser reel</td></tr>
+    <tr><td>Wicked Game</td><td>6</td><td>1 (bg)</td><td>51 (indirect)</td><td>Event recap with remix audio</td></tr>
+  </tbody></table></div>
+  <div class="nb" style="margin-top:10px"><strong>Insight:</strong> Your top 3 SC tracks (238, 185, 112 plays) have ZERO Instagram promotion. This is the single biggest missed opportunity.</div>
+</div>
+</div>
+
+<!-- ADS & ANALYTICS -->
+<div class="sub-c" id="trk-ads">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128176;</span><span class="st">Ads Performance</span></div>
+  <div class="nb">
+    <strong>No ad campaigns imported yet.</strong><br><br>
+    To populate this section:<br>
+    1. Export your Meta Ads Manager data as CSV<br>
+    2. Upload and the system will parse: campaign name, ad set, spend, impressions, reach, CPM, CPC, CTR, link clicks, landing page views, profile visits, follows, plays/views, cost per result<br>
+    3. Best creative, best hook, best CTA, and best audience will be auto-identified<br><br>
+    <strong>Recommended analytics tools:</strong><br>
+    &bull; <strong>Meta Business Suite</strong> &mdash; native IG analytics (free)<br>
+    &bull; <strong>Metricool</strong> &mdash; cross-platform analytics + scheduling<br>
+    &bull; <strong>Iconosquare</strong> &mdash; deep IG analytics + competitor benchmarking<br>
+    &bull; <strong>Apify Instagram scrapers</strong> &mdash; already integrated in this dashboard
+  </div>
+</div>
+<!-- Add Task -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="ads-task-input" placeholder="Add analytics task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('ads-task-input','Analytics')">
+    <button class="add-task-btn" onclick="addTaskFromTab('ads-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!--  SETTINGS                                                     -->
+<!-- ============================================================ -->
+<div class="tc" id="t-settings">
+<div class="sec">
+  <div class="sh"><span class="sn">&#9881;</span><span class="st">Accounts</span></div>
+  <div class="g">
+    <div class="c ig"><div class="cl">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs">Auto-scraped via Apify</div></div>
+    <div class="c sc"><div class="cl">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:var(--ac)">soundcloud.com/itselcapitan</a></div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TIKTOK</div><div class="cv" style="font-size:13px">NOT CONNECTED</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#128451;</span><span class="st">Data Sources</span></div>
+  <div class="nb">
+    <strong>Master Dataset:</strong> ~200 reels, 14 accounts, 6 Apify datasets<br>
+    <strong>IG Profile:</strong> Apify profile + post scraper (Mar 17, 2026)<br>
+    <strong>SoundCloud:</strong> Artist Pro screenshots (Mar 12, 2026)<br>
+    <strong>Competitors:</strong> 6 reel scraper datasets (Mar 12-17, 2026)<br><br>
+    <strong>Dataset IDs:</strong><br>
+    WrwLABGVcPGpMFEuV &middot; bgc7XdP0IIexl1gDD &middot; fypmt26TUtE0KawEP<br>
+    5XRX4HzWS9F1WY82g &middot; diquoIcUI9wZeYHyk &middot; Svx9Gx8MJyVjyU3dj<br><br>
+    <strong>Refresh:</strong> Say "pull my analytics again" to re-scrape and update MSE.
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#128190;</span><span class="st">Data Management</span></div>
+  <div class="nb">
+    <strong>Local Storage:</strong> All task, track, and feedback data persists in your browser via localStorage.<br>
+    <strong>Reset:</strong> <a href="#" onclick="if(confirm('Reset all task/track data to defaults?')){localStorage.removeItem('elcap_v6_state');db.ref('state').remove();location.reload()}" style="color:var(--rd)">Reset all data to defaults</a><br>
+    <strong>Sync status:</strong> <span id="sync-status" style="color:var(--gn)">Connected to Firebase</span>
+  </div>
+</div>
+</div>
+
+</div>
+</body>
+</html>
