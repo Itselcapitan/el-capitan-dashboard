@@ -377,7 +377,16 @@ function loadState(){
   // Load from localStorage immediately for fast first paint
   try {
     var saved = localStorage.getItem('elcap_v6_state');
-    if(saved){ STATE = JSON.parse(saved); _uid = STATE._uid || 1000; }
+    if(saved){
+      STATE = JSON.parse(saved);
+      if(STATE.tracks && !Array.isArray(STATE.tracks)) STATE.tracks = Object.values(STATE.tracks);
+      if(STATE.tasks && !Array.isArray(STATE.tasks)) STATE.tasks = Object.values(STATE.tasks);
+      if(STATE.feedback && !Array.isArray(STATE.feedback)) STATE.feedback = Object.values(STATE.feedback);
+      if(STATE.ads && !Array.isArray(STATE.ads)) STATE.ads = Object.values(STATE.ads);
+      if(!STATE.tracks || STATE.tracks.length===0) STATE.tracks = defaultTracks();
+      if(!STATE.tasks || STATE.tasks.length===0) STATE.tasks = defaultTasks();
+      _uid = STATE._uid || 1000;
+    }
     else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid }; }
   } catch(e){
     STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid };
@@ -390,6 +399,15 @@ function loadState(){
       // Only accept Firebase data if it's newer (higher _uid = more changes made)
       if(data._uid >= (_uid || 0)){
         STATE = data;
+        // Firebase converts arrays to objects — normalize back
+        if(STATE.tracks && !Array.isArray(STATE.tracks)) STATE.tracks = Object.values(STATE.tracks);
+        if(STATE.tasks && !Array.isArray(STATE.tasks)) STATE.tasks = Object.values(STATE.tasks);
+        if(STATE.feedback && !Array.isArray(STATE.feedback)) STATE.feedback = Object.values(STATE.feedback);
+        if(STATE.ads && !Array.isArray(STATE.ads)) STATE.ads = Object.values(STATE.ads);
+        if(!STATE.tracks) STATE.tracks = [];
+        if(!STATE.tasks) STATE.tasks = [];
+        if(!STATE.feedback) STATE.feedback = [];
+        if(!STATE.ads) STATE.ads = [];
         _uid = STATE._uid || 1000;
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
@@ -1006,6 +1024,41 @@ function addTrackTask(trackId){
 }
 
 // =====================================================
+// ADD NEW TRACK
+// =====================================================
+function addNewTrack(){
+  var nameInput = document.getElementById('new-track-name');
+  var name = nameInput ? nameInput.value.trim() : '';
+  if(!name) return;
+  var type = document.getElementById('new-track-type').value;
+  var genre = document.getElementById('new-track-genre').value;
+  var priority = document.getElementById('new-track-priority').value;
+  var id = 'tr_'+uid();
+  var track = {
+    id:id, name:name, type:type, genre:genre, emotionalJob:'', hardestHit:'', status:'PUSH', stage:1, priority:priority,
+    demoLink:'', notes:'', feedbackSummary:'', bestHookTimestamp:'', nextAction:'Define anchor + set up references',
+    dueDate:null, lastWorkedOn:new Date().toISOString().slice(0,10), relatedPosts:[], bestPost:null, rolloutStatus:'Not Started',
+    visionLock:{hookIdentity:'',genreLane:genre,emotionalJob:'',hardestHit:''},
+    references:{original:'',target1:'',target2:'',structure:''},
+    translationChecks:{phone:false,headphones:false,car:false,speakers:false,mono:false},
+    contentAssets:{studioClip:false,teaserClip:false,dropClip:false,crowdClip:false,reactionClip:false,artwork:false,releasePost:false,followUp:false},
+    bottleneck:'none', versions:[], liveTests:[], momentumScore:10, readinessScore:0, marketingAngle:''
+  };
+  STATE.tracks.push(track);
+  // Create parent task + subtasks
+  var parentId = 'task_'+id;
+  STATE.tasks.push({id:parentId, title:name, category:'Producing', priority:priority, status:'active', parentId:null, trackId:id, dueDate:null, createdFrom:'tracks', completedAt:null, collapsed:true, notes:''});
+  SUBTASK_TEMPLATES.forEach(function(st){
+    STATE.tasks.push({id:uid()+'', title:st, category:'Producing', priority:priority, status:'active', parentId:parentId, trackId:id, dueDate:null, createdFrom:'tracks', completedAt:null, collapsed:true, notes:''});
+  });
+  saveState();
+  nameInput.value = '';
+  renderTracks();
+  renderMasterTasks();
+  renderAgenda();
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function init(){
@@ -1021,6 +1074,7 @@ function init(){
 <div class="app">
 
 <div class="hd">
+  <img src="logo.png" alt="El Capitán" class="hd-logo">
   <div class="hd-sub">DJ &amp; PRODUCING CENTER V6</div>
 </div>
 
@@ -1450,6 +1504,22 @@ function init(){
     <tbody id="track-table-body"></tbody>
   </table></div>
   <div class="nb" style="margin-top:10px"><strong>Click any row</strong> to expand track detail — vision lock, production subtasks, feedback log, content assets, translation checks, live test log, and decision engine.</div>
+  <!-- Add Track -->
+  <div class="mini-add-task" style="margin-top:14px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input class="add-task-input" id="new-track-name" placeholder="Track name..." style="font-size:11px;padding:6px 10px;flex:1;min-width:140px" onkeydown="if(event.key==='Enter')addNewTrack()">
+      <select class="add-task-select" id="new-track-type" style="font-size:10px;padding:5px 8px">
+        <option value="Remix">Remix</option><option value="Bootleg">Bootleg</option><option value="Edit">Edit</option><option value="Original">Original</option><option value="Mashup">Mashup</option>
+      </select>
+      <select class="add-task-select" id="new-track-genre" style="font-size:10px;padding:5px 8px">
+        <option value="Tech House">Tech House</option><option value="Progressive House">Progressive House</option><option value="Bass House">Bass House</option><option value="Minimal">Minimal</option><option value="Other">Other</option>
+      </select>
+      <select class="add-task-select" id="new-track-priority" style="font-size:10px;padding:5px 8px">
+        <option value="red">🔴 High</option><option value="yellow">🟡 Medium</option><option value="blue">🔵 Low</option><option value="white">⚪ None</option>
+      </select>
+      <button class="add-task-btn" onclick="addNewTrack()" style="font-size:9px;padding:5px 10px">+ ADD TRACK</button>
+    </div>
+  </div>
 </div>
 </div>
 
