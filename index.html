@@ -848,12 +848,28 @@ function renderTracks(){
 
   var html = '';
   tracks.forEach(function(tr){
+    if(!tr || !tr.id) return; // skip null entries
+    try {
+    // Sanitize track before render
+    tr.type=tr.type||'Remix'; tr.genre=tr.genre||''; tr.status=tr.status||'PUSH'; tr.stage=tr.stage||1; tr.priority=tr.priority||'white';
+    tr.emotionalJob=tr.emotionalJob||''; tr.nextAction=tr.nextAction||''; tr.name=tr.name||'Untitled';
+    if(!tr.relatedPosts) tr.relatedPosts=[]; if(!Array.isArray(tr.relatedPosts)) tr.relatedPosts=Object.values(tr.relatedPosts);
+    if(!tr.liveTests) tr.liveTests=[]; if(!Array.isArray(tr.liveTests)) tr.liveTests=Object.values(tr.liveTests);
+    if(!tr.versions) tr.versions=[]; if(!Array.isArray(tr.versions)) tr.versions=Object.values(tr.versions);
+
+    // Calculate completion percentage
+    var trackTasks = STATE.tasks.filter(function(t){ return t.trackId===tr.id && t.parentId; });
+    var doneTasks = trackTasks.filter(function(t){ return t.status==='completed'; });
+    var pct = trackTasks.length>0 ? Math.round((doneTasks.length/trackTasks.length)*100) : 0;
+    var pctColor = pct>=80?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';
+
+    var stageIdx = (tr.stage||1)-1; if(stageIdx<0) stageIdx=0; if(stageIdx>=PRODUCTION_STAGES.length) stageIdx=PRODUCTION_STAGES.length-1;
+
     html += '<tr class="track-row" onclick="toggleTrackDetail(\''+tr.id+'\')">';
-    html += '<td style="font-weight:700">'+tr.name+'</td>';
+    html += '<td style="font-weight:700"><svg width="22" height="22" viewBox="0 0 36 36" style="vertical-align:middle;margin-right:6px"><circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--bd)" stroke-width="3"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="'+pctColor+'" stroke-width="3" stroke-dasharray="'+pct+' '+(100-pct)+'" stroke-dashoffset="25" stroke-linecap="round"/><text x="18" y="21" text-anchor="middle" fill="'+pctColor+'" font-size="10" font-family="Space Mono,monospace" font-weight="700">'+pct+'</text></svg>'+tr.name+'</td>';
     html += '<td>'+tr.type+'</td>';
     html += '<td>'+tr.genre+'</td>';
     html += '<td><span class="status-pill status-'+tr.status+'">'+tr.status+'</span></td>';
-    var stageIdx = (tr.stage||1)-1; if(stageIdx<0) stageIdx=0; if(stageIdx>=PRODUCTION_STAGES.length) stageIdx=PRODUCTION_STAGES.length-1;
     html += '<td><span class="stage-pill '+stagePillClass(tr.stage||1)+'">'+PRODUCTION_STAGES[stageIdx].name+'</span></td>';
     html += '<td><span class="priority-dot pr-'+(tr.priority||'white')+'"></span> '+(tr.priority||'none')+'</td>';
     html += '<td style="font-size:10px">'+(tr.emotionalJob||'—')+'</td>';
@@ -868,6 +884,7 @@ function renderTracks(){
     html += '<div class="track-detail'+(openTrackDetail===tr.id?' open':'')+'" id="detail-'+tr.id+'">';
     html += renderTrackDetail(tr);
     html += '</div></td></tr>';
+    } catch(e){ console.error('Track render error for '+tr.name+':',e); }
   });
   container.innerHTML = html;
 }
@@ -883,6 +900,16 @@ function sortTracks(col){
   renderTracks();
 }
 
+function makeRing(pct,color,size){
+  size=size||44;
+  var r=(size/2)-3, c=2*Math.PI*r, d=pct/100*c;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" style="vertical-align:middle">'
+    +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="var(--bd)" stroke-width="3"/>'
+    +'<circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-dasharray="'+d+' '+(c-d)+'" stroke-dashoffset="'+(-c/4)+'" stroke-linecap="round" style="transition:stroke-dasharray .3s"/>'
+    +'<text x="'+(size/2)+'" y="'+(size/2+4)+'" text-anchor="middle" fill="'+color+'" font-size="'+(size<40?9:11)+'" font-family="Space Mono,monospace" font-weight="700">'+pct+'%</text></svg>';
+}
+function pctColor(pct){ return pct>=80?'var(--gn)':pct>=40?'var(--am)':'var(--rd)'; }
+
 function renderTrackDetail(tr){
   // Safety: ensure nested objects/arrays exist
   if(!tr.visionLock) tr.visionLock={hookIdentity:'',genreLane:'',emotionalJob:'',hardestHit:''};
@@ -895,58 +922,72 @@ function renderTrackDetail(tr){
   if(!Array.isArray(tr.relatedPosts)) tr.relatedPosts=Object.values(tr.relatedPosts);
   if(!tr.versions) tr.versions=[];
   if(!Array.isArray(tr.versions)) tr.versions=Object.values(tr.versions);
+  if(!tr.feedback) tr.feedback=[];
 
   var html = '<div class="track-detail-grid">';
 
-  // Col 1: Vision Lock + References
+  // ── Col 1: Vision Lock + References (EDITABLE) ──
   html += '<div>';
   html += '<div class="track-field"><div class="track-field-label">VISION LOCK</div>';
-  html += '<div style="font-size:11px;line-height:1.6">';
-  html += '<strong>Hook:</strong> '+(tr.visionLock.hookIdentity||'<em style="color:var(--dm)">Not set</em>')+'<br>';
-  html += '<strong>Genre Lane:</strong> '+tr.visionLock.genreLane+'<br>';
-  html += '<strong>Emotional Job:</strong> '+tr.visionLock.emotionalJob+'<br>';
-  html += '<strong>Hardest-Hit:</strong> '+tr.visionLock.hardestHit;
+  html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:11px;align-items:center">';
+  html += '<strong>Hook:</strong><input value="'+(tr.visionLock.hookIdentity||'')+'" placeholder="e.g. Recognizable vocal hook" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'visionLock.hookIdentity\',this.value)">';
+  html += '<strong>Genre Lane:</strong><input value="'+(tr.visionLock.genreLane||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'visionLock.genreLane\',this.value)">';
+  html += '<strong>Emotional Job:</strong><input value="'+(tr.visionLock.emotionalJob||tr.emotionalJob||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'visionLock.emotionalJob\',this.value)">';
+  html += '<strong>Hardest-Hit:</strong><input value="'+(tr.visionLock.hardestHit||tr.hardestHit||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'visionLock.hardestHit\',this.value)">';
   html += '</div></div>';
 
   html += '<div class="track-field"><div class="track-field-label">REFERENCE TRACKS</div>';
-  html += '<div style="font-size:11px;line-height:1.6">';
-  html += '<strong>Original:</strong> '+(tr.references.original||'—')+'<br>';
-  html += '<strong>Target 1:</strong> '+(tr.references.target1||'—')+'<br>';
-  html += '<strong>Target 2:</strong> '+(tr.references.target2||'—')+'<br>';
-  html += '<strong>Structure:</strong> '+(tr.references.structure||'—');
+  html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:11px;align-items:center">';
+  html += '<strong>Original:</strong><input value="'+(tr.references.original||'')+'" placeholder="Original track" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'references.original\',this.value)">';
+  html += '<strong>Target 1:</strong><input value="'+(tr.references.target1||'')+'" placeholder="Pro reference" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'references.target1\',this.value)">';
+  html += '<strong>Target 2:</strong><input value="'+(tr.references.target2||'')+'" placeholder="Pro reference" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'references.target2\',this.value)">';
+  html += '<strong>Structure:</strong><input value="'+(tr.references.structure||'')+'" placeholder="Structure reference" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'references.structure\',this.value)">';
   html += '</div></div>';
 
   html += '<div class="track-field"><div class="track-field-label">BOTTLENECK</div>';
-  html += '<div style="font-size:11px">';
-  if(tr.bottleneck==='none') html += '<span style="color:var(--gn)">No bottleneck</span>';
-  else html += '<span style="color:var(--rd);font-weight:700">'+tr.bottleneck.toUpperCase()+'</span>';
-  html += '</div></div>';
+  html += '<select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'bottleneck\',this.value)" style="font-size:11px">';
+  ['none','arrangement','groove','mix','vocal','marketing'].forEach(function(b){
+    html += '<option value="'+b+'"'+(tr.bottleneck===b?' selected':'')+'>'+( b==='none'?'No bottleneck':b.charAt(0).toUpperCase()+b.slice(1)+' problem')+'</option>';
+  });
+  html += '</select></div>';
 
   html += '<div class="track-field"><div class="track-field-label">MARKETING ANGLE</div>';
-  html += '<div style="font-size:11px">'+(tr.marketingAngle||'—')+'</div></div>';
+  html += '<select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'marketingAngle\',this.value)" style="font-size:11px">';
+  ['','Club weapon','Emotional remix','Nostalgia flip','Producer flex','Crowd reaction','Viral audio angle','Social-proof angle'].forEach(function(a){
+    html += '<option value="'+a+'"'+(tr.marketingAngle===a?' selected':'')+'>'+(a||'— Select —')+'</option>';
+  });
+  html += '</select></div>';
 
   html += '<div class="track-field"><div class="track-field-label">NOTES</div>';
-  html += '<div style="font-size:11px;color:var(--dm)">'+(tr.notes||'—')+'</div></div>';
+  html += '<textarea onclick="event.stopPropagation()" onchange="event.stopPropagation();updateTrackField(\''+tr.id+'\',\'notes\',this.value)" placeholder="Track notes...">'+(tr.notes||'')+'</textarea></div>';
 
   html += '</div>';
 
-  // Col 2: Checks + Assets + Live Tests
+  // ── Col 2: Checks + Assets with RING CHARTS ──
   html += '<div>';
 
-  html += '<div class="track-field"><div class="track-field-label">TRANSLATION CHECKS</div>';
-  html += '<div class="track-check-grid">';
-  ['phone','headphones','car','speakers','mono'].forEach(function(k){
+  // Translation Checks
+  var transKeys = ['phone','headphones','car','speakers','mono'];
+  var transDone = transKeys.filter(function(k){ return tr.translationChecks[k]; }).length;
+  var transPct = Math.round((transDone/transKeys.length)*100);
+  html += '<div class="track-field"><div class="track-field-label" style="display:flex;align-items:center;gap:8px">TRANSLATION CHECKS '+makeRing(transPct,'#E040FB',36)+'</div>';
+  html += '<div class="track-check-grid" style="margin-top:6px">';
+  transKeys.forEach(function(k){
     var checked = tr.translationChecks[k];
-    html += '<label class="track-check-item"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleTranslation(\''+tr.id+'\',\''+k+'\')"> '+k.charAt(0).toUpperCase()+k.slice(1)+'</label>';
+    html += '<label class="track-check-item" style="gap:6px"><input type="checkbox" style="width:14px;height:14px;accent-color:#E040FB" '+(checked?'checked':'')+' onclick="event.stopPropagation()" onchange="event.stopPropagation();toggleTranslation(\''+tr.id+'\',\''+k+'\');renderTracks()"> '+k.charAt(0).toUpperCase()+k.slice(1)+'</label>';
   });
   html += '</div></div>';
 
-  html += '<div class="track-field"><div class="track-field-label">CONTENT ASSETS</div>';
-  html += '<div class="track-check-grid">';
+  // Content Assets
   var assetLabels = {studioClip:'Studio Clip',teaserClip:'Teaser Clip',dropClip:'Drop Clip',crowdClip:'Crowd Clip',reactionClip:'Reaction Clip',artwork:'Artwork',releasePost:'Release Post',followUp:'Follow-Up'};
-  Object.keys(assetLabels).forEach(function(k){
+  var assetKeys = Object.keys(assetLabels);
+  var assetDone = assetKeys.filter(function(k){ return tr.contentAssets[k]; }).length;
+  var assetPct = Math.round((assetDone/assetKeys.length)*100);
+  html += '<div class="track-field"><div class="track-field-label" style="display:flex;align-items:center;gap:8px">CONTENT ASSETS '+makeRing(assetPct,'var(--cy)',36)+'</div>';
+  html += '<div class="track-check-grid" style="margin-top:6px">';
+  assetKeys.forEach(function(k){
     var checked = tr.contentAssets[k];
-    html += '<label class="track-check-item"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleAsset(\''+tr.id+'\',\''+k+'\')"> '+assetLabels[k]+'</label>';
+    html += '<label class="track-check-item" style="gap:6px"><input type="checkbox" style="width:14px;height:14px;accent-color:var(--cy)" '+(checked?'checked':'')+' onclick="event.stopPropagation()" onchange="event.stopPropagation();toggleAsset(\''+tr.id+'\',\''+k+'\');renderTracks()"> '+assetLabels[k]+'</label>';
   });
   html += '</div></div>';
 
@@ -954,7 +995,7 @@ function renderTrackDetail(tr){
   html += '<div class="track-field"><div class="track-field-label">LIVE TEST LOG</div>';
   if(tr.liveTests.length===0) html += '<div style="font-size:10px;color:var(--dm)">No live tests logged</div>';
   tr.liveTests.forEach(function(lt){
-    html += '<div class="feedback-entry"><strong>'+lt.where+'</strong> ('+lt.date+') — Reaction: '+lt.reaction+(lt.idRequests?' | ID requests':'')+(lt.playAgain?' | Would play again':'')+'</div>';
+    html += '<div class="feedback-entry"><strong>'+(lt.where||'')+'</strong> ('+(lt.date||'')+') — Reaction: '+(lt.reaction||'')+(lt.idRequests?' | ID requests':'')+(lt.playAgain?' | Would play again':'')+'</div>';
   });
   html += '</div>';
 
@@ -962,45 +1003,48 @@ function renderTrackDetail(tr){
   html += '<div class="track-field"><div class="track-field-label">RELATED POSTS</div>';
   if(tr.relatedPosts.length===0) html += '<div style="font-size:10px;color:var(--dm)">No linked posts</div>';
   tr.relatedPosts.forEach(function(p){
-    html += '<div style="font-size:10px;margin-bottom:3px">'+p.type+' ('+p.date+') — '+p.likes+'L / '+p.comments+'C</div>';
+    html += '<div style="font-size:10px;margin-bottom:3px">'+(p.type||'post')+' ('+(p.date||'')+') — '+(p.likes||0)+'L / '+(p.comments||0)+'C</div>';
   });
   html += '</div>';
 
   html += '</div>';
   html += '</div>'; // end grid
 
-  // Production subtasks for this track
-  var trackTasks = STATE.tasks.filter(function(t){ return t.trackId===tr.id; });
+  // ── Production subtasks with RING CHART ──
+  var trackTasks = STATE.tasks ? STATE.tasks.filter(function(t){ return t.trackId===tr.id; }) : [];
   var parentTask = trackTasks.find(function(t){ return !t.parentId; });
   if(parentTask){
     var subs = getSubtasks(parentTask.id);
+    var subsDone = subs.filter(function(s){return s.status==='completed'}).length;
+    var subsPct = subs.length>0 ? Math.round((subsDone/subs.length)*100) : 0;
     html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
-    html += '<div class="track-field-label" style="margin-bottom:8px">PRODUCTION SUBTASKS ('+subs.filter(function(s){return s.status==='completed'}).length+'/'+subs.length+')</div>';
+    html += '<div class="track-field-label" style="margin-bottom:8px;display:flex;align-items:center;gap:8px">PRODUCTION SUBTASKS ('+subsDone+'/'+subs.length+') '+makeRing(subsPct,'var(--am)',44)+'</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px">';
     subs.forEach(function(sub){
       var done = sub.status==='completed';
-      html += '<div style="display:flex;align-items:center;gap:6px;padding:3px 0">';
-      html += '<div class="task-cb pr-'+sub.priority+(done?' checked':'')+'" onclick="event.stopPropagation();toggleTask(\''+sub.id+'\');renderTracks()" style="width:14px;height:14px;min-width:14px;font-size:8px">'+(done?'&#10003;':'')+'</div>';
+      html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0">';
+      html += '<div class="task-cb pr-'+(sub.priority||'white')+(done?' checked':'')+'" onclick="event.stopPropagation();toggleTask(\''+sub.id+'\');renderTracks()" style="width:14px;height:14px;min-width:14px;font-size:8px">'+(done?'&#10003;':'')+'</div>';
       html += '<span style="font-size:11px;'+(done?'text-decoration:line-through;opacity:.4;':'')+'">'+sub.title+'</span>';
       html += '</div>';
     });
-    html += '</div>';
+    html += '</div></div>';
   }
 
-  // Feedback log
-  var trackFeedback = STATE.feedback.filter(function(f){ return f.trackId===tr.id; });
+  // ── Feedback log ──
+  var trackFeedback = STATE.feedback ? STATE.feedback.filter(function(f){ return f.trackId===tr.id; }) : [];
   html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
   html += '<div class="track-field-label" style="margin-bottom:8px">FEEDBACK LOG</div>';
   if(trackFeedback.length===0) html += '<div style="font-size:10px;color:var(--dm)">No feedback logged</div>';
   trackFeedback.forEach(function(fb){
     html += '<div class="feedback-entry">';
-    html += '<div class="feedback-entry-hdr"><span style="font-weight:700">'+fb.source+'</span><span style="color:var(--dm);font-size:9px">'+fb.date+'</span>';
-    html += '<span class="tg tg-'+(fb.impact==='high'?'g':fb.impact==='medium'?'a':'r')+'">'+fb.impact+'</span></div>';
-    html += '<div>'+fb.summary+'</div>';
+    html += '<div class="feedback-entry-hdr"><span style="font-weight:700">'+(fb.source||'')+'</span><span style="color:var(--dm);font-size:9px">'+(fb.date||'')+'</span>';
+    html += '<span class="tg tg-'+(fb.impact==='high'?'g':fb.impact==='medium'?'a':'r')+'">'+(fb.impact||'')+'</span></div>';
+    html += '<div>'+(fb.summary||'')+'</div>';
     html += '</div>';
   });
   html += '</div>';
 
-  // Decision Engine
+  // ── Decision Engine ──
   html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">';
   html += '<div class="track-field-label" style="margin-bottom:8px">DECISION ENGINE</div>';
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
@@ -1010,16 +1054,24 @@ function renderTrackDetail(tr){
   });
   html += '</div></div>';
 
-  // Add custom task
+  // ── Add custom task ──
   html += '<div class="mini-add-task">';
   html += '<div style="display:flex;gap:6px;align-items:center">';
-  html += '<input class="add-task-input" id="track-task-'+tr.id+'" placeholder="Add custom task for '+tr.name+'..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addTrackTask(\''+tr.id+'\')}">';
+  html += '<input class="add-task-input" id="track-task-'+tr.id+'" placeholder="Add custom task for '+tr.name+'..." style="font-size:11px;padding:6px 10px" onclick="event.stopPropagation()" onkeydown="if(event.key===\'Enter\'){event.stopPropagation();addTrackTask(\''+tr.id+'\')}">';
   html += '<button class="add-task-btn" onclick="event.stopPropagation();addTrackTask(\''+tr.id+'\')" style="font-size:9px;padding:5px 10px">+ ADD</button>';
   html += '</div></div>';
 
   return html;
 }
 
+function updateTrackField(trackId, path, value){
+  var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
+  if(!tr) return;
+  var parts = path.split('.');
+  if(parts.length===2){ if(!tr[parts[0]]) tr[parts[0]]={}; tr[parts[0]][parts[1]]=value; }
+  else { tr[parts[0]]=value; }
+  saveState();
+}
 function toggleTranslation(trackId, key){
   var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
   if(tr){ tr.translationChecks[key] = !tr.translationChecks[key]; saveState(); }
