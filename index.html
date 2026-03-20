@@ -317,7 +317,10 @@ var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Produc
 var _uid = 1000;
 function uid(){ return 't'+(++_uid); }
 
-var STATE = { tracks:[], tasks:[], feedback:[], ads:[] };
+var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[] };
+var OUTREACH_STATUSES = ['Not Started','Researching','Contacted','Follow-Up Sent','Responded','Booked/Accepted','Rejected','On Hold'];
+var openVenueDetail = null;
+var openLabelDetail = null;
 
 function defaultTracks(){
   return [
@@ -372,6 +375,30 @@ function defaultTasks(){
   return tasks;
 }
 
+function defaultVenues(){
+  return [
+    {id:'v1',name:'lowercase',market:'Capital Region',contact:'DM @lowercase518',status:'Not Started',demoLink:'',notes:'Need 60-min mix first. Shane connection.',lastContacted:null,nextFollowUp:null,priority:'red'},
+    {id:'v2',name:'518 Craft',market:'Capital Region',contact:'troy@518craft.com',status:'Not Started',demoLink:'',notes:'Friday rotation. Email with mix link.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v3',name:'No Fun (Troy)',market:'Capital Region',contact:'nofuntroybooking@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v4',name:'Eastcoast UDM',market:'Boston',contact:'EastcoastUDM@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v5',name:'All of Us Events',market:'Capital Region',contact:'shane@shanestiel.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v6',name:'Keep On Boston',market:'Boston',contact:'DM @keeponboston',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v7',name:'Flora Collective',market:'Boston',contact:'floramusiccollective@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'}
+  ];
+}
+
+function defaultLabels(){
+  return [
+    {id:'l1',name:'Votion Records',contact:'votionrecords@gmail.com',genre:'Tech House',status:'Contacted',demoLink:'',notes:'VO/founder responded to Pack Up Ya Bags EPK. Follow up.',lastContacted:'2026-03-17',nextFollowUp:'2026-03-21',trackSent:'Pack Up Ya Bags',priority:'red'},
+    {id:'l2',name:'Shall Not Fade',contact:'Linktree form',genre:'House / Garage',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+    {id:'l3',name:'Yoshitoshi',contact:'demos@yoshitoshi.com',genre:'Tech House / Progressive',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+    {id:'l4',name:'Ovum Recordings',contact:'joshwink.com form',genre:'Tech House / Minimal',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
+    {id:'l5',name:'Moon Harbour',contact:'demo@moonharbour.com',genre:'Tech House',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
+    {id:'l6',name:'Studio Barnhus',contact:'demo@studiobarnhus.se',genre:'House / Experimental',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
+    {id:'l7',name:'Lobster Theremin',contact:'demos@lobstertheremin.com',genre:'House / Breaks',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'}
+  ];
+}
+
 var _saveTimeout = null;
 var _firebaseReady = false;
 
@@ -387,11 +414,17 @@ function loadState(){
       if(STATE.ads && !Array.isArray(STATE.ads)) STATE.ads = Object.values(STATE.ads);
       if(!STATE.tracks || STATE.tracks.length===0) STATE.tracks = defaultTracks();
       if(!STATE.tasks || STATE.tasks.length===0) STATE.tasks = defaultTasks();
+      if(!STATE.venues) STATE.venues = defaultVenues();
+      if(!Array.isArray(STATE.venues)) STATE.venues = Object.values(STATE.venues);
+      if(STATE.venues.length===0) STATE.venues = defaultVenues();
+      if(!STATE.labels) STATE.labels = defaultLabels();
+      if(!Array.isArray(STATE.labels)) STATE.labels = Object.values(STATE.labels);
+      if(STATE.labels.length===0) STATE.labels = defaultLabels();
       _uid = STATE._uid || 1000;
     }
-    else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid }; }
+    else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), _uid: _uid }; }
   } catch(e){
-    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], _uid: _uid };
+    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), _uid: _uid };
   }
 
   // Then listen to Firebase for real-time sync
@@ -410,6 +443,10 @@ function loadState(){
         if(!STATE.tasks) STATE.tasks = [];
         if(!STATE.feedback) STATE.feedback = [];
         if(!STATE.ads) STATE.ads = [];
+        if(!STATE.venues) STATE.venues = defaultVenues();
+        if(!Array.isArray(STATE.venues)) STATE.venues = Object.values(STATE.venues);
+        if(!STATE.labels) STATE.labels = defaultLabels();
+        if(!Array.isArray(STATE.labels)) STATE.labels = Object.values(STATE.labels);
         _uid = STATE._uid || 1000;
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
@@ -452,6 +489,7 @@ function showTab(id){
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
   if(id==='hq'){ renderAgenda(); renderMasterTasks(); }
   if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
+  if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
 }
 function showSub(tabId, subId){
   var tab = document.getElementById(tabId);
@@ -1131,6 +1169,109 @@ function addNewTrack(){
 }
 
 // =====================================================
+// OUTREACH SYSTEM — Venues + Labels
+// =====================================================
+function outreachStatusColor(s){
+  var m={'Not Started':'var(--dm)','Researching':'var(--ac)','Contacted':'var(--am)','Follow-Up Sent':'var(--am)','Responded':'var(--cy)','Booked/Accepted':'var(--gn)','Rejected':'var(--rd)','On Hold':'var(--dm)'};
+  return m[s]||'var(--dm)';
+}
+
+function renderVenues(){
+  var c=document.getElementById('venue-table-body'); if(!c) return;
+  if(!STATE.venues) STATE.venues=defaultVenues();
+  if(!Array.isArray(STATE.venues)) STATE.venues=Object.values(STATE.venues);
+  var html='';
+  STATE.venues.forEach(function(v){
+    if(!v||!v.id) return;
+    v.status=v.status||'Not Started'; v.priority=v.priority||'white'; v.notes=v.notes||''; v.demoLink=v.demoLink||''; v.market=v.market||'';
+    var sc=outreachStatusColor(v.status);
+    html+='<tr class="track-row" onclick="openVenueDetail=openVenueDetail===\''+v.id+'\'?null:\''+v.id+'\';renderVenues()">';
+    html+='<td><span class="priority-dot pr-'+v.priority+'"></span> <strong>'+v.name+'</strong></td>';
+    html+='<td>'+v.market+'</td>';
+    html+='<td style="font-size:10px">'+v.contact+'</td>';
+    html+='<td><span style="color:'+sc+';font:700 9px/1 \'Space Mono\',monospace">'+v.status+'</span></td>';
+    html+='<td style="font-size:10px">'+(v.lastContacted||'—')+'</td>';
+    html+='<td style="font-size:10px">'+(v.nextFollowUp||'—')+'</td>';
+    html+='</tr>';
+    // Detail row
+    html+='<tr><td colspan="6" style="padding:0;border:none"><div class="track-detail'+(openVenueDetail===v.id?' open':'')+'" style="'+(openVenueDetail===v.id?'display:block;':'display:none;')+'padding:14px">';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    html+='<div class="track-field"><div class="track-field-label">STATUS</div><select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'status\',this.value);renderVenues()">';
+    OUTREACH_STATUSES.forEach(function(s){ html+='<option'+(v.status===s?' selected':'')+'>'+s+'</option>'; });
+    html+='</select></div>';
+    html+='<div class="track-field"><div class="track-field-label">PRIORITY</div><select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'priority\',this.value);renderVenues()">';
+    ['red','yellow','blue','white'].forEach(function(p){ html+='<option value="'+p+'"'+(v.priority===p?' selected':'')+'>'+(p==='red'?'🔴 High':p==='yellow'?'🟡 Medium':p==='blue'?'🔵 Low':'⚪ None')+'</option>'; });
+    html+='</select></div>';
+    html+='<div class="track-field"><div class="track-field-label">DEMO LINK</div><input value="'+(v.demoLink||'')+'" placeholder="SoundCloud / Google Drive link..." onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'demoLink\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">LAST CONTACTED</div><input type="date" value="'+(v.lastContacted||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'lastContacted\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">NEXT FOLLOW-UP</div><input type="date" value="'+(v.nextFollowUp||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'nextFollowUp\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">CONTACT</div><input value="'+(v.contact||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'contact\',this.value)"></div>';
+    html+='</div>';
+    html+='<div class="track-field" style="margin-top:8px"><div class="track-field-label">NOTES</div><textarea onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'venues\',\''+v.id+'\',\'notes\',this.value)" placeholder="Notes about this venue...">'+(v.notes||'')+'</textarea></div>';
+    html+='</div></td></tr>';
+  });
+  c.innerHTML=html;
+}
+
+function renderLabels(){
+  var c=document.getElementById('label-table-body'); if(!c) return;
+  if(!STATE.labels) STATE.labels=defaultLabels();
+  if(!Array.isArray(STATE.labels)) STATE.labels=Object.values(STATE.labels);
+  var html='';
+  STATE.labels.forEach(function(l){
+    if(!l||!l.id) return;
+    l.status=l.status||'Not Started'; l.priority=l.priority||'white'; l.notes=l.notes||''; l.demoLink=l.demoLink||''; l.genre=l.genre||''; l.trackSent=l.trackSent||'';
+    var sc=outreachStatusColor(l.status);
+    html+='<tr class="track-row" onclick="openLabelDetail=openLabelDetail===\''+l.id+'\'?null:\''+l.id+'\';renderLabels()">';
+    html+='<td><span class="priority-dot pr-'+l.priority+'"></span> <strong>'+l.name+'</strong></td>';
+    html+='<td style="font-size:10px">'+l.genre+'</td>';
+    html+='<td style="font-size:10px">'+l.contact+'</td>';
+    html+='<td><span style="color:'+sc+';font:700 9px/1 \'Space Mono\',monospace">'+l.status+'</span></td>';
+    html+='<td style="font-size:10px">'+(l.trackSent||'—')+'</td>';
+    html+='<td style="font-size:10px">'+(l.lastContacted||'—')+'</td>';
+    html+='<td style="font-size:10px">'+(l.nextFollowUp||'—')+'</td>';
+    html+='</tr>';
+    // Detail row
+    html+='<tr><td colspan="7" style="padding:0;border:none"><div class="track-detail" style="'+(openLabelDetail===l.id?'display:block;':'display:none;')+'padding:14px">';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    html+='<div class="track-field"><div class="track-field-label">STATUS</div><select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'status\',this.value);renderLabels()">';
+    OUTREACH_STATUSES.forEach(function(s){ html+='<option'+(l.status===s?' selected':'')+'>'+s+'</option>'; });
+    html+='</select></div>';
+    html+='<div class="track-field"><div class="track-field-label">PRIORITY</div><select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'priority\',this.value);renderLabels()">';
+    ['red','yellow','blue','white'].forEach(function(p){ html+='<option value="'+p+'"'+(l.priority===p?' selected':'')+'>'+(p==='red'?'🔴 High':p==='yellow'?'🟡 Medium':p==='blue'?'🔵 Low':'⚪ None')+'</option>'; });
+    html+='</select></div>';
+    html+='<div class="track-field"><div class="track-field-label">DEMO LINK</div><input value="'+(l.demoLink||'')+'" placeholder="SoundCloud / Google Drive link..." onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'demoLink\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">TRACK SENT</div><input value="'+(l.trackSent||'')+'" placeholder="Which track did you send?" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'trackSent\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">LAST CONTACTED</div><input type="date" value="'+(l.lastContacted||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'lastContacted\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">NEXT FOLLOW-UP</div><input type="date" value="'+(l.nextFollowUp||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'nextFollowUp\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">GENRE</div><input value="'+(l.genre||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'genre\',this.value)"></div>';
+    html+='<div class="track-field"><div class="track-field-label">CONTACT</div><input value="'+(l.contact||'')+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'contact\',this.value)"></div>';
+    html+='</div>';
+    html+='<div class="track-field" style="margin-top:8px"><div class="track-field-label">NOTES</div><textarea onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'notes\',this.value)" placeholder="Notes about this label...">'+(l.notes||'')+'</textarea></div>';
+    html+='</div></td></tr>';
+  });
+  c.innerHTML=html;
+}
+
+function updateOutreach(type,id,field,value){
+  var arr=STATE[type]; if(!arr) return;
+  var item=arr.find(function(x){return x.id===id;}); if(!item) return;
+  item[field]=value; saveState();
+}
+
+function addVenue(){
+  var n=document.getElementById('new-venue-name'); if(!n||!n.value.trim()) return;
+  STATE.venues.push({id:'v_'+uid(),name:n.value.trim(),market:document.getElementById('new-venue-market').value||'',contact:'',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'yellow'});
+  n.value=''; saveState(); renderVenues();
+}
+
+function addLabel(){
+  var n=document.getElementById('new-label-name'); if(!n||!n.value.trim()) return;
+  STATE.labels.push({id:'l_'+uid(),name:n.value.trim(),contact:'',genre:document.getElementById('new-label-genre').value||'',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'});
+  n.value=''; saveState(); renderLabels();
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function init(){
@@ -1508,16 +1649,21 @@ function init(){
 <div class="sub-c on" id="o-venues">
 <div class="sec">
   <div class="sh"><span class="sn">&#127927;</span><span class="st">Venue Queue</span></div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Venue</th><th>Market</th><th>Contact</th></tr></thead><tbody>
-    <tr><td>1</td><td style="font-weight:700">lowercase</td><td>Capital Region</td><td>DM @lowercase518</td></tr>
-    <tr><td>2</td><td style="font-weight:700">518 Craft</td><td>Capital Region</td><td>&#116;&#114;&#111;&#121;&#64;&#53;&#49;&#56;&#99;&#114;&#97;&#102;&#116;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>3</td><td style="font-weight:700">Votion Records</td><td>Boston</td><td>&#118;&#111;&#116;&#105;&#111;&#110;&#114;&#101;&#99;&#111;&#114;&#100;&#115;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>4</td><td style="font-weight:700">No Fun (Troy)</td><td>Capital Region</td><td>&#110;&#111;&#102;&#117;&#110;&#116;&#114;&#111;&#121;&#98;&#111;&#111;&#107;&#105;&#110;&#103;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>5</td><td style="font-weight:700">Eastcoast UDM</td><td>Boston</td><td>&#69;&#97;&#115;&#116;&#99;&#111;&#97;&#115;&#116;&#85;&#68;&#77;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>6</td><td style="font-weight:700">All of Us Events</td><td>Capital Region</td><td>&#115;&#104;&#97;&#110;&#101;&#64;&#115;&#104;&#97;&#110;&#101;&#115;&#116;&#105;&#101;&#108;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>7</td><td style="font-weight:700">Keep On Boston</td><td>Boston</td><td>DM @keeponboston</td></tr>
-    <tr><td>8</td><td style="font-weight:700">Flora Collective</td><td>Boston</td><td>&#102;&#108;&#111;&#114;&#97;&#109;&#117;&#115;&#105;&#99;&#99;&#111;&#108;&#108;&#101;&#99;&#116;&#105;&#118;&#101;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
-  </tbody></table></div>
+  <div class="nb" style="margin-bottom:10px"><strong>Click any row</strong> to expand &mdash; edit status, add notes, demo links, follow-up dates. All changes sync across devices.</div>
+  <div class="tw"><table>
+    <thead><tr><th>Venue</th><th>Market</th><th>Contact</th><th>Status</th><th>Last Contacted</th><th>Next Follow-Up</th></tr></thead>
+    <tbody id="venue-table-body"></tbody>
+  </table></div>
+  <!-- Add Venue -->
+  <div class="mini-add-task" style="margin-top:12px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input class="add-task-input" id="new-venue-name" placeholder="Venue name..." style="font-size:11px;padding:6px 10px;flex:1;min-width:160px" onkeydown="if(event.key==='Enter')addVenue()">
+      <select class="add-task-select" id="new-venue-market" style="font-size:10px;padding:5px 8px">
+        <option value="Capital Region">Capital Region</option><option value="Boston">Boston</option><option value="NYC">NYC</option><option value="Other">Other</option>
+      </select>
+      <button class="add-task-btn" onclick="addVenue()" style="font-size:9px;padding:5px 10px">+ ADD VENUE</button>
+    </div>
+  </div>
 </div>
 <!-- Add Task -->
 <div class="mini-add-task">
@@ -1531,16 +1677,22 @@ function init(){
 <div class="sub-c" id="o-labels">
 <div class="sec">
   <div class="sh"><span class="sn">&#128191;</span><span class="st">Label Queue</span></div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Label</th><th>Contact</th></tr></thead><tbody>
-    <tr><td>1</td><td style="font-weight:700">Votion Records</td><td>&#118;&#111;&#116;&#105;&#111;&#110;&#114;&#101;&#99;&#111;&#114;&#100;&#115;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>2</td><td style="font-weight:700">Shall Not Fade</td><td>Linktree form</td></tr>
-    <tr><td>3</td><td style="font-weight:700">Yoshitoshi</td><td>&#100;&#101;&#109;&#111;&#115;&#64;&#121;&#111;&#115;&#104;&#105;&#116;&#111;&#115;&#104;&#105;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>4</td><td style="font-weight:700">Ovum Recordings</td><td>joshwink.com form</td></tr>
-    <tr><td>5</td><td style="font-weight:700">Moon Harbour</td><td>&#100;&#101;&#109;&#111;&#64;&#109;&#111;&#111;&#110;&#104;&#97;&#114;&#98;&#111;&#117;&#114;&#46;&#99;&#111;&#109;</td></tr>
-    <tr><td>6</td><td style="font-weight:700">Studio Barnhus</td><td>&#100;&#101;&#109;&#111;&#64;&#115;&#116;&#117;&#100;&#105;&#111;&#98;&#97;&#114;&#110;&#104;&#117;&#115;&#46;&#115;&#101;</td></tr>
-    <tr><td>7</td><td style="font-weight:700">Lobster Theremin</td><td>&#100;&#101;&#109;&#111;&#115;&#64;&#108;&#111;&#98;&#115;&#116;&#101;&#114;&#116;&#104;&#101;&#114;&#101;&#109;&#105;&#110;&#46;&#99;&#111;&#109;</td></tr>
-  </tbody></table></div>
+  <div class="nb" style="margin-bottom:10px"><strong>Click any row</strong> to expand &mdash; edit status, add demo links, track which song you sent, notes, follow-up dates.</div>
+  <div class="tw"><table>
+    <thead><tr><th>Label</th><th>Genre</th><th>Contact</th><th>Status</th><th>Track Sent</th><th>Last Contacted</th><th>Next Follow-Up</th></tr></thead>
+    <tbody id="label-table-body"></tbody>
+  </table></div>
   <div class="nb" style="margin-top:10px"><strong>Path:</strong> Votion &rarr; Shall Not Fade + Yoshitoshi &rarr; Moon Harbour &rarr; Diynamic &rarr; Innervisions (3-5yr)</div>
+  <!-- Add Label -->
+  <div class="mini-add-task" style="margin-top:12px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input class="add-task-input" id="new-label-name" placeholder="Label name..." style="font-size:11px;padding:6px 10px;flex:1;min-width:160px" onkeydown="if(event.key==='Enter')addLabel()">
+      <select class="add-task-select" id="new-label-genre" style="font-size:10px;padding:5px 8px">
+        <option value="Tech House">Tech House</option><option value="Progressive House">Progressive House</option><option value="House / Garage">House / Garage</option><option value="Minimal">Minimal</option><option value="Other">Other</option>
+      </select>
+      <button class="add-task-btn" onclick="addLabel()" style="font-size:9px;padding:5px 10px">+ ADD LABEL</button>
+    </div>
+  </div>
 </div>
 </div>
 </div>
