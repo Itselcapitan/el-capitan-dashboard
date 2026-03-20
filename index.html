@@ -203,6 +203,8 @@ tr:hover td{background:rgba(0,229,255,.015)}
 .sort-btn{cursor:pointer;user-select:none}
 .sort-btn:hover{color:var(--ac)}
 .sort-indicator{font-size:8px;margin-left:2px}
+.gloss-caret{transition:transform .2s;display:inline-block}
+.gloss-caret.open{transform:rotate(90deg)}
 
 /* Ads section */
 .ads-table td,.ads-table th{font-size:10px;padding:6px 8px}
@@ -1590,6 +1592,164 @@ function init(){
       <button class="add-task-btn" onclick="addNewTrack()" style="font-size:9px;padding:5px 10px">+ ADD TRACK</button>
     </div>
   </div>
+
+  <!-- COLLAPSIBLE GLOSSARY -->
+  <div style="margin-top:18px;background:var(--s);border:1px solid var(--bd);border-radius:9px;overflow:hidden">
+    <div onclick="var b=this.nextElementSibling;var c=this.querySelector('.gloss-caret');var isOpen=b.style.display==='block';b.style.display=isOpen?'none':'block';c.classList.toggle('open',!isOpen)" style="display:flex;align-items:center;gap:8px;padding:12px 16px;cursor:pointer;user-select:none;background:var(--s2)">
+      <span class="gloss-caret" style="font-size:10px;color:var(--dm);transition:transform .2s;display:inline-block">&#9654;</span>
+      <span style="font:700 10px/1 'Space Mono',monospace;letter-spacing:1.5px;color:var(--ac)">&#128218; PRODUCTION GLOSSARY &amp; WORKFLOW REFERENCE</span>
+      <span style="font:400 9px/1 'Space Mono',monospace;color:var(--dm);margin-left:auto">click to expand</span>
+    </div>
+    <div style="display:none;padding:16px;font-size:11px;line-height:1.7;color:var(--dm)">
+
+      <!-- PRODUCTION STAGES -->
+      <div style="margin-bottom:18px">
+        <div style="font:700 9px/1 'Space Mono',monospace;color:var(--am);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase">&#127926; Production Stages (in order)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #888">
+            <strong style="color:var(--tx)">1. Define Anchor</strong><br>
+            Before sound design, decide: what part of the original is the hook, what genre lane, what emotional job your version does better, what section should hit hardest. Goal: extract the identity and rebuild the energy.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #888">
+            <strong style="color:var(--tx)">2. Build 8-Bar Loop</strong><br>
+            Build order: kick &rarr; bass groove &rarr; clap/snare &rarr; hats/percs &rarr; main vocal chop or lead hook &rarr; one supporting synth/stab &rarr; one FX transition element. This is your remix DNA.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--ac)">
+            <strong style="color:var(--tx)">3. Vocal Prep</strong><br>
+            Warp/time-align vocal. Find key and BPM. Test full-speed, half-time, pitched, chopped sections. Create three lanes: clean lead vocal, chop lane, FX lane. Groove first, tone second.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--ac)">
+            <strong style="color:var(--tx)">4. Breakdown Sketch</strong><br>
+            Emotional chord/pad idea. Vocal feature moment. Build transition into the drop. This is the "breathing room" that makes the drop hit harder.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--ac)">
+            <strong style="color:var(--tx)">5. Full Arrangement</strong><br>
+            Copy 8-bar loop across timeline. Remove elements to create sections (subtractive method). Add transitions, builds, uplifters, variation. Don't over-produce the drop &mdash; pick one identity: vocal-led, bass-led, hook synth-led, or call-and-response.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #b388ff">
+            <strong style="color:var(--tx)">6. Production Polish</strong><br>
+            Vocal throws, fills, drop variation, automation, ear-candy. Hats/percussion as energy automation &mdash; change hat length, stereo placement, transient feel, ride usage. Reverb as structure, not decoration.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #b388ff">
+            <strong style="color:var(--tx)">7. Mix Prep</strong><br>
+            Individual channel cleanup. Gain staging. Remove unnecessary processing. Organize session: label tracks, color-code, group buses. Prep for focused mixing.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #b388ff">
+            <strong style="color:var(--tx)">8. Mixing</strong><br>
+            Mix in layers: individual cleanup &rarr; kick/bass relationship &rarr; drum group &rarr; synth/music pocket &rarr; vocal pocket &rarr; FX support &rarr; mix bus polish. Keep mix bus simple. Reference constantly: original track + 2 pro targets + 1 structure reference.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #b388ff">
+            <strong style="color:var(--tx)">9. Premaster Check</strong><br>
+            Leave headroom. Mono check. Transition check. Test on phone, headphones, car speakers. If it doesn't translate, go back to mix &mdash; don't fix it in mastering.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #b388ff">
+            <strong style="color:var(--tx)">10. Mastering</strong><br>
+            Correction first, enhancement second. Loudness only after translation works. Check: true peak, LUFS, mono compatibility. Export final master + streaming versions.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--am)">
+            <strong style="color:var(--tx)">11. Demo Out / Feedback</strong><br>
+            Send to feedback circle: DJ friends, producers, label contacts. Share bounce with specific questions ("how's the groove?", "does the drop land?"). Log all feedback with source, impact level, and action taken.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--am)">
+            <strong style="color:var(--tx)">12. Revision Round</strong><br>
+            Process feedback. Make targeted adjustments. Don't re-open arrangement unless critical. Focus on mix tweaks, vocal levels, transition fixes. Re-bounce and re-check translations.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">13. Teaser Ready</strong><br>
+            Track is good enough to post publicly. Create teaser assets: 15-30 sec drop clip, studio session clip, before/after comparison. This is your first public-facing content for the track.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">14. Rollout Active</strong><br>
+            Full release campaign: teaser post &rarr; "should I drop this?" engagement post &rarr; release announcement &rarr; drop day post &rarr; follow-up/reaction post. Coordinate across IG, TikTok, SoundCloud. Run ads if budget allows. Tag original artists.
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSLATION CHECKS -->
+      <div style="margin-bottom:18px">
+        <div style="font:700 9px/1 'Space Mono',monospace;color:#E040FB;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase">&#127911; Translation Checks &mdash; What to Listen For</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #E040FB">
+            <strong style="color:var(--tx)">&#128241; Phone</strong><br>
+            Does the bass still have presence? Can you hear the vocal clearly? Does the kick cut through on tiny speakers? Low end often disappears &mdash; if the groove still works on phone, it'll work everywhere.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #E040FB">
+            <strong style="color:var(--tx)">&#127911; Headphones</strong><br>
+            Check stereo width, panning accuracy, vocal clarity, and detail in the high end. Listen for harsh frequencies, sibilance, and any artifacts that get lost on speakers but jump out in headphones.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #E040FB">
+            <strong style="color:var(--tx)">&#128663; Car</strong><br>
+            The real-world test. Does the sub hit right? Does the track feel exciting at volume? Are transitions smooth when driving? Car speakers exaggerate low-mid buildup &mdash; if it's muddy here, clean up 200-400Hz.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #E040FB">
+            <strong style="color:var(--tx)">&#128266; Speakers</strong><br>
+            Studio monitors or home speakers. Check balance across the full frequency range. Does the kick-bass relationship hold? Are synths sitting right in the mix? Is there enough headroom?
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid #E040FB">
+            <strong style="color:var(--tx)">&#9898; Mono</strong><br>
+            Collapse to mono and listen. Does anything disappear? Phase cancellation kills wide sounds in mono &mdash; club systems are often mono or near-mono. If the drop loses power in mono, fix stereo processing.
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTENT ASSETS -->
+      <div style="margin-bottom:18px">
+        <div style="font:700 9px/1 'Space Mono',monospace;color:var(--cy);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase">&#127909; Content Assets &mdash; What Each One Is</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Studio Clip</strong><br>
+            Screen recording or camera footage of you working on the track in your DAW. Shows the production process. Great for "making of" or "how I made this" content. Film during production, not after.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Teaser Clip</strong><br>
+            15-30 second clip of the best moment (usually the drop or vocal hook). This is your first public preview &mdash; the "should I drop this?" or "WIP" post. Hook the listener in 3 seconds.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Drop Clip</strong><br>
+            Isolated drop section (15-20 sec). The most shareable, replayable moment. Use for TikTok, Reels, and Stories. This is the clip that goes viral if the drop is good enough.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Crowd Clip</strong><br>
+            Video of a crowd reacting to your track live. The ultimate social proof. Film at gigs, house parties, car rides with friends. "Other DJs playing my track" is the top-performing format in the scene.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Reaction Clip</strong><br>
+            Someone hearing your track for the first time. Producer friend, DJ, random person. Genuine surprise/excitement is magnetic content. Film friends reacting at the studio or send the track and ask them to screen record.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Artwork</strong><br>
+            Release cover art for SoundCloud, streaming, and social posts. Can be simple (track title + your logo on a background) or elaborate. Needs to look good at 500x500 and as a tiny thumbnail.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Release Post</strong><br>
+            The main announcement post when the track goes live. Includes streaming link, artwork, caption with CTA ("link in bio", "COMMENT remix for the link"). This is the anchor post of your rollout.
+          </div>
+          <div style="background:var(--s2);border-radius:6px;padding:10px;border-left:3px solid var(--cy)">
+            <strong style="color:var(--tx)">Follow-Up Post</strong><br>
+            Second-wave content after release: thank you post, play count milestone, behind-the-scenes story, or repurposed teaser. Keeps the track in the algorithm after the initial push.
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL WORKFLOW SUMMARY -->
+      <div style="margin-bottom:10px">
+        <div style="font:700 9px/1 'Space Mono',monospace;color:var(--gn);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase">&#9889; Full Workflow Summary</div>
+        <div style="background:var(--s2);border-radius:6px;padding:14px;border-left:3px solid var(--gn);line-height:1.8">
+          <strong style="color:var(--tx)">Phase A &mdash; Prep:</strong> Import original, set BPM/key, pull acapella/hook, choose 3 references.<br>
+          <strong style="color:var(--tx)">Phase B &mdash; 8-Bar Drop Loop:</strong> Kick &rarr; bass &rarr; clap &rarr; hats/percs &rarr; hook vocal/chop &rarr; one lead/stab &rarr; basic FX.<br>
+          <strong style="color:var(--tx)">Phase C &mdash; Breakdown Sketch:</strong> Emotional chord/pad idea, vocal feature moment, build transition.<br>
+          <strong style="color:var(--tx)">Phase D &mdash; Full Arrangement:</strong> Copy loop across timeline, remove to create sections, add transitions/builds/uplifters.<br>
+          <strong style="color:var(--tx)">Phase E &mdash; Production Polish:</strong> Vocal throws, fills, drop variation, automation, ear-candy.<br>
+          <strong style="color:var(--tx)">Phase F &mdash; Mix:</strong> Individual cleanup &rarr; kick/bass lock &rarr; drum bus &rarr; music pocket &rarr; vocal pocket &rarr; FX balance &rarr; mix bus restraint.<br>
+          <strong style="color:var(--tx)">Phase G &mdash; Master:</strong> Reference, loudness/true peak/mono checks, export.<br><br>
+          <strong style="color:var(--am)">Biggest rule:</strong> <span style="color:var(--tx)">Finish fast, decide early, and only deepen processing after groove and arrangement already work.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 </div>
 
