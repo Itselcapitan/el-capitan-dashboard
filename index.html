@@ -246,9 +246,9 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 var MSE = {
   lastUpdated: "2026-03-17",
   dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
-  ig: { followers: 302, posts: 22, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo", views: 25697, interactions: 671, accountsReached: 4935, profileVisits: 852, externalLinkTaps: 7, followersNonFollowers: "31.9% / 68.1%", reelsViewShare: 46.9, postsViewShare: 37.9, storiesViewShare: 15.2, reelsInteractionShare: 62.4, postsInteractionShare: 33.7, storiesInteractionShare: 3.8, peakHour: "3pm", peakDay: "Friday" },
-  sc: { followers: 41, plays: 603, tracks: 9, plays30d: 199, growth30d: "+84%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack: "Every 1s A Winner (238 plays)" },
-  tiktok: { active: true, handle: "@itselcapitan", followers: 0, posts: 3, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser"], joined: "2026-03-20" },
+  ig: { followers: 302, posts: 24, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo", views: 25697, interactions: 671, accountsReached: 4935, profileVisits: 852, externalLinkTaps: 7, followersNonFollowers: "31.9% / 68.1%", reelsViewShare: 46.9, postsViewShare: 37.9, storiesViewShare: 15.2, reelsInteractionShare: 62.4, postsInteractionShare: 33.7, storiesInteractionShare: 3.8, peakHour: "3pm", peakDay: "Friday" },
+  sc: { followers: 41, plays: 603, tracks: 9, plays7d: 29, plays7dGrowth: "+107%", plays30d: 118, plays30dGrowth: "-47%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Every 1s A Winner (11 plays)", topTrack30d: "Every 1s A Winner (74 plays)", topListeners: ["Union Athletics (6 plays)", "DiAZ(PR) (5 plays, 21 followers)", "Jesse Jones (3 plays, 30 followers)", "Binky (8 plays, 16 followers)", "Shaps (6 plays, 39 followers)"], topLocations: ["Schenectady (7 plays)", "Ashburn (3 plays)", "Bayamon (3 plays)"] },
+  tiktok: { active: true, handle: "@itselcapitan", followers: 25, likes: 148, posts: 3, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser"], joined: "2026-03-20" },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
   contentMix: {
     format: "60% Reels, 25% Carousels (event recaps), 15% Images (release art only)",
@@ -1101,7 +1101,24 @@ function renderTrackDetail(tr){
   html += '<button class="add-task-btn" onclick="event.stopPropagation();addTrackTask(\''+tr.id+'\')" style="font-size:9px;padding:5px 10px">+ ADD</button>';
   html += '</div></div>';
 
+  // ── Delete Track ──
+  html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);text-align:right">';
+  html += '<button onclick="event.stopPropagation();deleteTrack(\''+tr.id+'\',\''+tr.name.replace(/'/g,"\\'")+'\')" style="background:transparent;border:1px solid var(--rd);color:var(--rd);padding:6px 16px;border-radius:6px;cursor:pointer;font:700 10px/1 \'Space Mono\',monospace;letter-spacing:1px;transition:all .2s" onmouseover="this.style.background=\'var(--rd)\';this.style.color=\'#0a0c10\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--rd)\'">DELETE TRACK</button>';
+  html += '</div>';
+
   return html;
+}
+
+function deleteTrack(trackId, trackName){
+  if(!confirm('Delete "'+trackName+'"? This will remove the track and all its subtasks. This cannot be undone.')) return;
+  STATE.tracks = STATE.tracks.filter(function(t){ return t.id !== trackId; });
+  // Also remove associated tasks
+  STATE.tasks = STATE.tasks.filter(function(t){ return t.trackId !== trackId; });
+  openTrackDetail = null;
+  saveState();
+  renderTracks();
+  renderMasterTasks();
+  renderAgenda();
 }
 
 function updateTrackField(trackId, path, value){
@@ -1360,7 +1377,7 @@ function init(){
   </div>
 </div>
 
-<div class="ds">All derived from MASTER_STRATEGY_ENGINE. Last updated: March 17, 2026. Source: Apify live scrape + SoundCloud Artist Pro + 200 competitor reels</div>
+<div class="ds">All derived from MASTER_STRATEGY_ENGINE. Last updated: March 25, 2026. Source: Apify live scrape + SoundCloud Artist Pro + TikTok + 200 competitor reels</div>
 </div>
 
 <!-- ============================================================ -->
@@ -1400,6 +1417,8 @@ function init(){
     <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">hunter mtn nights (NEW)</td><td>Reel</td><td>Mar 16</td><td style="color:var(--gn);font-weight:700">51</td></tr>
     <tr><td>Chibiza set on SC</td><td>Sidecar</td><td>May 13</td><td style="color:var(--ac)">52</td></tr>
     <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">pack up ya bags (NEW)</td><td>Reel</td><td>Mar 17</td><td style="color:var(--gn)">25</td></tr>
+    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">the money teaser (NEW)</td><td>Reel</td><td>Mar 22</td><td style="color:var(--gn)">—</td></tr>
+    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">&#x1F4B0; money drop (NEW)</td><td>Reel</td><td>Mar 24</td><td style="color:var(--gn)">—</td></tr>
   </tbody></table></div>
 </div>
 <!-- Add Task -->
@@ -1548,25 +1567,57 @@ function init(){
   <button class="sub-btn" data-sub="g-tk" onclick="showSub('t-growth','g-tk')">TikTok</button>
   <button class="sub-btn" data-sub="g-comp" onclick="showSub('t-growth','g-comp')">Competitors</button>
   <button class="sub-btn" data-sub="g-cadence" onclick="showSub('t-growth','g-cadence')">Posting Cadence</button>
+  <button class="sub-btn" data-sub="g-wisdom" onclick="showSub('t-growth','g-wisdom')">Community Wisdom</button>
 </div>
 
 <div class="sub-c on" id="g-sc">
 <div class="sec">
-  <div class="sh"><span class="sn">SC</span><span class="st">SoundCloud</span></div>
+  <div class="sh"><span class="sn">SC</span><span class="st">SoundCloud — Last 7 Days</span></div>
   <div class="g">
+    <div class="c sc"><div class="cl">PLAYS (7D)</div><div class="cv">29</div><div class="cs"><span style="color:var(--gn)">(+107%)</span></div></div>
+    <div class="c sc"><div class="cl">PLAYS (30D)</div><div class="cv">118</div><div class="cs"><span style="color:var(--rd)">(-47%)</span></div></div>
     <div class="c sc"><div class="cl">FOLLOWERS</div><div class="cv">41</div></div>
-    <div class="c sc"><div class="cl">TOTAL PLAYS</div><div class="cv">603</div><div class="cs">30d: 199 <span style="color:var(--gn)">(+84%)</span></div></div>
-    <div class="c sc"><div class="cl">TRACKS</div><div class="cv">9</div></div>
-    <div class="c sc"><div class="cl">ENGAGEMENT</div><div class="cv">85</div><div class="cs">37 likes &middot; 22 reposts &middot; 26 comments</div></div>
+    <div class="c sc"><div class="cl">ENGAGEMENT (7D)</div><div class="cv">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts</div></div>
   </div>
 </div>
 <div class="sec">
-  <div class="sh"><span class="sn">&#127760;</span><span class="st">Geography</span></div>
+  <div class="sh"><span class="sn">&#127942;</span><span class="st">Top Tracks (7D)</span></div>
+  <div class="g">
+    <div class="c sc"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">11 plays</div></div>
+    <div class="c sc"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">7 plays</div></div>
+    <div class="c sc"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">5 plays</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#127911;</span><span class="st">Top Listeners (7D)</span></div>
+  <div class="g">
+    <div class="c sc"><div class="cl">UNION ATHLETICS</div><div class="cv" style="font-size:12px">6 plays</div></div>
+    <div class="c sc"><div class="cl">DiAZ(PR)</div><div class="cv" style="font-size:12px">5 plays</div><div class="cs">21 followers &middot; 1 track</div></div>
+    <div class="c sc"><div class="cl">JESSE JONES</div><div class="cv" style="font-size:12px">3 plays</div><div class="cs">30 followers</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#127760;</span><span class="st">Top Locations (7D)</span></div>
   <div class="geo">
-    <div class="geo-i"><div class="geo-v">52</div><div class="geo-l">Schenectady</div></div>
-    <div class="geo-i"><div class="geo-v">11</div><div class="geo-l">Wayland</div></div>
-    <div class="geo-i"><div class="geo-v">10</div><div class="geo-l">New York</div></div>
-    <div class="geo-i"><div class="geo-v">5</div><div class="geo-l">Sydney, AU</div></div>
+    <div class="geo-i"><div class="geo-v">7</div><div class="geo-l">Schenectady</div></div>
+    <div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Ashburn</div></div>
+    <div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Bayam&oacute;n, PR</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#127942;</span><span class="st">Top Tracks (30D)</span></div>
+  <div class="g">
+    <div class="c sc"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">74 plays</div></div>
+    <div class="c sc"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">21 plays</div></div>
+    <div class="c sc"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">11 plays</div></div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#127911;</span><span class="st">Top Listeners (30D)</span></div>
+  <div class="g">
+    <div class="c sc"><div class="cl">BINKY</div><div class="cv" style="font-size:12px">8 plays</div><div class="cs">16 followers &middot; 1 track</div></div>
+    <div class="c sc"><div class="cl">SHAPS</div><div class="cv" style="font-size:12px">6 plays</div><div class="cs">39 followers &middot; 1 track</div></div>
+    <div class="c sc"><div class="cl">UNION ATHLETICS</div><div class="cv" style="font-size:12px">6 plays</div></div>
   </div>
 </div>
 <!-- Add Task -->
@@ -1583,8 +1634,9 @@ function init(){
   <div class="sh"><span class="sn" style="background:rgba(0,242,234,.08);color:#00f2ea">TK</span><span class="st">TikTok</span></div>
   <div class="g">
     <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">ACCOUNT</div><div class="cv" style="font-size:14px">@itselcapitan</div><div class="cs">Created Mar 20, 2026</div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">FOLLOWERS</div><div class="cv">0</div><div class="cs">Day 1 — building from scratch</div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">POSTS</div><div class="cv">3</div><div class="cs">First batch uploaded today</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">FOLLOWERS</div><div class="cv">25</div><div class="cs">+25 in 5 days</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TOTAL LIKES</div><div class="cv">148</div><div class="cs">Strong early engagement</div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">POSTS</div><div class="cv">3</div><div class="cs">Cross-posting IG Reels</div></div>
     <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">STRATEGY</div><div class="cv" style="font-size:11px">CROSS-POST</div><div class="cs">Mirror all IG Reels here. TikTok has highest organic discovery for DJ content.</div></div>
   </div>
 </div>
@@ -1635,6 +1687,31 @@ function init(){
   </div>
 </div>
 </div>
+
+<div class="sub-c" id="g-wisdom">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128172;</span><span class="st">Community Wisdom &amp; Mentor Notes</span></div>
+  <div class="nb" style="margin-bottom:10px">Advice from other producers, DJs, and mentors. Save what resonates.</div>
+  <div style="background:rgba(0,242,234,.04);border:1px solid rgba(0,242,234,.15);border-radius:8px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="color:var(--cy);font:700 11px/1 'Space Mono',monospace">CHALANT</span>
+      <span style="color:var(--dm);font-size:10px">Mar 2026</span>
+    </div>
+    <div style="color:var(--tx);font-size:12px;line-height:1.6">
+      <p style="margin:0 0 8px">&bull; For me it all started with remixes, great way to get your name out there.</p>
+      <p style="margin:0 0 8px">&bull; Push your music out with content. Try to upload daily.</p>
+      <p style="margin:0 0 8px">&bull; The most important thing is <strong style="color:var(--cy)">consistency</strong>. If you keep posting people will notice and start to recognize you.</p>
+      <p style="margin:0 0 8px">&bull; The more you force yourself to finish tracks and put them out, the better you'll get at it.</p>
+      <p style="margin:0 0 8px">&bull; It's a marathon &mdash; if you love it then the journey is just part of the fun.</p>
+      <p style="margin:0">&bull; No extra Hypeddit stuff. All just from putting stuff out on SoundCloud and building hype organically.</p>
+    </div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);color:var(--dm);font-size:10px">
+      <strong>Key takeaway:</strong> Volume + consistency + organic SoundCloud growth &gt; paid promotion at this stage.
+    </div>
+  </div>
+</div>
+</div>
+
 </div>
 
 <!-- ============================================================ -->
