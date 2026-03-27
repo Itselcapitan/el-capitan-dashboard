@@ -312,9 +312,27 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 // MASTER STRATEGY ENGINE — SINGLE SOURCE OF TRUTH
 // =====================================================
 var MSE = {
-  lastUpdated: "2026-03-17",
-  dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
-  ig: { followers: 312, posts: 30, engRate: 7.3, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo", views: 21980, interactions: 679, accountsReached: 3815, profileVisits: 940, externalLinkTaps: 7, followersNonFollowers: "34.9% / 65.1%", interactionFollowersNonFollowers: "66.9% / 33.1%", profileActivity: 947, reelsViewShare: 65.1, postsViewShare: 15.0, storiesViewShare: 19.9, reelsInteractionShare: 75.5, postsInteractionShare: 19.1, storiesInteractionShare: 5.5, peakHour: "12pm-3pm", peakDay: "Tue-Wed" },
+  lastUpdated: "2026-03-27",
+  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (Dec 27–Mar 26) + 200 competitor reels (14 accounts, 6 datasets)",
+  ig: {
+    followers: 312, posts: 30, engRate: 7.3, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo",
+    views: 21980, interactions: 1500, accountsReached: 11003, impressions: 45344,
+    profileVisits: 2564, externalLinkTaps: 26, profileActivity: 2590,
+    followersNonFollowers: "2.7% / 97.3%", interactionFollowersNonFollowers: "66.9% / 33.1%",
+    reelsViewShare: 65.1, postsViewShare: 15.0, storiesViewShare: 19.9,
+    reelsInteractionShare: 75.5, postsInteractionShare: 19.1, storiesInteractionShare: 5.5,
+    peakHour: "12pm-3pm", peakDay: "Tue-Wed",
+    // 90-day deep report (Dec 27 – Mar 26)
+    followerGrowth: 65, netFollowers: 123, unfollowRate: 13,
+    reachGrowth: 1056, impressionGrowth: 1625, interactionGrowth: 831,
+    nonFollowerReach: 97.3,
+    profileVisitRate: 23, linkClickRate: 1,
+    totalLikes: 333, totalComments: 23, totalShares: 256, totalSaves: 7,
+    reelLikes: 241, reelComments: 23, reelShares: 109,
+    postInteractions: 887, reelInteractions: 492, storyInteractions: 45,
+    demo18_24: 58.3, demo25_34: 29.8, demo35_44: 8.3, demoMale: 70.5, demoFemale: 29.5,
+    geoSchenectady: 41.3, geoNYC: 3.2, geoBoston: 2.8, geoAlbany: 2.4
+  },
   sc: { followers: 41, plays: 603, tracks: 9, plays7d: 29, plays7dGrowth: "+107%", plays30d: 118, plays30dGrowth: "-47%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Every 1s A Winner (11 plays)", topTrack30d: "Every 1s A Winner (74 plays)", topListeners: ["Union Athletics (6 plays)", "DiAZ(PR) (5 plays, 21 followers)", "Jesse Jones (3 plays, 30 followers)", "Binky (8 plays, 16 followers)", "Shaps (6 plays, 39 followers)"], topLocations: ["Schenectady (7 plays)", "Ashburn (3 plays)", "Bayamon (3 plays)"] },
   tiktok: { active: true, handle: "@itselcapitan", followers: 28, likes: 205, posts: 5, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser", "Money drop clip", "PUYB Release"], joined: "2026-03-20", totalPlays: 2177, bestPost: "Pack Up Ya Bags teaser (1,141 plays)", avgPlaysPerPost: 435 },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
@@ -1568,6 +1586,16 @@ function computeAlerts(){
   var mixTask = STATE.tasks.find(function(t){ return t.title && t.title.indexOf('60-min') > -1 && t.status === 'active'; });
   if(mixTask) alerts.push({level:'red', msg:'60-min mix still not recorded \u2014 blocks all venue outreach'});
 
+  // IG conversion gap
+  if(MSE.ig.linkClickRate && MSE.ig.linkClickRate <= 2){
+    alerts.push({level:'red', msg:'IG link click rate at '+MSE.ig.linkClickRate+'% \u2014 23% visit profile but barely click. Fix bio CTA + link-in-bio page'});
+  }
+
+  // Hyper-local audience
+  if(MSE.ig.geoSchenectady && MSE.ig.geoSchenectady > 30){
+    alerts.push({level:'amber', msg:MSE.ig.geoSchenectady+'% of IG audience is Schenectady \u2014 need to break into NYC/Boston for venue growth'});
+  }
+
   // Ad budget near exhaustion
   STATE.ads.forEach(function(a){
     if(a.status === 'active' && a.spent && a.budget && a.spent >= a.budget * 0.9){
@@ -2115,7 +2143,7 @@ function init(){
 
 <!-- ANALYTICS — Unified: IG + TikTok + SoundCloud -->
 <div id="c-analytics">
-<div class="ds">Last scraped: March 28, 2026</div>
+<div class="ds">Last scraped: March 27, 2026 &middot; IG deep report: Dec 27 &ndash; Mar 26 (90 days)</div>
 
 <!-- CROSS-PLATFORM SUMMARY -->
 <div class="sec">
@@ -2125,10 +2153,10 @@ function init(){
       <div class="cl">INSTAGRAM</div>
       <div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">312 followers</div>
       <div class="cs" style="line-height:1.8">
-        ~30 posts &middot; 7.3% eng rate<br>
-        Best post: 117 engagements<br>
-        Peak time: 12pm&ndash;3pm Tue&ndash;Wed<br>
-        679 total interactions
+        +65% growth &middot; +123 net followers<br>
+        11,003 accounts reached <span style="color:var(--gn)">(+1,056%)</span><br>
+        45,344 impressions <span style="color:var(--gn)">(+1,625%)</span><br>
+        1,500 total interactions <span style="color:var(--gn)">(+831%)</span>
       </div>
     </div>
     <div class="c" style="border-left:3px solid #00f2ea">
@@ -2153,20 +2181,109 @@ function init(){
     </div>
   </div>
   <div class="nb">
-    <strong>Combined Reach:</strong> ~5,992 total impressions across all platforms (3,815 IG accounts reached + 2,177 TikTok plays). Cross-posting is doubling content exposure with minimal extra effort. SoundCloud serves as the release/demo hub.
+    <strong>Combined Reach:</strong> ~13,180 total impressions across all platforms (11,003 IG accounts reached + 2,177 TikTok plays). <strong style="color:var(--am)">Key Problem:</strong> You do NOT need more reach &mdash; you need to convert attention. 23% visit your profile but only 1% click the link.
   </div>
 </div>
 
 <!-- INSTAGRAM -->
 <div class="sec">
-  <div class="sh"><span class="sn" style="background:rgba(225,48,108,.1);color:#E1306C">IG</span><span class="st">Instagram &mdash; @itselcapitan_</span></div>
+  <div class="sh"><span class="sn" style="background:rgba(225,48,108,.1);color:#E1306C">IG</span><span class="st">Instagram &mdash; @itselcapitan_ (90-day deep report)</span></div>
   <div class="g">
-    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">312</div><div class="cs">+34 since Mar 12 (+12.2%)</div></div>
-    <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">7.3%</div><div class="cs">Avg 22.6 eng per post &middot; Top post 117</div></div>
-    <div class="c ig"><div class="cl">VIEWS</div><div class="cv">21,980</div><div class="cs">Non-followers 65.1% &middot; Followers 34.9%</div></div>
-    <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">679</div><div class="cs">Reels 75.5% &middot; Posts 19.1% &middot; Stories 5.5%</div></div>
-    <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">3,815</div><div class="cs">65.1% views from non-followers</div></div>
+    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">312</div><div class="cs">+65% growth &middot; +123 net &middot; 13% unfollow rate</div></div>
+    <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">11,003</div><div class="cs"><span style="color:var(--gn)">+1,056%</span> &middot; 97.3% non-followers</div></div>
+    <div class="c ig"><div class="cl">IMPRESSIONS</div><div class="cv">45,344</div><div class="cs"><span style="color:var(--gn)">+1,625%</span> vs previous period</div></div>
+    <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">1,500</div><div class="cs"><span style="color:var(--gn)">+831%</span> &middot; Posts 887, Reels 492, Stories 45</div></div>
+    <div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">2,564</div><div class="cs">23% visit rate from reach &middot; 26 link clicks (1%)</div></div>
     <div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">12&ndash;3pm</div><div class="cs">Tue&ndash;Wed strongest &middot; Views: Reels 65.1%, Stories 19.9%, Posts 15.0%</div></div>
+  </div>
+
+  <!-- ENGAGEMENT FUNNEL -->
+  <div style="margin-top:14px;padding:14px;background:var(--s);border:1px solid var(--bd);border-radius:9px">
+    <div style="font:700 9px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:2px;margin-bottom:10px">CONVERSION FUNNEL (90 DAYS)</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="text-align:center;flex:1;min-width:100px">
+        <div style="font-size:22px;font-weight:700;color:var(--gn)">11,003</div>
+        <div style="font-size:9px;color:var(--dm)">Reached</div>
+      </div>
+      <div style="color:var(--dm);font-size:18px">&rarr;</div>
+      <div style="text-align:center;flex:1;min-width:100px">
+        <div style="font-size:22px;font-weight:700;color:var(--am)">2,564</div>
+        <div style="font-size:9px;color:var(--dm)">Profile Visits (23%)</div>
+      </div>
+      <div style="color:var(--dm);font-size:18px">&rarr;</div>
+      <div style="text-align:center;flex:1;min-width:100px">
+        <div style="font-size:22px;font-weight:700;color:var(--rd)">26</div>
+        <div style="font-size:9px;color:var(--dm)">Link Clicks (1%)</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:8px;background:rgba(255,82,82,.06);border:1px solid rgba(255,82,82,.15);border-radius:5px;font-size:10px;color:var(--rd)">
+      <strong>Conversion Gap:</strong> 23% profile visit rate is strong, but only 1% click the link. Fix: stronger CTA in bio, link-in-bio landing page, "link in bio" callout in every post caption.
+    </div>
+  </div>
+
+  <!-- ENGAGEMENT BREAKDOWN -->
+  <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="c ig">
+      <div class="cl">POST ENGAGEMENT (90D)</div>
+      <div class="cs" style="line-height:2">
+        <strong style="color:var(--ac)">333</strong> likes &middot; <strong style="color:var(--ac)">23</strong> comments<br>
+        <strong style="color:var(--ac)">256</strong> shares &middot; <strong style="color:var(--ac)">7</strong> saves<br>
+        <span style="font-size:9px;color:var(--rd)">Save rate extremely low &mdash; content shared socially, not saved for value</span>
+      </div>
+    </div>
+    <div class="c ig">
+      <div class="cl">REEL ENGAGEMENT (90D)</div>
+      <div class="cs" style="line-height:2">
+        <strong style="color:var(--ac)">241</strong> likes &middot; <strong style="color:var(--ac)">23</strong> comments<br>
+        <strong style="color:var(--ac)">109</strong> shares<br>
+        <span style="font-size:9px;color:var(--am)">Shares likely social/contextual (tagging friends) not value-driven</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMOGRAPHICS -->
+  <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="c ig">
+      <div class="cl">AGE DEMOGRAPHICS</div>
+      <div style="margin-top:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:10px;width:40px;color:var(--dm)">18-24</span>
+          <div style="flex:1;height:14px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="height:100%;width:58.3%;background:linear-gradient(90deg,#833ab4,#fd1d1d);border-radius:3px"></div></div>
+          <span style="font-size:11px;font-weight:700;color:var(--ac);width:40px;text-align:right">58.3%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:10px;width:40px;color:var(--dm)">25-34</span>
+          <div style="flex:1;height:14px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="height:100%;width:29.8%;background:linear-gradient(90deg,#833ab4,#fd1d1d);border-radius:3px"></div></div>
+          <span style="font-size:11px;font-weight:700;color:var(--ac);width:40px;text-align:right">29.8%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;width:40px;color:var(--dm)">35-44</span>
+          <div style="flex:1;height:14px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="height:100%;width:8.3%;background:linear-gradient(90deg,#833ab4,#fd1d1d);border-radius:3px"></div></div>
+          <span style="font-size:11px;font-weight:700;color:var(--ac);width:40px;text-align:right">8.3%</span>
+        </div>
+      </div>
+    </div>
+    <div class="c ig">
+      <div class="cl">GENDER &amp; GEOGRAPHY</div>
+      <div style="margin-top:6px">
+        <div style="display:flex;gap:12px;margin-bottom:8px">
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--ac)">70.5%</div>
+            <div style="font-size:9px;color:var(--dm)">Male</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#E1306C">29.5%</div>
+            <div style="font-size:9px;color:var(--dm)">Female</div>
+          </div>
+        </div>
+        <div class="geo" style="margin-top:4px">
+          <div class="geo-i"><div class="geo-v">41.3%</div><div class="geo-l">Schenectady</div></div>
+          <div class="geo-i"><div class="geo-v">3.2%</div><div class="geo-l">NYC</div></div>
+          <div class="geo-i"><div class="geo-v">2.8%</div><div class="geo-l">Boston</div></div>
+          <div class="geo-i"><div class="geo-v">2.4%</div><div class="geo-l">Albany</div></div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="tw" style="margin-top:10px"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody>
     <tr><td>Hunter Mtn lineup (co-author)</td><td>Image</td><td>Feb 18</td><td style="color:var(--ac);font-weight:700">117</td></tr>
@@ -2259,15 +2376,20 @@ function init(){
 
 <!-- KEY INSIGHTS -->
 <div class="sec">
-  <div class="sh"><span class="sn">&#128161;</span><span class="st">Key Insights</span></div>
+  <div class="sh"><span class="sn">&#128161;</span><span class="st">Key Insights &amp; Strategic Position</span></div>
   <div class="nb" style="line-height:2">
-    <strong>Reels dominate IG:</strong> 65.1% of views + 75.5% of interactions &mdash; reel-first strategy is correct<br>
-    <strong>TikTok outperforms IG on raw reach</strong> &mdash; 2,177 plays vs 3,815 IG accounts reached, but TikTok from 5 posts vs ~30 IG<br>
-    <strong>Pack Up Ya Bags teaser is a breakout:</strong> 1,141 TikTok plays, 147 likes (12.9% like rate)<br>
-    <strong>IG followers up to 312</strong> (+12.2%) &mdash; profile activity at 947 (940 visits, 7 link taps)<br>
-    <strong>Discovery still strong:</strong> 65.1% of views from non-followers &mdash; content reaching new audiences<br>
-    <strong>Peak posting window:</strong> 12pm&ndash;3pm Tue&ndash;Wed (168 activity peak) &mdash; schedule posts accordingly<br>
-    <strong>Engagement rate dropped to 7.3%</strong> from 14.3% &mdash; more posts diluting avg, but total interactions UP (679 vs 671)
+    <strong style="color:var(--gn)">Reach is exploding:</strong> 11,003 accounts reached (+1,056%), 45,344 impressions (+1,625%) &mdash; the algorithm is pushing your content hard<br>
+    <strong style="color:var(--gn)">Non-follower discovery:</strong> 97.3% of reach comes from non-followers &mdash; massive organic discovery<br>
+    <strong style="color:var(--gn)">Total interactions up 831%:</strong> 1,500 total (Posts 887, Reels 492, Stories 45)<br>
+    <strong style="color:var(--am)">Conversion gap is the #1 problem:</strong> 23% visit your profile, but only 1% click the link &mdash; fix bio + CTA<br>
+    <strong style="color:var(--am)">Low save rate (7 saves / 90 days):</strong> Content is shared socially (tagging friends) not saved for value &mdash; shares may be contextual, not aspirational<br>
+    <strong style="color:var(--am)">Audience is hyper-local:</strong> 41.3% Schenectady &mdash; need to break into NYC/Boston to reach venue bookers<br>
+    <strong>Demographics locked in:</strong> 58.3% age 18-24, 70.5% male &mdash; perfect for college/club DJ market<br>
+    <strong>Pack Up Ya Bags breakout:</strong> 1,141 TikTok plays + 147 likes (12.9% like rate) from 5 posts in 7 days<br>
+    <strong>Peak posting window:</strong> 12pm&ndash;3pm Tue&ndash;Wed &mdash; schedule posts accordingly
+  </div>
+  <div style="margin-top:10px;padding:10px;background:rgba(123,47,247,.06);border:1px solid rgba(123,47,247,.15);border-radius:5px;font-size:10px;color:#b388ff;line-height:1.8">
+    <strong>Strategic Position:</strong> You are at "Algorithm Exposure + Attention Spike." Next phase: "Audience Conversion + Brand Lock-In." You do NOT need more reach &mdash; you need to convert attention, build identity, and create content people save and respect. Focus: stronger bio CTA, link-in-bio landing, "save this" hooks in captions, identity-building content (not just event promos).
   </div>
 </div>
 
