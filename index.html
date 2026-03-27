@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
   firebase.initializeApp({
     apiKey: "AIzaSyB-G9o5W9YcHTDZb1btABrl1wFUt0419Jc",
@@ -209,6 +210,73 @@ tr:hover td{background:rgba(0,229,255,.015)}
 /* Ads section */
 .ads-table td,.ads-table th{font-size:10px;padding:6px 8px}
 
+/* Artist Score */
+.score-ring-wrap{display:flex;align-items:center;gap:20px}
+.score-ring{position:relative;display:flex;align-items:center;justify-content:center}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring-val{position:absolute;font:700 28px/1 'Space Mono',monospace}
+.score-ring-val.score-green{color:var(--gn)}.score-ring-val.score-amber{color:var(--am)}.score-ring-val.score-red{color:var(--rd)}
+.score-factors{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.score-factor{display:flex;align-items:center;gap:8px;font-size:11px}
+.score-factor-label{flex:1;color:var(--dm);font-size:10px}
+.score-factor-bar{width:80px;height:6px;background:var(--s2);border-radius:3px;overflow:hidden}
+.score-factor-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.score-factor-val{font:700 10px/1 'Space Mono',monospace;width:28px;text-align:right}
+.score-badge{font:700 10px/1 'Space Mono',monospace;padding:2px 6px;border-radius:8px;display:inline-block}
+.score-badge-green{background:rgba(0,230,118,.12);color:var(--gn)}
+.score-badge-amber{background:rgba(255,171,0,.12);color:var(--am)}
+.score-badge-red{background:rgba(255,82,82,.12);color:var(--rd)}
+
+/* Growth Alerts */
+.alert-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:12px;animation:fi .2s ease}
+.alert-red{background:rgba(255,82,82,.08);border:1px solid rgba(255,82,82,.2);color:var(--rd)}
+.alert-amber{background:rgba(255,171,0,.08);border:1px solid rgba(255,171,0,.2);color:var(--am)}
+.alert-icon{font-size:14px;flex-shrink:0}
+.alert-text{flex:1}
+.alert-dismiss{background:none;border:none;color:var(--dm);cursor:pointer;font-size:14px;padding:0 4px;opacity:.5;transition:.2s}
+.alert-dismiss:hover{opacity:1}
+
+/* Campaign Builder */
+.campaign-wizard{background:var(--s);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.campaign-steps{display:flex;border-bottom:1px solid var(--bd);background:var(--s2)}
+.campaign-step{flex:1;padding:10px;text-align:center;font:700 9px/1 'Space Mono',monospace;letter-spacing:1px;color:var(--dm);position:relative;cursor:pointer;transition:.2s}
+.campaign-step.active{color:var(--ac);background:rgba(0,229,255,.04)}
+.campaign-step.done{color:var(--gn)}
+.campaign-step::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent}
+.campaign-step.active::after{background:var(--ac)}
+.campaign-step.done::after{background:var(--gn)}
+.campaign-body{padding:16px}
+.campaign-card{background:var(--s);border:1px solid var(--bd);border-radius:9px;padding:14px;margin-bottom:10px;transition:.2s}
+.campaign-card:hover{border-color:var(--ac)}
+.campaign-progress{height:4px;background:var(--s2);border-radius:2px;margin-top:8px;overflow:hidden}
+.campaign-progress-fill{height:100%;background:var(--ac);border-radius:2px;transition:width .3s ease}
+
+/* Release Timeline */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--bd)}
+.timeline-item{position:relative;margin-bottom:12px;padding-left:16px}
+.timeline-dot{position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;border:2px solid var(--bd);background:var(--s)}
+.timeline-dot.done{background:var(--gn);border-color:var(--gn)}
+.timeline-dot.active{background:var(--ac);border-color:var(--ac);box-shadow:0 0 8px rgba(0,229,255,.3)}
+.timeline-dot.future{background:var(--s2)}
+.timeline-day{font:700 9px/1 'Space Mono',monospace;color:var(--dm);margin-bottom:2px}
+.timeline-action{font-size:12px;line-height:1.4}
+.timeline-action.done{text-decoration:line-through;opacity:.5}
+.countdown-badge{font:700 11px/1 'Space Mono',monospace;padding:4px 10px;border-radius:12px;display:inline-block;background:rgba(0,229,255,.1);color:var(--ac);border:1px solid rgba(0,229,255,.2)}
+
+/* Chart containers */
+.chart-wrap{background:var(--s);border:1px solid var(--bd);border-radius:9px;padding:14px;margin-bottom:10px}
+.chart-wrap canvas{max-height:220px}
+.sparkline-wrap{display:inline-block;vertical-align:middle;margin-left:8px}
+.sparkline-wrap canvas{height:32px!important;width:100px!important}
+
+/* Ad CRUD */
+.ad-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+.ad-form label{font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1px;display:block;margin-bottom:4px}
+.ad-form input,.ad-form select{background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px 8px;color:var(--tx);font:400 11px/1.4 'DM Sans',sans-serif;width:100%;outline:none}
+.ad-form input:focus,.ad-form select:focus{border-color:var(--ac)}
+.ad-status-active{color:var(--gn)}.ad-status-paused{color:var(--am)}.ad-status-completed{color:var(--dm)}
+
 @media(max-width:768px){.g{grid-template-columns:1fr}.hd-logo{width:110px}.t-btn{padding:11px 14px;font-size:11px}.track-detail-grid{grid-template-columns:1fr}.agenda-grid{grid-template-columns:1fr}.add-task-bar{flex-direction:column}.add-task-input{min-width:100%}}
 
 /* ============================================================ */
@@ -317,7 +385,7 @@ var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Produc
 var _uid = 1000;
 function uid(){ return 't'+(++_uid); }
 
-var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[] };
+var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[] };
 var OUTREACH_STATUSES = ['Not Started','Researching','Contacted','Follow-Up Sent','Responded','Booked/Accepted','Rejected','On Hold'];
 var openVenueDetail = null;
 var openLabelDetail = null;
@@ -420,11 +488,15 @@ function loadState(){
       if(!STATE.labels) STATE.labels = defaultLabels();
       if(!Array.isArray(STATE.labels)) STATE.labels = Object.values(STATE.labels);
       if(STATE.labels.length===0) STATE.labels = defaultLabels();
+      if(!STATE.scores) STATE.scores = [];
+      if(!Array.isArray(STATE.scores)) STATE.scores = Object.values(STATE.scores);
+      if(!STATE.campaigns) STATE.campaigns = [];
+      if(!Array.isArray(STATE.campaigns)) STATE.campaigns = Object.values(STATE.campaigns);
       _uid = STATE._uid || 1000;
     }
-    else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), _uid: _uid }; }
+    else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], _uid: _uid }; }
   } catch(e){
-    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), _uid: _uid };
+    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], _uid: _uid };
   }
 
   // Then listen to Firebase for real-time sync
@@ -447,6 +519,10 @@ function loadState(){
         if(!Array.isArray(STATE.venues)) STATE.venues = Object.values(STATE.venues);
         if(!STATE.labels) STATE.labels = defaultLabels();
         if(!Array.isArray(STATE.labels)) STATE.labels = Object.values(STATE.labels);
+        if(!STATE.scores) STATE.scores = [];
+        if(!Array.isArray(STATE.scores)) STATE.scores = Object.values(STATE.scores);
+        if(!STATE.campaigns) STATE.campaigns = [];
+        if(!Array.isArray(STATE.campaigns)) STATE.campaigns = Object.values(STATE.campaigns);
         _uid = STATE._uid || 1000;
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
@@ -487,8 +563,10 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderAgenda(); renderMasterTasks(); }
-  if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
+  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); setTimeout(renderHQCharts, 100); }
+  if(id==='content'){ renderReleaseTimelines(); }
+  if(id==='growth'){ renderCampaigns(); }
+  if(id==='tracks'){ try{ renderTracks(); renderAds(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
 }
 function showSub(tabId, subId){
@@ -1289,12 +1367,640 @@ function addLabel(){
 }
 
 // =====================================================
+// ARTIST SCORE ENGINE (0-100)
+// =====================================================
+function computeArtistScore(){
+  var factors = {};
+  // Posting Cadence (15%) — posts this month vs target 20
+  var now = new Date();
+  var thisMonth = now.getMonth();
+  var postsThisMonth = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt).getMonth()===thisMonth; }).length;
+  factors.cadence = Math.min(100, Math.round((postsThisMonth / 20) * 100));
+
+  // Growth Velocity (15%) — based on follower counts vs targets
+  var igTarget = 500, tkTarget = 200, scTarget = 60;
+  var igPct = Math.min(100, Math.round((MSE.ig.followers / igTarget) * 100));
+  var tkPct = Math.min(100, Math.round((MSE.tiktok.followers / tkTarget) * 100));
+  var scPct = Math.min(100, Math.round((MSE.sc.followers / scTarget) * 100));
+  factors.growth = Math.round((igPct + tkPct + scPct) / 3);
+
+  // Reel Performance (15%) — engagement rate vs 5% benchmark
+  factors.reelPerf = Math.min(100, Math.round((MSE.ig.engRate / 5) * 100));
+
+  // Discovery (10%) — non-follower reach
+  factors.discovery = Math.min(100, Math.round(68.1 * 1.47)); // 68.1% non-follower reach
+
+  // Cross-Platform (10%) — active on 3 platforms
+  var platforms = 0;
+  if(MSE.ig.followers > 0) platforms++;
+  if(MSE.tiktok.active) platforms++;
+  if(MSE.sc.followers > 0) platforms++;
+  factors.crossPlatform = Math.round((platforms / 3) * 100);
+
+  // Release Cadence (10%) — released tracks / expected
+  var releasedCount = STATE.tracks.filter(function(t){ return t.stage >= 15; }).length;
+  factors.releases = Math.min(100, Math.round((releasedCount / 4) * 100)); // 4 releases target
+
+  // Pipeline Health (10%) — non-blocked tracks
+  var active = STATE.tracks.filter(function(t){ return t.stage < 15; });
+  var blocked = active.filter(function(t){ return t.bottleneck && t.bottleneck !== 'none'; });
+  factors.pipeline = active.length > 0 ? Math.round(((active.length - blocked.length) / active.length) * 100) : 50;
+
+  // Task Completion (10%)
+  var allTasks = STATE.tasks.filter(function(t){ return !t.parentId; });
+  var doneTasks = allTasks.filter(function(t){ return t.status === 'completed'; });
+  factors.tasks = allTasks.length > 0 ? Math.round((doneTasks.length / allTasks.length) * 100) : 0;
+
+  // Campaign Effectiveness (5%)
+  factors.campaigns = STATE.ads.length > 0 ? 60 : 30; // Basic score, improves with ad data
+
+  // Weighted total
+  var total = Math.round(
+    factors.cadence * 0.15 +
+    factors.growth * 0.15 +
+    factors.reelPerf * 0.15 +
+    factors.discovery * 0.10 +
+    factors.crossPlatform * 0.10 +
+    factors.releases * 0.10 +
+    factors.pipeline * 0.10 +
+    factors.tasks * 0.10 +
+    factors.campaigns * 0.05
+  );
+
+  return { total: total, factors: factors, date: new Date().toISOString().slice(0,10) };
+}
+
+function renderArtistScore(){
+  var el = document.getElementById('artist-score-area');
+  if(!el) return;
+  var s = computeArtistScore();
+
+  // Store score snapshot (max 1 per day)
+  var today = s.date;
+  var existing = STATE.scores.find(function(x){ return x.date === today; });
+  if(!existing){ STATE.scores.push(s); if(STATE.scores.length > 30) STATE.scores.shift(); saveState(); }
+  else { existing.total = s.total; existing.factors = s.factors; }
+
+  var color = s.total >= 70 ? 'var(--gn)' : s.total >= 40 ? 'var(--am)' : 'var(--rd)';
+  var colorClass = s.total >= 70 ? 'score-green' : s.total >= 40 ? 'score-amber' : 'score-red';
+  var pct = s.total / 100;
+  var r = 54, circ = 2 * Math.PI * r;
+
+  var factorList = [
+    {label:'Posting Cadence',val:s.factors.cadence,w:'15%'},
+    {label:'Growth Velocity',val:s.factors.growth,w:'15%'},
+    {label:'Reel Performance',val:s.factors.reelPerf,w:'15%'},
+    {label:'Discovery Rate',val:s.factors.discovery,w:'10%'},
+    {label:'Cross-Platform',val:s.factors.crossPlatform,w:'10%'},
+    {label:'Release Cadence',val:s.factors.releases,w:'10%'},
+    {label:'Pipeline Health',val:s.factors.pipeline,w:'10%'},
+    {label:'Task Completion',val:s.factors.tasks,w:'10%'},
+    {label:'Campaigns',val:s.factors.campaigns,w:'5%'}
+  ];
+
+  var html = '<div class="score-ring-wrap">';
+  html += '<div class="score-ring"><svg width="130" height="130"><circle cx="65" cy="65" r="'+r+'" fill="none" stroke="var(--s2)" stroke-width="8"/>';
+  html += '<circle cx="65" cy="65" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="8" stroke-dasharray="'+circ+'" stroke-dashoffset="'+(circ*(1-pct))+'" stroke-linecap="round"/></svg>';
+  html += '<div class="score-ring-val '+colorClass+'">'+s.total+'</div></div>';
+  html += '<div class="score-factors">';
+  factorList.forEach(function(f){
+    var fc = f.val >= 70 ? 'var(--gn)' : f.val >= 40 ? 'var(--am)' : 'var(--rd)';
+    html += '<div class="score-factor"><span class="score-factor-label">'+f.label+' <span style="color:var(--dm);font-size:8px">('+f.w+')</span></span>';
+    html += '<div class="score-factor-bar"><div class="score-factor-fill" style="width:'+f.val+'%;background:'+fc+'"></div></div>';
+    html += '<span class="score-factor-val" style="color:'+fc+'">'+f.val+'</span></div>';
+  });
+  html += '</div></div>';
+
+  // Sparkline of last 7 scores
+  if(STATE.scores.length > 1){
+    html += '<div class="sparkline-wrap" style="margin-top:10px"><canvas id="score-sparkline"></canvas></div>';
+  }
+
+  el.innerHTML = html;
+
+  // Draw sparkline
+  if(STATE.scores.length > 1){
+    var ctx = document.getElementById('score-sparkline');
+    if(ctx){
+      new Chart(ctx, {
+        type:'line',
+        data:{
+          labels: STATE.scores.slice(-7).map(function(x){ return x.date.slice(5); }),
+          datasets:[{data: STATE.scores.slice(-7).map(function(x){ return x.total; }), borderColor: color, borderWidth:2, pointRadius:0, fill:false, tension:.3}]
+        },
+        options:{responsive:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}}}
+      });
+    }
+  }
+}
+
+// =====================================================
+// TRACK SCORE ENGINE (0-100, released tracks only)
+// =====================================================
+function computeTrackScore(track){
+  if(track.stage < 15) return null;
+  var f = {};
+  // Organic Traction (25%)
+  var scPlays = 0;
+  if(track.name === "Every 1's A Winner") scPlays = 238;
+  else if(track.name === 'Sports Car') scPlays = 185;
+  else if(track.name === 'DANCE.') scPlays = 112;
+  f.organic = Math.min(100, Math.round((scPlays / 500) * 100)); // 500 target
+
+  // Paid Traction (20%)
+  var trackAds = STATE.ads.filter(function(a){ return a.trackId === track.id; });
+  f.paid = trackAds.length > 0 ? Math.min(100, Math.round(50 + trackAds.length * 15)) : 0;
+
+  // Rollout Completeness (20%)
+  var assets = track.contentAssets || {};
+  var checks = ['studioClip','teaserClip','dropClip','crowdClip','artwork','releasePost','followUp'];
+  var done = checks.filter(function(k){ return assets[k]; }).length;
+  f.rollout = Math.round((done / checks.length) * 100);
+
+  // Engagement Quality (20%)
+  var relPosts = track.relatedPosts || [];
+  var totalEng = 0;
+  relPosts.forEach(function(p){ totalEng += (p.likes||0) + (p.comments||0); });
+  f.engagement = Math.min(100, Math.round((totalEng / 100) * 100));
+
+  // Audience Response (15%)
+  var liveTests = track.liveTests || [];
+  var positiveTests = liveTests.filter(function(t){ return t.reaction === 'positive'; }).length;
+  f.audience = Math.min(100, liveTests.length > 0 ? Math.round((positiveTests / liveTests.length) * 100) : 20);
+
+  var total = Math.round(f.organic*0.25 + f.paid*0.20 + f.rollout*0.20 + f.engagement*0.20 + f.audience*0.15);
+  return { total:total, factors:f };
+}
+
+function getTrackScoreBadge(track){
+  var score = computeTrackScore(track);
+  if(!score) return '';
+  var cls = score.total >= 70 ? 'score-badge-green' : score.total >= 40 ? 'score-badge-amber' : 'score-badge-red';
+  return '<span class="score-badge '+cls+'">'+score.total+'</span>';
+}
+
+// =====================================================
+// GROWTH THRESHOLD ALERTS
+// =====================================================
+function computeAlerts(){
+  var alerts = [];
+
+  // Posting cadence
+  var now = new Date();
+  var weekAgo = new Date(now - 7*24*60*60*1000);
+  var postsThisWeek = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt) >= weekAgo; }).length;
+  if(postsThisWeek < 4) alerts.push({level:'amber', msg:'Only '+postsThisWeek+'/5 posts this week \u2014 cadence below target'});
+
+  // SC 30d declining
+  if(MSE.sc.plays30dGrowth && MSE.sc.plays30dGrowth.indexOf('-') === 0){
+    alerts.push({level:'red', msg:'SoundCloud 30-day plays dropped '+MSE.sc.plays30dGrowth+' \u2014 need more releases'});
+  }
+
+  // Overdue tasks
+  var overdue = STATE.tasks.filter(function(t){ return t.status==='active' && t.dueDate && new Date(t.dueDate) < now && !t.parentId; });
+  if(overdue.length > 0) alerts.push({level:'amber', msg:overdue.length+' task'+(overdue.length>1?'s':'')+' overdue \u2014 check Focus Right Now'});
+
+  // Blocked tracks
+  var blocked = STATE.tracks.filter(function(t){ return t.bottleneck && t.bottleneck !== 'none' && t.stage < 15; });
+  if(blocked.length > 0) alerts.push({level:'amber', msg:blocked.length+' track'+(blocked.length>1?'s':'')+' blocked on '+blocked.map(function(t){return t.bottleneck}).filter(function(v,i,a){return a.indexOf(v)===i}).join(', ')});
+
+  // No mix recorded
+  var mixTask = STATE.tasks.find(function(t){ return t.title && t.title.indexOf('60-min') > -1 && t.status === 'active'; });
+  if(mixTask) alerts.push({level:'red', msg:'60-min mix still not recorded \u2014 blocks all venue outreach'});
+
+  // Ad budget near exhaustion
+  STATE.ads.forEach(function(a){
+    if(a.status === 'active' && a.spent && a.budget && a.spent >= a.budget * 0.9){
+      alerts.push({level:'amber', msg:(a.campaignName||'Campaign')+' at '+(Math.round(a.spent/a.budget*100))+'% budget'});
+    }
+  });
+
+  return alerts;
+}
+
+function renderAlerts(){
+  var el = document.getElementById('growth-alerts-area');
+  if(!el) return;
+  var alerts = computeAlerts();
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
+
+  var html = '';
+  alerts.forEach(function(a, i){
+    var key = a.msg.slice(0,30);
+    if(dismissed.indexOf(key) > -1) return;
+    html += '<div class="alert-banner alert-'+a.level+'">';
+    html += '<span class="alert-icon">'+(a.level==='red'?'\u{1F534}':'\u{1F7E1}')+'</span>';
+    html += '<span class="alert-text">'+a.msg+'</span>';
+    html += '<button class="alert-dismiss" onclick="dismissAlert(\''+key.replace(/'/g,"\\'")+'\')" title="Dismiss">\u2715</button>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function dismissAlert(key){
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
+  dismissed.push(key);
+  localStorage.setItem('elcap_dismissed_alerts', JSON.stringify(dismissed));
+  renderAlerts();
+}
+
+// =====================================================
+// RELEASE TIMING ENGINE
+// =====================================================
+function getDefaultTimeline(){
+  return [
+    {day:-14, action:'Create album cover / artwork', done:false},
+    {day:-12, action:'Start teaser clips on TikTok + IG Stories', done:false},
+    {day:-10, action:'Behind-the-scenes studio content', done:false},
+    {day:-7,  action:'Create SoundCloud release info (genre, hashtags, description, upload song)', done:false},
+    {day:-5,  action:'Release on SoundCloud', done:false},
+    {day:-5,  action:'Start paid ads (engagement objective)', done:false},
+    {day:-3,  action:'Snippet reel with countdown', done:false},
+    {day:-1,  action:'Final teaser + "tomorrow" post', done:false},
+    {day:0,   action:'RELEASE DAY \u2014 post reel + TikTok + create HypedIt pipeline reel', done:false},
+    {day:0,   action:'Update IG + TikTok bio: "[Track] out now \u2014 DOWNLOAD BELOW"', done:false},
+    {day:1,   action:'Thank you post + repost UGC', done:false},
+    {day:3,   action:'Behind-the-scenes breakdown reel', done:false},
+    {day:7,   action:'Review analytics, adjust ad spend', done:false},
+    {day:14,  action:'Remix/edit content push', done:false}
+  ];
+}
+
+function renderReleaseTimelines(){
+  var el = document.getElementById('release-timelines-area');
+  if(!el) return;
+  var tracks = STATE.tracks.filter(function(t){ return t.releaseDate || (t.stage >= 13 && t.stage < 15); });
+
+  if(tracks.length === 0){
+    el.innerHTML = '<div class="nb">No tracks with upcoming releases. Set a <strong>releaseDate</strong> on a track in the pipeline to activate the timeline.</div>';
+    return;
+  }
+
+  var html = '';
+  tracks.forEach(function(tr){
+    if(!tr.timeline) tr.timeline = getDefaultTimeline();
+    var releaseDate = tr.releaseDate ? new Date(tr.releaseDate) : null;
+    var now = new Date();
+    var daysUntil = releaseDate ? Math.ceil((releaseDate - now) / (24*60*60*1000)) : null;
+
+    html += '<div class="c" style="margin-bottom:16px;padding:16px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    html += '<div><span style="font-weight:700;font-size:14px">'+tr.name+'</span>';
+    if(releaseDate) html += ' <span class="countdown-badge">'+(daysUntil > 0 ? daysUntil+'d until release' : daysUntil === 0 ? 'RELEASE DAY' : Math.abs(daysUntil)+'d since release')+'</span>';
+    html += '</div>';
+    if(!tr.releaseDate) html += '<input type="date" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:4px 8px;color:var(--tx);font-size:10px" onchange="setReleaseDate(\''+tr.id+'\',this.value)">';
+    html += '</div>';
+
+    html += '<div class="timeline">';
+    tr.timeline.forEach(function(item, i){
+      var dayLabel = item.day < 0 ? 'D'+item.day : item.day === 0 ? 'D-DAY' : 'D+'+item.day;
+      var actualDate = releaseDate ? new Date(releaseDate.getTime() + item.day*24*60*60*1000) : null;
+      var isPast = actualDate && actualDate < now;
+      var dotClass = item.done ? 'done' : (isPast && !item.done) ? 'active' : 'future';
+
+      html += '<div class="timeline-item">';
+      html += '<div class="timeline-dot '+dotClass+'" onclick="toggleTimelineItem(\''+tr.id+'\','+i+')" style="cursor:pointer" title="Click to toggle"></div>';
+      html += '<div class="timeline-day">'+dayLabel+(actualDate ? ' \u2014 '+actualDate.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '')+'</div>';
+      html += '<div class="timeline-action'+(item.done?' done':'')+'">'+item.action+'</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function setReleaseDate(trackId, date){
+  var tr = STATE.tracks.find(function(t){ return t.id === trackId; });
+  if(tr){ tr.releaseDate = date; if(!tr.timeline) tr.timeline = getDefaultTimeline(); saveState(); renderReleaseTimelines(); }
+}
+
+function toggleTimelineItem(trackId, idx){
+  var tr = STATE.tracks.find(function(t){ return t.id === trackId; });
+  if(tr && tr.timeline && tr.timeline[idx]){ tr.timeline[idx].done = !tr.timeline[idx].done; saveState(); renderReleaseTimelines(); }
+}
+
+// =====================================================
+// CAMPAIGN BUILDER
+// =====================================================
+var campaignWizardStep = 0;
+var newCampaign = {};
+
+function renderCampaigns(){
+  var el = document.getElementById('campaigns-area');
+  if(!el) return;
+  var html = '';
+
+  // Active campaigns
+  var active = STATE.campaigns.filter(function(c){ return c.status === 'active' || c.status === 'planned'; });
+  if(active.length > 0){
+    html += '<div class="sec"><div class="sh"><span class="sn">ACTIVE</span><span class="st">Current Campaigns</span></div>';
+    active.forEach(function(c){
+      var totalSteps = c.steps ? c.steps.length : 0;
+      var doneSteps = c.steps ? c.steps.filter(function(s){return s.done;}).length : 0;
+      var pct = totalSteps > 0 ? Math.round((doneSteps/totalSteps)*100) : 0;
+      html += '<div class="campaign-card">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<div><strong>'+c.name+'</strong> <span class="tg tg-'+(c.status==='active'?'g':'b')+'">'+c.status.toUpperCase()+'</span></div>';
+      html += '<span style="font:700 10px/1 \'Space Mono\',monospace;color:var(--ac)">'+pct+'%</span></div>';
+      html += '<div style="font-size:11px;color:var(--dm);margin-top:4px">'+c.goal+' \u2014 '+(c.platforms||[]).join(', ')+'</div>';
+      html += '<div class="campaign-progress"><div class="campaign-progress-fill" style="width:'+pct+'%"></div></div>';
+      // Step checklist
+      if(c.steps){
+        html += '<div style="margin-top:8px">';
+        c.steps.forEach(function(step, si){
+          html += '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px">';
+          html += '<div class="task-cb'+(step.done?' checked':'')+'" onclick="toggleCampaignStep(\''+c.id+'\','+si+')" style="width:14px;height:14px;min-width:14px;font-size:8px">'+(step.done?'\u2713':'')+'</div>';
+          html += '<span style="'+(step.done?'text-decoration:line-through;opacity:.4':'')+'">'+step.action+'</span></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // New campaign button
+  html += '<div style="margin-top:12px"><button class="add-task-btn" onclick="showCampaignWizard()" style="width:100%;padding:10px;font-size:11px">+ NEW CAMPAIGN</button></div>';
+
+  // Wizard (hidden by default)
+  html += '<div id="campaign-wizard-wrap" style="display:none;margin-top:14px"></div>';
+
+  el.innerHTML = html;
+}
+
+function toggleCampaignStep(campId, stepIdx){
+  var c = STATE.campaigns.find(function(x){ return x.id === campId; });
+  if(c && c.steps && c.steps[stepIdx]){ c.steps[stepIdx].done = !c.steps[stepIdx].done; saveState(); renderCampaigns(); }
+}
+
+function showCampaignWizard(){
+  campaignWizardStep = 0;
+  newCampaign = {id:uid(),name:'',goal:'',platforms:[],startDate:'',endDate:'',steps:[],budget:{},status:'planned'};
+  var wrap = document.getElementById('campaign-wizard-wrap');
+  if(wrap) wrap.style.display = 'block';
+  renderWizardStep();
+}
+
+function renderWizardStep(){
+  var wrap = document.getElementById('campaign-wizard-wrap');
+  if(!wrap) return;
+  var steps = ['Goal','Platforms','Details','Review'];
+  var html = '<div class="campaign-wizard">';
+  html += '<div class="campaign-steps">';
+  steps.forEach(function(s,i){
+    html += '<div class="campaign-step'+(i===campaignWizardStep?' active':'')+(i<campaignWizardStep?' done':'')+'">'+s+'</div>';
+  });
+  html += '</div><div class="campaign-body">';
+
+  if(campaignWizardStep === 0){
+    // Goal selection
+    html += '<div style="font-size:12px;margin-bottom:10px;font-weight:600">What is the campaign goal?</div>';
+    var goals = ['Promote track release','Grow followers','Build email list','Promote event','Custom'];
+    goals.forEach(function(g){
+      var sel = newCampaign.goal === g;
+      html += '<div onclick="newCampaign.goal=\''+g+'\';renderWizardStep()" style="padding:10px;border:1px solid '+(sel?'var(--ac)':'var(--bd)')+';border-radius:7px;margin-bottom:6px;cursor:pointer;font-size:12px;background:'+(sel?'rgba(0,229,255,.06)':'var(--s)')+'">'+g+'</div>';
+    });
+    if(newCampaign.goal === 'Promote track release'){
+      html += '<div style="margin-top:8px"><label style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1px">SELECT TRACK</label>';
+      html += '<select id="wizard-track" onchange="newCampaign.trackId=this.value;newCampaign.name=this.options[this.selectedIndex].text+\' Release Campaign\'" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;width:100%;margin-top:4px">';
+      html += '<option value="">Choose...</option>';
+      STATE.tracks.forEach(function(t){ html += '<option value="'+t.id+'"'+(newCampaign.trackId===t.id?' selected':'')+'>'+t.name+'</option>'; });
+      html += '</select></div>';
+    }
+  } else if(campaignWizardStep === 1){
+    // Platforms
+    html += '<div style="font-size:12px;margin-bottom:10px;font-weight:600">Which platforms?</div>';
+    ['Instagram','TikTok','SoundCloud'].forEach(function(p){
+      var sel = (newCampaign.platforms||[]).indexOf(p) > -1;
+      html += '<div onclick="var i=(newCampaign.platforms||[]).indexOf(\''+p+'\');if(i>-1)newCampaign.platforms.splice(i,1);else{if(!newCampaign.platforms)newCampaign.platforms=[];newCampaign.platforms.push(\''+p+'\')};renderWizardStep()" style="padding:10px;border:1px solid '+(sel?'var(--ac)':'var(--bd)')+';border-radius:7px;margin-bottom:6px;cursor:pointer;font-size:12px;background:'+(sel?'rgba(0,229,255,.06)':'var(--s)')+'">'+p+(sel?' \u2713':'')+'</div>';
+    });
+  } else if(campaignWizardStep === 2){
+    // Details
+    html += '<div style="font-size:12px;margin-bottom:10px;font-weight:600">Campaign Details</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    html += '<div><label style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm)">CAMPAIGN NAME</label><input value="'+(newCampaign.name||'')+'" onchange="newCampaign.name=this.value" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;width:100%;margin-top:4px"></div>';
+    html += '<div><label style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm)">AD BUDGET ($)</label><input type="number" value="'+(newCampaign.budget.total||0)+'" onchange="newCampaign.budget.total=parseFloat(this.value)" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;width:100%;margin-top:4px"></div>';
+    html += '<div><label style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm)">START DATE</label><input type="date" value="'+(newCampaign.startDate||'')+'" onchange="newCampaign.startDate=this.value" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;width:100%;margin-top:4px"></div>';
+    html += '<div><label style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm)">END DATE</label><input type="date" value="'+(newCampaign.endDate||'')+'" onchange="newCampaign.endDate=this.value" style="background:var(--s);border:1px solid var(--bd);border-radius:5px;padding:6px;color:var(--tx);font-size:11px;width:100%;margin-top:4px"></div>';
+    html += '</div>';
+  } else if(campaignWizardStep === 3){
+    // Review
+    html += '<div style="font-size:12px;margin-bottom:10px;font-weight:600">Review Campaign</div>';
+    // Auto-generate steps based on goal
+    if(newCampaign.goal === 'Promote track release'){
+      newCampaign.steps = [
+        {action:'Create album cover / artwork', done:false},
+        {action:'Create SoundCloud release info (genre, hashtags, description, upload song)', done:false},
+        {action:'Release on SoundCloud', done:false},
+        {action:'Post release reel on Instagram', done:false},
+        {action:'Post release TikTok', done:false},
+        {action:'Create HypedIt pipeline reel', done:false},
+        {action:'Update IG + TikTok bio: "[Track] out now \u2014 DOWNLOAD BELOW"', done:false},
+        {action:'Launch paid ad (engagement objective)', done:false},
+        {action:'Post follow-up / thank you content', done:false},
+        {action:'Review analytics + adjust ad spend', done:false}
+      ];
+    } else {
+      newCampaign.steps = [
+        {action:'Define content plan', done:false},
+        {action:'Create first post', done:false},
+        {action:'Schedule remaining posts', done:false},
+        {action:'Launch paid ads (if budget set)', done:false},
+        {action:'Mid-campaign review', done:false},
+        {action:'Final analytics review', done:false}
+      ];
+    }
+    html += '<div class="nb">';
+    html += '<strong>Name:</strong> '+(newCampaign.name||'Unnamed')+'<br>';
+    html += '<strong>Goal:</strong> '+newCampaign.goal+'<br>';
+    html += '<strong>Platforms:</strong> '+(newCampaign.platforms||[]).join(', ')+'<br>';
+    html += '<strong>Dates:</strong> '+(newCampaign.startDate||'TBD')+' \u2014 '+(newCampaign.endDate||'TBD')+'<br>';
+    html += '<strong>Budget:</strong> $'+(newCampaign.budget.total||0)+'<br>';
+    html += '<strong>Steps:</strong> '+newCampaign.steps.length+' items';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  // Navigation
+  html += '<div style="display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--bd)">';
+  if(campaignWizardStep > 0) html += '<button class="add-task-btn" onclick="campaignWizardStep--;renderWizardStep()" style="font-size:10px">\u2190 Back</button>';
+  else html += '<button class="add-task-btn" onclick="document.getElementById(\'campaign-wizard-wrap\').style.display=\'none\'" style="font-size:10px;border-color:var(--rd);color:var(--rd)">Cancel</button>';
+  if(campaignWizardStep < 3) html += '<button class="add-task-btn" onclick="campaignWizardStep++;renderWizardStep()" style="font-size:10px">Next \u2192</button>';
+  else html += '<button class="add-task-btn" onclick="launchCampaign()" style="font-size:10px;background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)">Launch Campaign</button>';
+  html += '</div></div>';
+
+  wrap.innerHTML = html;
+}
+
+function launchCampaign(){
+  newCampaign.status = 'active';
+  STATE.campaigns.push(newCampaign);
+  saveState();
+  document.getElementById('campaign-wizard-wrap').style.display = 'none';
+  renderCampaigns();
+}
+
+// =====================================================
+// ADS CRUD (Paid Media Command Center)
+// =====================================================
+function defaultAds(){
+  return [
+    {id:'ad_001', trackId:'tr1', platform:'instagram', campaignName:'Pack Up Ya Bags', status:'completed', objective:'link_clicks', budget:24, spent:20.53, impressions:1473, reach:1223, clicks:12, engagements:398, cpe:0.052, ctr:0.81, startDate:'2026-02-18', endDate:'2026-03-19', notes:'Tech House DJ Fans - Northeast'},
+    {id:'ad_002', trackId:null, platform:'instagram', campaignName:'Hunter Mtn Nights', status:'paused', objective:'profile_visits', budget:35, spent:5.85, impressions:400, reach:387, clicks:3, engagements:137, cpe:0.043, ctr:0.75, startDate:'2026-03-01', endDate:'2026-03-15', notes:'Broad targeting'}
+  ];
+}
+
+function renderAds(){
+  var el = document.getElementById('ads-command-center');
+  if(!el) return;
+  if(!STATE.ads || STATE.ads.length === 0) STATE.ads = defaultAds();
+
+  var totalSpend = 0, totalImpressions = 0, totalResults = 0;
+  STATE.ads.forEach(function(a){ totalSpend += (a.spent||0); totalImpressions += (a.impressions||0); totalResults += (a.clicks||0); });
+
+  var html = '';
+  // Summary cards
+  html += '<div class="g" style="margin-bottom:16px">';
+  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL SPEND</div><div class="cv">$'+totalSpend.toFixed(2)+'</div><div class="cs">'+STATE.ads.length+' campaigns</div></div>';
+  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL IMPRESSIONS</div><div class="cv">'+totalImpressions.toLocaleString()+'</div></div>';
+  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL RESULTS</div><div class="cv">'+totalResults+'</div><div class="cs">Link clicks + profile visits</div></div>';
+  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">AVG CPR</div><div class="cv">$'+(totalResults>0?(totalSpend/totalResults).toFixed(2):'--')+'</div></div>';
+  html += '</div>';
+
+  // Platform spend chart
+  html += '<div class="chart-wrap"><canvas id="ads-platform-chart" height="180"></canvas></div>';
+
+  // Campaign table
+  html += '<div class="tw"><table class="ads-table"><thead><tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Objective</th><th>Results</th><th>CPR</th><th>Budget</th><th>Spent</th><th>Impressions</th><th></th></tr></thead><tbody>';
+  STATE.ads.forEach(function(a){
+    var statusCls = a.status==='active'?'tg-g':a.status==='paused'?'tg-a':'tg-gr';
+    html += '<tr>';
+    html += '<td style="font-weight:700">'+(a.campaignName||'')+'</td>';
+    html += '<td>'+(a.platform||'')+'</td>';
+    html += '<td><span class="tg '+statusCls+'">'+a.status.toUpperCase()+'</span></td>';
+    html += '<td>'+(a.objective||'').replace('_',' ')+'</td>';
+    html += '<td style="color:var(--ac);font-weight:700">'+(a.clicks||0)+'</td>';
+    html += '<td>$'+(a.clicks>0?(a.spent/a.clicks).toFixed(2):'--')+'</td>';
+    html += '<td>$'+(a.budget||0)+'</td>';
+    html += '<td>$'+(a.spent||0).toFixed(2)+'</td>';
+    html += '<td>'+(a.impressions||0).toLocaleString()+'</td>';
+    html += '<td><button class="add-task-btn" onclick="deleteAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;border-color:var(--rd);color:var(--rd)">\u2715</button></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Add campaign form
+  html += '<div style="margin-top:14px"><button class="add-task-btn" onclick="toggleAdForm()" id="ad-form-toggle" style="width:100%;padding:8px;font-size:10px">+ ADD CAMPAIGN</button></div>';
+  html += '<div id="ad-form-area" style="display:none;margin-top:10px">';
+  html += '<div class="ad-form" style="background:var(--s);border:1px solid var(--bd);border-radius:9px">';
+  html += '<div><label>CAMPAIGN NAME</label><input id="ad-name" placeholder="e.g. Pack Up Ya Bags Launch"></div>';
+  html += '<div><label>PLATFORM</label><select id="ad-platform"><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>';
+  html += '<div><label>TRACK (OPTIONAL)</label><select id="ad-track"><option value="">None</option>';
+  STATE.tracks.forEach(function(t){ html += '<option value="'+t.id+'">'+t.name+'</option>'; });
+  html += '</select></div>';
+  html += '<div><label>OBJECTIVE</label><select id="ad-objective"><option value="engagement">Engagement</option><option value="link_clicks">Link Clicks</option><option value="reach">Reach</option><option value="profile_visits">Profile Visits</option></select></div>';
+  html += '<div><label>BUDGET ($)</label><input type="number" id="ad-budget" value="25"></div>';
+  html += '<div><label>STATUS</label><select id="ad-status"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option></select></div>';
+  html += '<div style="grid-column:span 2;text-align:right"><button class="add-task-btn" onclick="addAd()" style="background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)">Save Campaign</button></div>';
+  html += '</div></div>';
+
+  // Insights
+  html += '<div class="nb" style="margin-top:12px"><strong>Best performing:</strong> Remix teasers + niche audience targeting (Tech House DJ Fans). Link click objective outperforms profile visits.</div>';
+
+  el.innerHTML = html;
+
+  // Draw platform chart
+  setTimeout(function(){
+    var ctx = document.getElementById('ads-platform-chart');
+    if(ctx){
+      var igSpend = 0, tkSpend = 0;
+      STATE.ads.forEach(function(a){ if(a.platform==='instagram') igSpend+=a.spent||0; else tkSpend+=a.spent||0; });
+      new Chart(ctx, {
+        type:'doughnut',
+        data:{
+          labels:['Instagram','TikTok'],
+          datasets:[{data:[igSpend,tkSpend],backgroundColor:['rgba(225,48,108,.6)','rgba(0,242,234,.6)'],borderColor:['rgba(225,48,108,1)','rgba(0,242,234,1)'],borderWidth:1}]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8888aa',font:{size:10}}}}}
+      });
+    }
+  }, 100);
+}
+
+function toggleAdForm(){
+  var f = document.getElementById('ad-form-area');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function addAd(){
+  var ad = {
+    id: uid(),
+    campaignName: document.getElementById('ad-name').value,
+    platform: document.getElementById('ad-platform').value,
+    trackId: document.getElementById('ad-track').value || null,
+    objective: document.getElementById('ad-objective').value,
+    budget: parseFloat(document.getElementById('ad-budget').value) || 0,
+    status: document.getElementById('ad-status').value,
+    spent:0, impressions:0, reach:0, clicks:0, engagements:0, cpe:0, ctr:0,
+    startDate: new Date().toISOString().slice(0,10), endDate:'', notes:''
+  };
+  STATE.ads.push(ad);
+  saveState();
+  renderAds();
+}
+
+function deleteAd(adId){
+  STATE.ads = STATE.ads.filter(function(a){ return a.id !== adId; });
+  saveState();
+  renderAds();
+}
+
+// =====================================================
+// HQ CHARTS
+// =====================================================
+function renderHQCharts(){
+  // Cross-platform followers bar chart
+  var ctx = document.getElementById('hq-platform-chart');
+  if(!ctx) return;
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:['Instagram','TikTok','SoundCloud'],
+      datasets:[{
+        label:'Followers',
+        data:[MSE.ig.followers, MSE.tiktok.followers, MSE.sc.followers],
+        backgroundColor:['rgba(225,48,108,.5)','rgba(0,242,234,.5)','rgba(255,85,0,.5)'],
+        borderColor:['#E1306C','#00f2ea','#ff5500'],
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#8888aa',font:{size:9}},grid:{display:false}},
+        y:{ticks:{color:'#8888aa',font:{size:9}},grid:{color:'rgba(42,42,58,.3)'}}
+      }
+    }
+  });
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function init(){
   loadState();
   renderAgenda();
   renderMasterTasks();
+  renderArtistScore();
+  renderAlerts();
+  // Render charts after a tick to ensure DOM is ready
+  setTimeout(function(){
+    renderHQCharts();
+  }, 200);
 }
 </script>
 </head>
@@ -1322,28 +2028,36 @@ function init(){
 <!-- ============================================================ -->
 <div class="tc on" id="t-hq">
 
+<!-- Artist Score + Platform Chart (top row) -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+  <div class="sec" style="margin-bottom:0">
+    <div class="sh"><span class="sn">SCORE</span><span class="st">Artist Score</span></div>
+    <div id="artist-score-area"></div>
+  </div>
+  <div class="sec" style="margin-bottom:0">
+    <div class="sh"><span class="sn">PLATFORMS</span><span class="st">Follower Overview</span></div>
+    <div class="chart-wrap" style="margin-bottom:0"><canvas id="hq-platform-chart" height="160"></canvas></div>
+  </div>
+</div>
+
+<!-- Growth Alerts -->
+<div class="sec" id="growth-alerts-section">
+  <div id="growth-alerts-area"></div>
+</div>
+
 <!-- Daily Agenda -->
 <div class="sec">
   <div class="sh"><span class="sn">&#9733;</span><span class="st">Daily Agenda</span></div>
   <div class="agenda-card" id="daily-agenda"></div>
 </div>
 
-<!-- Master Task Tracker -->
+<!-- Focus Right Now (moved up from below) -->
 <div class="sec">
-  <div class="sh"><span class="sn">TASKS</span><span class="st">Master Task Tracker</span></div>
-  <div id="master-tasks"></div>
-</div>
-
-<!-- Master Strategy -->
-<div class="sec">
-  <div class="sh"><span class="sn">ENGINE</span><span class="st">Master Strategy</span></div>
-  <div class="nb">
-    <strong>PRIMARY FOCUS:</strong> Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.<br><br>
-    <strong>FORMAT:</strong> 60% Reels, 25% Carousels, 15% Images (release art only)<br>
-    <strong>FREQUENCY:</strong> 4-5 reels/week. Daily during release weeks.<br>
-    <strong>AUDIO:</strong> Always your own music. Never trending sounds.<br>
-    <strong>HASHTAGS:</strong> <span id="core-hashtags">#techhouse #dj #housemusic #remix</span> (same 4, every post)
-    <button id="copy-hashtags-btn" onclick="navigator.clipboard.writeText(document.getElementById('core-hashtags').textContent);var b=this;b.textContent='Copied!';b.style.background='var(--gn)';setTimeout(function(){b.textContent='Copy Hashtags';b.style.background='var(--ac)'},1500)" style="margin-left:8px;background:var(--ac);color:#000;border:none;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Copy Hashtags</button>
+  <div class="sh"><span class="sn" style="color:var(--am)">!</span><span class="st">Focus Right Now</span></div>
+  <div class="g">
+    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Post Wicked Game "should I drop this?" reel (OVERDUE &mdash; due Mar 28)<br><strong>2.</strong> Launch first "Three Heaters Monday" (OVERDUE &mdash; due Mar 23)<br><strong>3.</strong> Post dashboard walkthrough reel (already filmed)<br><strong>4.</strong> <s style="color:var(--dm)">Create TikTok</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">PUYB Reel 2</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Money teaser</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Votion demo</s> <span style="color:var(--gn)">&#10003; DONE</span></div></div>
+    <div class="c p"><div class="cl">THIS MONTH</div><div class="cs"><strong>5.</strong> Record 60-min tech house mix (unlocks all venue outreach)<br><strong>6.</strong> DM @lowercase518 with mix link<br><strong>7.</strong> Email 518 Craft for Friday rotation<br><strong>8.</strong> Post 12+ reels across IG + TikTok (currently at ~8)<br><strong>9.</strong> Push Wicked Game to mastering</div></div>
+    <div class="c p"><div class="cl">90 DAYS</div><div class="cs"><strong>10.</strong> Release Wicked Game remix<br><strong>11.</strong> Start Harry Styles "Aperture" bootleg<br><strong>12.</strong> Hit 500 IG followers + 200 TikTok followers<br><strong>13.</strong> Get first Capital Region or Boston booking<br><strong>14.</strong> Finish The Money &amp; move to mastering</div></div>
   </div>
 </div>
 
@@ -1372,13 +2086,22 @@ function init(){
   </div>
 </div>
 
-<!-- Focus Right Now -->
+<!-- Master Task Tracker -->
 <div class="sec">
-  <div class="sh"><span class="sn" style="color:var(--am)">!</span><span class="st">Focus Right Now</span></div>
-  <div class="g">
-    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Post Wicked Game "should I drop this?" reel (OVERDUE &mdash; due Mar 28)<br><strong>2.</strong> Launch first "Three Heaters Monday" (OVERDUE &mdash; due Mar 23)<br><strong>3.</strong> Post dashboard walkthrough reel (already filmed)<br><strong>4.</strong> <s style="color:var(--dm)">Create TikTok</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">PUYB Reel 2</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Money teaser</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Votion demo</s> <span style="color:var(--gn)">&#10003; DONE</span></div></div>
-    <div class="c p"><div class="cl">THIS MONTH</div><div class="cs"><strong>5.</strong> Record 60-min tech house mix (unlocks all venue outreach)<br><strong>6.</strong> DM @lowercase518 with mix link<br><strong>7.</strong> Email 518 Craft for Friday rotation<br><strong>8.</strong> Post 12+ reels across IG + TikTok (currently at ~8)<br><strong>9.</strong> Push Wicked Game to mastering</div></div>
-    <div class="c p"><div class="cl">90 DAYS</div><div class="cs"><strong>10.</strong> Release Wicked Game remix<br><strong>11.</strong> Start Harry Styles "Aperture" bootleg<br><strong>12.</strong> Hit 500 IG followers + 200 TikTok followers<br><strong>13.</strong> Get first Capital Region or Boston booking<br><strong>14.</strong> Finish The Money &amp; move to mastering</div></div>
+  <div class="sh"><span class="sn">TASKS</span><span class="st">Master Task Tracker</span></div>
+  <div id="master-tasks"></div>
+</div>
+
+<!-- Master Strategy -->
+<div class="sec">
+  <div class="sh"><span class="sn">ENGINE</span><span class="st">Master Strategy</span></div>
+  <div class="nb">
+    <strong>PRIMARY FOCUS:</strong> Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.<br><br>
+    <strong>FORMAT:</strong> 60% Reels, 25% Carousels, 15% Images (release art only)<br>
+    <strong>FREQUENCY:</strong> 4-5 reels/week. Daily during release weeks.<br>
+    <strong>AUDIO:</strong> Always your own music. Never trending sounds.<br>
+    <strong>HASHTAGS:</strong> <span id="core-hashtags">#techhouse #dj #housemusic #remix</span> (same 4, every post)
+    <button id="copy-hashtags-btn" onclick="navigator.clipboard.writeText(document.getElementById('core-hashtags').textContent);var b=this;b.textContent='Copied!';b.style.background='var(--gn)';setTimeout(function(){b.textContent='Copy Hashtags';b.style.background='var(--ac)'},1500)" style="margin-left:8px;background:var(--ac);color:#000;border:none;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Copy Hashtags</button>
   </div>
 </div>
 
@@ -1683,6 +2406,15 @@ function init(){
 </div>
 </div>
 
+<!-- RELEASE TIMING ENGINE -->
+<div id="c-release-timing">
+<div class="sec">
+  <div class="sh"><span class="sn" style="background:rgba(0,188,212,.1);color:var(--cy)">&#128197;</span><span class="st">Release Timing Engine</span></div>
+  <div class="nb" style="margin-bottom:12px"><strong>Tracks approaching release get an auto-generated timeline.</strong> Set a release date on any track in the pipeline to activate. Click dots to mark steps done. Workflow: album cover &rarr; SC upload &rarr; release &rarr; reel + TikTok + HypedIt &rarr; update bios.</div>
+  <div id="release-timelines-area"></div>
+</div>
+</div>
+
 </div>
 
 <!-- ============================================================ -->
@@ -1694,6 +2426,7 @@ function init(){
   <button class="sub-btn" data-sub="g-comp" onclick="showSub('t-growth','g-comp')">Competitors</button>
   <button class="sub-btn" data-sub="g-cadence" onclick="showSub('t-growth','g-cadence')">Posting Cadence</button>
   <button class="sub-btn" data-sub="g-wisdom" onclick="showSub('t-growth','g-wisdom')">Community Wisdom</button>
+  <button class="sub-btn" data-sub="g-campaigns" onclick="showSub('t-growth','g-campaigns');renderCampaigns()">Campaigns</button>
 </div>
 
 <div class="sub-c on" id="g-sc">
@@ -1809,6 +2542,14 @@ function init(){
 </div>
 </div>
 
+<div class="sub-c" id="g-campaigns">
+<div class="sec">
+  <div class="sh"><span class="sn" style="background:rgba(123,47,247,.1);color:#b388ff">&#128640;</span><span class="st">Campaign Builder</span></div>
+  <div class="nb" style="margin-bottom:12px"><strong>Plan and execute multi-step campaigns.</strong> For track releases: album cover &rarr; SC release info &rarr; release on SC &rarr; reel + TikTok + HypedIt &rarr; update bios. All steps are trackable.</div>
+  <div id="campaigns-area"></div>
+</div>
+</div>
+
 </div>
 
 <!-- ============================================================ -->
@@ -1878,7 +2619,7 @@ function init(){
 <div class="sub-tabs" id="tracks-tabs">
   <button class="sub-btn on" data-sub="trk-table" onclick="showSub('t-tracks','trk-table')">Track Pipeline</button>
   <button class="sub-btn" data-sub="trk-perf" onclick="showSub('t-tracks','trk-perf')">Track Performance</button>
-  <button class="sub-btn" data-sub="trk-ads" onclick="showSub('t-tracks','trk-ads')">Ads &amp; Analytics</button>
+  <button class="sub-btn" data-sub="trk-ads" onclick="showSub('t-tracks','trk-ads');renderAds()">Paid Media</button>
 </div>
 
 <div class="sub-c on" id="trk-table">
@@ -2097,68 +2838,8 @@ function init(){
 <!-- ADS & ANALYTICS -->
 <div class="sub-c" id="trk-ads">
 <div class="sec">
-  <div class="sh"><span class="sn">&#128176;</span><span class="st">Ads Performance</span></div>
-
-  <!-- Summary Cards -->
-  <div class="g" style="margin-bottom:16px">
-    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL SPEND</div><div class="cv">$26.38</div><div class="cs">2 campaigns &middot; Feb 18 - Mar 19, 2026</div></div>
-    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL IMPRESSIONS</div><div class="cv">1,873</div><div class="cs">Reach: 1,610 unique accounts</div></div>
-    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL RESULTS</div><div class="cv">15</div><div class="cs">12 link clicks + 3 profile visits</div></div>
-    <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">AVG COST PER RESULT</div><div class="cv">$1.76</div><div class="cs">Pack Up Ya Bags: $1.71/click &middot; Hunter Mtn: $1.95/visit</div></div>
-  </div>
-
-  <!-- Campaign Table -->
-  <div class="tw"><table class="ads-table">
-    <thead><tr><th>Campaign</th><th>Status</th><th>Result Type</th><th>Results</th><th>CPR</th><th>Budget</th><th>Spent</th><th>Impressions</th><th>Reach</th><th>CPM</th></tr></thead>
-    <tbody>
-      <tr>
-        <td style="font-weight:700">Pack Up Ya Bags</td>
-        <td><span class="tg tg-a">PENDING REVIEW</span></td>
-        <td>Link Clicks</td>
-        <td style="color:var(--ac);font-weight:700">12</td>
-        <td>$1.71</td>
-        <td>$24</td>
-        <td>$20.53</td>
-        <td>1,473</td>
-        <td>1,223</td>
-        <td>$13.94</td>
-      </tr>
-      <tr>
-        <td style="font-weight:700">Hunter Mtn Nights</td>
-        <td><span class="tg tg-gr">INACTIVE</span></td>
-        <td>Profile Visits</td>
-        <td style="color:var(--ac)">3</td>
-        <td>$1.95</td>
-        <td>$35</td>
-        <td>$5.85</td>
-        <td>400</td>
-        <td>387</td>
-        <td>$14.63</td>
-      </tr>
-    </tbody>
-  </table></div>
-
-  <!-- Insights -->
-  <div class="nb" style="margin-top:12px">
-    <strong>&#9889; Key Insights:</strong><br>
-    &bull; <strong>Pack Up Ya Bags is your best ad by far</strong> &mdash; 4x the results at lower CPR ($1.71 vs $1.95)<br>
-    &bull; <strong>Audience:</strong> "Tech House DJ Fans - Northeast" (PUYB) vs broad targeting (Hunter Mtn) &mdash; niche targeting wins<br>
-    &bull; <strong>CPM is reasonable</strong> ($13-15) for awareness at your scale<br>
-    &bull; <strong>Hunter Mtn underperformed</strong> &mdash; only spent $5.85 of $35 budget, profile visit objective is harder to optimize<br>
-    &bull; <strong>Recommendation:</strong> Run all future ads with link click objective + niche audience targeting. Double down on remix teasers as ad creative.<br>
-    &bull; <strong>Best creative:</strong> Pack Up Ya Bags teaser (remix content > event recap for ads)<br>
-    &bull; <strong>Best audience:</strong> Tech House DJ Fans - Northeast<br>
-    &bull; <strong>Best objective:</strong> Link Clicks (not Profile Visits)
-  </div>
-
-  <!-- Manage Ads Status -->
-  <div style="margin-top:12px">
-    <div class="sh"><span class="sn">&#128225;</span><span class="st">Active Campaigns (from Meta)</span></div>
-    <div class="g">
-      <div class="c" style="border-left:3px solid var(--a2)"><div class="cl">PACK UP YA BAGS AD</div><div class="cv" style="font-size:14px">Finishing in 3hrs</div><div class="cs">1,733 views &middot; 398 engagements &middot; $23.12 of $24 spent<br>Audience: Tech House DJ Fans - Northeast</div></div>
-      <div class="c" style="border-left:3px solid var(--dm)"><div class="cl">HUNTER MTN NIGHTS AD</div><div class="cv" style="font-size:14px;color:var(--dm)">Paused</div><div class="cs">429 views &middot; 137 engagements &middot; $5.85 of $35 spent<br>Audience: Broad targeting</div></div>
-    </div>
-  </div>
+  <div class="sh"><span class="sn">&#128176;</span><span class="st">Paid Media Command Center</span></div>
+  <div id="ads-command-center"></div>
 </div>
 <!-- Add Task -->
 <div class="mini-add-task">
