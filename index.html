@@ -314,7 +314,7 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 var MSE = {
   lastUpdated: "2026-03-17",
   dataSource: "Apify live scrape + SoundCloud Artist Pro + 200 competitor reels (14 accounts, 6 datasets)",
-  ig: { followers: 301, posts: 26, engRate: 14.3, avgEng: 34.1, topPost: 117, topFormat: "Co-authored event promo", views: 25697, interactions: 671, accountsReached: 4935, profileVisits: 852, externalLinkTaps: 7, followersNonFollowers: "31.9% / 68.1%", reelsViewShare: 46.9, postsViewShare: 37.9, storiesViewShare: 15.2, reelsInteractionShare: 62.4, postsInteractionShare: 33.7, storiesInteractionShare: 3.8, peakHour: "3pm", peakDay: "Friday" },
+  ig: { followers: 312, posts: 30, engRate: 7.3, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo", views: 21980, interactions: 679, accountsReached: 3815, profileVisits: 940, externalLinkTaps: 7, followersNonFollowers: "34.9% / 65.1%", interactionFollowersNonFollowers: "66.9% / 33.1%", profileActivity: 947, reelsViewShare: 65.1, postsViewShare: 15.0, storiesViewShare: 19.9, reelsInteractionShare: 75.5, postsInteractionShare: 19.1, storiesInteractionShare: 5.5, peakHour: "12pm-3pm", peakDay: "Tue-Wed" },
   sc: { followers: 41, plays: 603, tracks: 9, plays7d: 29, plays7dGrowth: "+107%", plays30d: 118, plays30dGrowth: "-47%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Every 1s A Winner (11 plays)", topTrack30d: "Every 1s A Winner (74 plays)", topListeners: ["Union Athletics (6 plays)", "DiAZ(PR) (5 plays, 21 followers)", "Jesse Jones (3 plays, 30 followers)", "Binky (8 plays, 16 followers)", "Shaps (6 plays, 39 followers)"], topLocations: ["Schenectady (7 plays)", "Ashburn (3 plays)", "Bayamon (3 plays)"] },
   tiktok: { active: true, handle: "@itselcapitan", followers: 28, likes: 205, posts: 5, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser", "Money drop clip", "PUYB Release"], joined: "2026-03-20", totalPlays: 2177, bestPost: "Pack Up Ya Bags teaser (1,141 plays)", avgPlaysPerPost: 435 },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
@@ -1387,8 +1387,8 @@ function computeArtistScore(){
   // Reel Performance (15%) — engagement rate vs 5% benchmark
   factors.reelPerf = Math.min(100, Math.round((MSE.ig.engRate / 5) * 100));
 
-  // Discovery (10%) — non-follower reach
-  factors.discovery = Math.min(100, Math.round(68.1 * 1.47)); // 68.1% non-follower reach
+  // Discovery (10%) — non-follower view reach
+  factors.discovery = Math.min(100, Math.round(65.1 * 1.47)); // 65.1% views from non-followers
 
   // Cross-Platform (10%) — active on 3 platforms
   var platforms = 0;
@@ -2065,9 +2065,9 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn" style="color:var(--gn)">&#10003;</span><span class="st">What's Working</span></div>
   <div class="g">
-    <div class="c w"><div class="cl">IG ENGAGEMENT RATE</div><div class="cv">14.3%</div><div class="cs">301 followers. Industry avg 1-3%. 68% reach from non-followers. Quality is not the bottleneck.</div></div>
+    <div class="c w"><div class="cl">IG ENGAGEMENT RATE</div><div class="cv">7.3%</div><div class="cs">312 followers. Industry avg 1-3%. 65% views from non-followers. Reels drive 75.5% of interactions.</div></div>
     <div class="c w"><div class="cl">TIKTOK LAUNCH</div><div class="cv">2,177 plays</div><div class="cs">28 followers, 5 posts, 205 likes in first week. PUYB teaser = 1,141 plays (12.9% like rate). Outpacing IG on reach.</div></div>
-    <div class="c w"><div class="cl">CROSS-POSTING</div><div class="cv">3 platforms</div><div class="cs">IG + TikTok + SoundCloud = ~7,112 combined impressions. Same content, 3x eyeballs, minimal effort.</div></div>
+    <div class="c w"><div class="cl">CROSS-POSTING</div><div class="cv">3 platforms</div><div class="cs">IG + TikTok + SoundCloud = ~5,992 combined reach. Same content, 3x eyeballs, minimal effort.</div></div>
     <div class="c w"><div class="cl">RELEASE PIPELINE</div><div class="cv">8 tracks</div><div class="cs">PUYB at teaser stage. Wicked Game at demo/feedback. The Money in production polish. Bando + Tuyo started. Pipeline is full.</div></div>
     <div class="c w"><div class="cl">REMIX TEASERS</div><div class="cv">Top format</div><div class="cs">Recognizable hook + drop = proven formula. Best performer on both IG and TikTok. 8.2% eng rate benchmark from Dom Dolla.</div></div>
     <div class="c w"><div class="cl">OUTREACH STARTED</div><div class="cv">&#10003; 2 sent</div><div class="cs">Votion Records demo submitted. Label EPK followed up. First real outreach in motion.</div></div>
@@ -2115,7 +2115,7 @@ function init(){
 
 <!-- ANALYTICS — Unified: IG + TikTok + SoundCloud -->
 <div id="c-analytics">
-<div class="ds">Last scraped: March 27, 2026</div>
+<div class="ds">Last scraped: March 28, 2026</div>
 
 <!-- CROSS-PLATFORM SUMMARY -->
 <div class="sec">
@@ -2123,12 +2123,12 @@ function init(){
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
     <div class="c ig" style="border-left:3px solid #E1306C">
       <div class="cl">INSTAGRAM</div>
-      <div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">301 followers</div>
+      <div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">312 followers</div>
       <div class="cs" style="line-height:1.8">
-        ~26 posts &middot; 14.3% eng rate<br>
+        ~30 posts &middot; 7.3% eng rate<br>
         Best post: 117 engagements<br>
-        Peak time: 3pm Friday<br>
-        671 total interactions
+        Peak time: 12pm&ndash;3pm Tue&ndash;Wed<br>
+        679 total interactions
       </div>
     </div>
     <div class="c" style="border-left:3px solid #00f2ea">
@@ -2153,7 +2153,7 @@ function init(){
     </div>
   </div>
   <div class="nb">
-    <strong>Combined Reach:</strong> ~7,112 total impressions across all platforms (4,935 IG accounts reached + 2,177 TikTok plays). Cross-posting is doubling content exposure with minimal extra effort. SoundCloud serves as the release/demo hub.
+    <strong>Combined Reach:</strong> ~5,992 total impressions across all platforms (3,815 IG accounts reached + 2,177 TikTok plays). Cross-posting is doubling content exposure with minimal extra effort. SoundCloud serves as the release/demo hub.
   </div>
 </div>
 
@@ -2161,12 +2161,12 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn" style="background:rgba(225,48,108,.1);color:#E1306C">IG</span><span class="st">Instagram &mdash; @itselcapitan_</span></div>
   <div class="g">
-    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">301</div><div class="cs">+23 since Mar 12 (+8.3%) &middot; Following: 577</div></div>
-    <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">14.3%</div><div class="cs">Avg 34.1 eng per post &middot; Top post 117</div></div>
-    <div class="c ig"><div class="cl">VIEWS</div><div class="cv">25,697</div><div class="cs">Non-followers 68.1% &middot; Followers 31.9%</div></div>
-    <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">671</div><div class="cs">Reels 62.4% &middot; Posts 33.7% &middot; Stories 3.8%</div></div>
-    <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">4,935</div><div class="cs">68% discovery from non-followers</div></div>
-    <div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">3pm Fri</div><div class="cs">Peak hours: 9am&ndash;6pm &middot; Content mix: Reels 46.9%, Posts 37.9%, Stories 15.2%</div></div>
+    <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">312</div><div class="cs">+34 since Mar 12 (+12.2%)</div></div>
+    <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">7.3%</div><div class="cs">Avg 22.6 eng per post &middot; Top post 117</div></div>
+    <div class="c ig"><div class="cl">VIEWS</div><div class="cv">21,980</div><div class="cs">Non-followers 65.1% &middot; Followers 34.9%</div></div>
+    <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">679</div><div class="cs">Reels 75.5% &middot; Posts 19.1% &middot; Stories 5.5%</div></div>
+    <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">3,815</div><div class="cs">65.1% views from non-followers</div></div>
+    <div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">12&ndash;3pm</div><div class="cs">Tue&ndash;Wed strongest &middot; Views: Reels 65.1%, Stories 19.9%, Posts 15.0%</div></div>
   </div>
   <div class="tw" style="margin-top:10px"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody>
     <tr><td>Hunter Mtn lineup (co-author)</td><td>Image</td><td>Feb 18</td><td style="color:var(--ac);font-weight:700">117</td></tr>
@@ -2261,12 +2261,13 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn">&#128161;</span><span class="st">Key Insights</span></div>
   <div class="nb" style="line-height:2">
-    <strong>TikTok is outperforming IG on raw reach</strong> &mdash; 2,177 plays in 7 days vs ~671 IG interactions<br>
+    <strong>Reels dominate IG:</strong> 65.1% of views + 75.5% of interactions &mdash; reel-first strategy is correct<br>
+    <strong>TikTok outperforms IG on raw reach</strong> &mdash; 2,177 plays vs 3,815 IG accounts reached, but TikTok from 5 posts vs ~30 IG<br>
     <strong>Pack Up Ya Bags teaser is a breakout:</strong> 1,141 TikTok plays, 147 likes (12.9% like rate)<br>
-    <strong>SoundCloud 7d plays up 107%</strong> &mdash; Every 1's A Winner driving organic discovery<br>
-    <strong>Cross-posting strategy is working</strong> &mdash; same content, 3 platforms, 3x the eyeballs<br>
-    <strong>Instagram has highest engagement quality</strong> &mdash; 14.3% eng rate, strong profile visits (852)<br>
-    <strong>SoundCloud serves as demo/release hub</strong> &mdash; 41 followers growing organically from IG/TikTok traffic
+    <strong>IG followers up to 312</strong> (+12.2%) &mdash; profile activity at 947 (940 visits, 7 link taps)<br>
+    <strong>Discovery still strong:</strong> 65.1% of views from non-followers &mdash; content reaching new audiences<br>
+    <strong>Peak posting window:</strong> 12pm&ndash;3pm Tue&ndash;Wed (168 activity peak) &mdash; schedule posts accordingly<br>
+    <strong>Engagement rate dropped to 7.3%</strong> from 14.3% &mdash; more posts diluting avg, but total interactions UP (679 vs 671)
   </div>
 </div>
 
