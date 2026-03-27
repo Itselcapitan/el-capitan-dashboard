@@ -1384,17 +1384,9 @@ function init(){
 <!--  CONTENT — Analytics + Strategy + Reels Intel + Libraries    -->
 <!-- ============================================================ -->
 <div class="tc" id="t-content">
-<div class="sub-tabs" id="content-tabs">
-  <button class="sub-btn on" data-sub="c-analytics" onclick="showSub('t-content','c-analytics')">Analytics</button>
-  <button class="sub-btn" data-sub="c-strategy" onclick="showSub('t-content','c-strategy')">Strategy</button>
-  <button class="sub-btn" data-sub="c-reels" onclick="showSub('t-content','c-reels')">Reels Intel</button>
-  <button class="sub-btn" data-sub="c-hooks" onclick="showSub('t-content','c-hooks')">Hook Library</button>
-  <button class="sub-btn" data-sub="c-scenes" onclick="showSub('t-content','c-scenes')">Scene Library</button>
-  <button class="sub-btn" data-sub="c-pipeline" onclick="showSub('t-content','c-pipeline')">Idea Pipeline</button>
-</div>
 
 <!-- ANALYTICS — Unified: IG + TikTok + SoundCloud -->
-<div class="sub-c on" id="c-analytics">
+<div id="c-analytics">
 <div class="ds">Last scraped: March 27, 2026</div>
 
 <!-- CROSS-PLATFORM SUMMARY -->
@@ -1560,29 +1552,7 @@ function init(){
 </div>
 
 <!-- STRATEGY -->
-<div class="sub-c" id="c-strategy">
-  <div class="tw"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody>
-    <tr><td>Hunter Mtn lineup (co-author)</td><td>Image</td><td>Feb 18</td><td style="color:var(--ac);font-weight:700">117</td></tr>
-    <tr><td>(no caption) sidecar</td><td>Sidecar</td><td>Feb 2</td><td style="color:var(--ac)">84</td></tr>
-    <tr><td>"post more" sidecar</td><td>Sidecar</td><td>Nov 27</td><td style="color:var(--ac)">73</td></tr>
-    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">hunter mtn nights (NEW)</td><td>Reel</td><td>Mar 16</td><td style="color:var(--gn);font-weight:700">51</td></tr>
-    <tr><td>Chibiza set on SC</td><td>Sidecar</td><td>May 13</td><td style="color:var(--ac)">52</td></tr>
-    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">pack up ya bags (NEW)</td><td>Reel</td><td>Mar 17</td><td style="color:var(--gn)">25</td></tr>
-    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">the money teaser (NEW)</td><td>Reel</td><td>Mar 22</td><td style="color:var(--gn)">—</td></tr>
-    <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">&#x1F4B0; money drop (NEW)</td><td>Reel</td><td>Mar 24</td><td style="color:var(--gn)">—</td></tr>
-  </tbody></table></div>
-</div>
-<!-- Add Task -->
-<div class="mini-add-task">
-  <div style="display:flex;gap:6px;align-items:center">
-    <input class="add-task-input" id="content-task-input" placeholder="Add social media task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('content-task-input','Social Media')">
-    <button class="add-task-btn" onclick="addTaskFromTab('content-task-input','Social Media')" style="font-size:9px;padding:5px 10px">+ ADD</button>
-  </div>
-</div>
-</div>
-
-<!-- STRATEGY -->
-<div class="sub-c" id="c-strategy">
+<div id="c-strategy">
 <div class="sec">
   <div class="sh"><span class="sn">&#9650;</span><span class="st">Priority Formats (from Master Strategy Engine)</span></div>
   <div class="tw"><table><thead><tr><th>#</th><th>Format</th><th>Evidence</th><th>Impact</th></tr></thead><tbody>
@@ -1608,23 +1578,23 @@ function init(){
 </div>
 
 <!-- REELS INTEL -->
-<div class="sub-c" id="c-reels">
+<div id="c-reels">
 <div class="sec">
   <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (~200 scraped)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Key Pattern</th></tr></thead><tbody>
-    <tr><td>@domdolla</td><td>rhyme dust interlude</td><td style="color:var(--ac);font-weight:700">736K</td><td>9M</td><td>Raw studio + casual caption</td></tr>
-    <tr><td>@niikoxswae</td><td>Rule The World w/ Tiesto</td><td style="color:var(--ac)">519K</td><td>8.5M</td><td>Major collab + nostalgia flip</td></tr>
-    <tr><td>@domdolla</td><td>made this on the plane</td><td>196K</td><td>3.2M</td><td>Studio-on-the-go</td></tr>
-    <tr><td>@zachhzachhzachh</td><td>fredagain/skepta mashup</td><td>145K</td><td>&mdash;</td><td>Meme + artist tag bait</td></tr>
-    <tr><td>@bolothedj</td><td>taco shop rave</td><td>139K</td><td>2.9M</td><td>Unexpected venue, energy</td></tr>
-    <tr><td>@sidequestdj</td><td>Day 6/10 remix challenge</td><td>120K</td><td>&mdash;</td><td>Serial format, daily challenge</td></tr>
-    <tr><td>@domdolla</td><td>totally addicted to bass</td><td>76K</td><td>1.4M</td><td>Release day, massive crowd</td></tr>
-    <tr><td>@niikoxswae</td><td>Disco Inferno flip</td><td>24K</td><td>613K</td><td>Nostalgia flip + artist tag</td></tr>
-    <tr><td>@wally_sounds</td><td>Peg (Wally Remix)</td><td>14K</td><td>&mdash;</td><td>Recognizable hook first 2sec</td></tr>
-    <tr><td>@zachhzachhzachh</td><td>COMMENT 4 RAWS</td><td>8.3K</td><td>&mdash;</td><td>Keyword CTA = 1,013 comments</td></tr>
-    <tr><td>@chalantmusic</td><td>Legendary b3b</td><td>4.7K</td><td>165K</td><td>Live energy, tagged artists</td></tr>
-    <tr><td>@lukealexvnder</td><td>a business idea</td><td>3.9K</td><td>94K</td><td>Talking head DJ life take</td></tr>
-    <tr><td>@austinashtinmusic</td><td>FISHER playing Caramel</td><td>3.1K</td><td>40K</td><td>Bigger DJ social proof</td></tr>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th></tr></thead><tbody>
+    <tr><td>@domdolla</td><td>rhyme dust interlude</td><td style="color:var(--ac);font-weight:700">736K</td><td>9M</td><td style="color:var(--gn);font-weight:700">8.2%</td><td>Raw studio + casual caption</td></tr>
+    <tr><td>@austinashtinmusic</td><td>FISHER playing Caramel</td><td>3.1K</td><td>40K</td><td style="color:var(--gn);font-weight:700">7.8%</td><td>Bigger DJ social proof</td></tr>
+    <tr><td>@niikoxswae</td><td>Rule The World w/ Tiesto</td><td style="color:var(--ac)">519K</td><td>8.5M</td><td style="color:var(--ac)">6.1%</td><td>Major collab + nostalgia flip</td></tr>
+    <tr><td>@domdolla</td><td>made this on the plane</td><td>196K</td><td>3.2M</td><td style="color:var(--ac)">6.1%</td><td>Studio-on-the-go</td></tr>
+    <tr><td>@domdolla</td><td>totally addicted to bass</td><td>76K</td><td>1.4M</td><td style="color:var(--ac)">5.4%</td><td>Release day, massive crowd</td></tr>
+    <tr><td>@bolothedj</td><td>taco shop rave</td><td>139K</td><td>2.9M</td><td>4.8%</td><td>Unexpected venue, energy</td></tr>
+    <tr><td>@lukealexvnder</td><td>a business idea</td><td>3.9K</td><td>94K</td><td>4.1%</td><td>Talking head DJ life take</td></tr>
+    <tr><td>@niikoxswae</td><td>Disco Inferno flip</td><td>24K</td><td>613K</td><td>3.9%</td><td>Nostalgia flip + artist tag</td></tr>
+    <tr><td>@chalantmusic</td><td>Legendary b3b</td><td>4.7K</td><td>165K</td><td>2.8%</td><td>Live energy, tagged artists</td></tr>
+    <tr><td>@zachhzachhzachh</td><td>fredagain/skepta mashup</td><td>145K</td><td>&mdash;</td><td>&mdash;</td><td>Meme + artist tag bait</td></tr>
+    <tr><td>@sidequestdj</td><td>Day 6/10 remix challenge</td><td>120K</td><td>&mdash;</td><td>&mdash;</td><td>Serial format, daily challenge</td></tr>
+    <tr><td>@wally_sounds</td><td>Peg (Wally Remix)</td><td>14K</td><td>&mdash;</td><td>&mdash;</td><td>Recognizable hook first 2sec</td></tr>
+    <tr><td>@zachhzachhzachh</td><td>COMMENT 4 RAWS</td><td>8.3K</td><td>&mdash;</td><td>&mdash;</td><td>Keyword CTA = 1,013 comments</td></tr>
   </tbody></table></div>
 </div>
 <div class="sec">
@@ -1643,7 +1613,7 @@ function init(){
 </div>
 
 <!-- HOOK LIBRARY -->
-<div class="sub-c" id="c-hooks">
+<div id="c-hooks">
 <div class="sec">
   <div class="sh"><span class="sn">&#127907;</span><span class="st">Hook Library</span></div>
   <div class="tw"><table><thead><tr><th>#</th><th>First 2 Seconds</th><th>Source</th><th>Status</th></tr></thead><tbody>
@@ -1669,7 +1639,7 @@ function init(){
 </div>
 
 <!-- SCENE LIBRARY -->
-<div class="sub-c" id="c-scenes">
+<div id="c-scenes">
 <div class="sec">
   <div class="sh"><span class="sn">&#127916;</span><span class="st">Scene Library</span></div>
   <div class="tw"><table><thead><tr><th>Scene</th><th>Why It Works</th><th>Frequency</th><th>Fit</th></tr></thead><tbody>
@@ -1685,7 +1655,7 @@ function init(){
 </div>
 
 <!-- IDEA PIPELINE -->
-<div class="sub-c" id="c-pipeline">
+<div id="c-pipeline">
 <div class="sec">
   <div class="sh"><span class="sn">&#128161;</span><span class="st">Idea Pipeline</span></div>
   <div class="tw"><table><thead><tr><th>Idea</th><th>Format</th><th>Track</th><th>Priority</th><th>Status</th></tr></thead><tbody>
