@@ -607,7 +607,7 @@ function showTab(id){
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
   if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); renderTrackScores(); renderScrapedAlerts(); loadWeeklyStrategy(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
-  if(id==='content'){ setTimeout(renderContentCharts, 200); }
+  if(id==='content'){ renderContentStats(); renderCompetitorData(); setTimeout(renderContentCharts, 200); }
   if(id==='campaigns'){ renderCampaigns(); renderReleaseTimelines(); renderAds(); }
   if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
@@ -1530,6 +1530,7 @@ function renderArtistScore(){
   if(STATE.scores.length > 1){
     html += '<div class="sparkline-wrap" style="margin-top:10px"><canvas id="score-sparkline"></canvas></div>';
   }
+  html += '<div id="artist-score-insight" style="margin-top:10px;padding:8px 12px;border-radius:6px;background:rgba(0,229,255,.05);border-left:3px solid var(--ac);font-size:11px;color:var(--tx);line-height:1.5;display:none"></div>';
 
   el.innerHTML = html;
 
@@ -2073,7 +2074,8 @@ function loadAnalytics(){
 
     MSE.lastUpdated = data.scrapedAt ? data.scrapedAt.slice(0,10) : MSE.lastUpdated;
 
-    // Store deltas and alerts for HQ
+    // Store full scraped data for dynamic rendering
+    window._latestData = data;
     window._scrapedDeltas = data.deltas || null;
     window._scrapedAlerts = data.alerts || [];
 
@@ -2086,9 +2088,183 @@ function loadAnalytics(){
       setTimeout(function(){ renderHQCharts(); renderAlerts(); renderScrapedAlerts(); }, 100);
     }
     if(document.getElementById('t-content').classList.contains('on')){
-      setTimeout(renderContentCharts, 200);
+      setTimeout(function(){ renderContentStats(); renderContentCharts(); }, 200);
     }
+    // Always render content stats when data arrives (badges etc.)
+    renderContentStats();
   });
+}
+
+function loadCompetitors(){
+  db.ref('competitors/latest').once('value', function(snap){
+    var data = snap.val();
+    if(!data) return;
+    window._competitorData = data;
+    renderCompetitorData();
+  });
+}
+
+function renderContentStats(){
+  var ig = MSE.ig || {};
+  var tt = MSE.tiktok || {};
+  var sc = MSE.sc || {};
+  var data = window._latestData || {};
+
+  // --- Cross-Platform Overview cards ---
+  var xplat = document.getElementById('xplat-stats');
+  if(xplat){
+    var totalFollowers = (ig.followers||0) + (tt.followers||0) + (sc.followers||0);
+    xplat.innerHTML =
+      '<div class="c ig" style="border-left:3px solid #E1306C">' +
+        '<div class="cl">INSTAGRAM</div>' +
+        '<div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">' + (ig.followers||0).toLocaleString() + ' followers</div>' +
+        '<div class="cs" style="line-height:1.8">' + (ig.posts||0) + ' posts &middot; ' + (ig.engRate||0) + '% eng rate</div>' +
+      '</div>' +
+      '<div class="c" style="border-left:3px solid #00f2ea">' +
+        '<div class="cl" style="color:#00f2ea">TIKTOK</div>' +
+        '<div class="cv" style="color:#00f2ea">' + (tt.followers||0).toLocaleString() + ' followers</div>' +
+        '<div class="cs" style="line-height:1.8">' + (tt.posts||tt.videos||0) + ' posts &middot; ' + (tt.totalPlays||0).toLocaleString() + ' plays</div>' +
+      '</div>' +
+      '<div class="c" style="border-left:3px solid #ff5500">' +
+        '<div class="cl" style="color:#ff5500">SOUNDCLOUD</div>' +
+        '<div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + ' followers</div>' +
+        '<div class="cs" style="line-height:1.8">' + (sc.tracks||0) + ' tracks</div>' +
+      '</div>';
+  }
+  // Cross-platform badge
+  var xpBadge = document.getElementById('xplat-badge');
+  if(xpBadge){
+    var totalF = (ig.followers||0) + (tt.followers||0) + (sc.followers||0);
+    xpBadge.textContent = '3 platforms \u00b7 ' + totalF.toLocaleString() + ' total followers';
+  }
+
+  // --- IG stats ---
+  var igGrid = document.getElementById('ig-stats-grid');
+  if(igGrid){
+    igGrid.innerHTML =
+      '<div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">' + (ig.followers||0).toLocaleString() + '</div><div class="cs">' + (ig.posts||0) + ' posts</div></div>' +
+      '<div class="c ig"><div class="cl">ENG RATE</div><div class="cv">' + (ig.engRate||0) + '%</div><div class="cs">Avg ' + (ig.avgLikes||ig.avgEng||0) + ' likes &middot; ' + (ig.avgComments||0) + ' comments</div></div>' +
+      '<div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">' + (ig.accountsReached||11003).toLocaleString() + '</div><div class="cs">97.3% non-followers</div></div>' +
+      '<div class="c ig"><div class="cl">IMPRESSIONS</div><div class="cv">' + (ig.impressions||45344).toLocaleString() + '</div><div class="cs">90-day total</div></div>' +
+      '<div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">' + (ig.profileViews||2564).toLocaleString() + '</div><div class="cs">23% visit rate</div></div>' +
+      '<div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">12\u20133pm</div><div class="cs">Tue\u2013Wed \u00b7 Reels 65.1%</div></div>';
+  }
+  var igBadge = document.getElementById('ig-badge');
+  if(igBadge) igBadge.textContent = '90-day deep report \u00b7 ' + (ig.followers||0).toLocaleString() + ' followers';
+
+  // --- IG Posts Table ---
+  var igTable = document.getElementById('ig-posts-table');
+  if(igTable && data.igPosts && data.igPosts.length){
+    var posts = data.igPosts.slice().sort(function(a,b){ return (b.likesCount||0) - (a.likesCount||0); });
+    var rows = '';
+    posts.forEach(function(p){
+      var caption = (p.caption||'(no caption)').substring(0,50);
+      var eng = (p.likesCount||0) + (p.commentsCount||0);
+      var date = p.timestamp ? new Date(p.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      var type = p.type || (p.isReel ? 'Reel' : 'Post');
+      rows += '<tr><td>' + caption + '</td><td>' + type + '</td><td>' + date + '</td><td style="color:var(--ac);font-weight:700">' + eng + '</td></tr>';
+    });
+    igTable.innerHTML = rows;
+  }
+
+  // --- TikTok stats ---
+  var ttGrid = document.getElementById('tt-stats-grid');
+  if(ttGrid){
+    ttGrid.innerHTML =
+      '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TOTAL PLAYS</div><div class="cv" style="color:#00f2ea">' + (tt.totalPlays||0).toLocaleString() + '</div><div class="cs">Across ' + (tt.posts||tt.videos||0) + ' posts</div></div>' +
+      '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">FOLLOWERS</div><div class="cv" style="color:#00f2ea">' + (tt.followers||0).toLocaleString() + '</div><div class="cs">' + (tt.likes||tt.hearts||0).toLocaleString() + ' total likes</div></div>' +
+      '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">AVG PLAYS/POST</div><div class="cv" style="color:#00f2ea">' + (tt.avgPlaysPerPost||tt.avgPlays||0).toLocaleString() + '</div><div class="cs">Per video average</div></div>';
+  }
+  var ttBadge = document.getElementById('tt-badge');
+  if(ttBadge) ttBadge.textContent = (tt.totalPlays||0).toLocaleString() + ' plays \u00b7 ' + (tt.followers||0).toLocaleString() + ' followers';
+
+  // --- TikTok Posts Table ---
+  var ttTable = document.getElementById('tt-posts-table');
+  if(ttTable && data.ttPosts && data.ttPosts.length){
+    var tposts = data.ttPosts.slice().sort(function(a,b){ return (b.playCount||0) - (a.playCount||0); });
+    var trows = '';
+    tposts.forEach(function(p){
+      var desc = (p.desc||p.text||'(no caption)').substring(0,50);
+      var date = p.createTime ? new Date(p.createTime*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      trows += '<tr><td style="font-weight:700">' + desc + '</td><td>' + date + '</td>' +
+        '<td style="color:#00f2ea;font-weight:700">' + (p.playCount||0).toLocaleString() + '</td>' +
+        '<td>' + (p.diggCount||0).toLocaleString() + '</td>' +
+        '<td>' + (p.shareCount||0).toLocaleString() + '</td>' +
+        '<td>' + (p.collectCount||0).toLocaleString() + '</td>' +
+        '<td>' + (p.commentCount||0).toLocaleString() + '</td></tr>';
+    });
+    ttTable.innerHTML = trows;
+  }
+
+  // --- SoundCloud stats ---
+  var scGrid = document.getElementById('sc-stats-grid');
+  if(scGrid){
+    scGrid.innerHTML =
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks</div></div>';
+  }
+  var scBadge = document.getElementById('sc-badge');
+  if(scBadge) scBadge.textContent = (sc.followers||0).toLocaleString() + ' followers';
+
+  // --- Last scraped date ---
+  var lsd = document.getElementById('last-scraped-date');
+  if(lsd && MSE.lastUpdated) lsd.textContent = 'Last scraped: ' + MSE.lastUpdated;
+
+  // --- Posting cadence (What Works + HQ) ---
+  var cadenceEl = document.getElementById('your-posting-cadence');
+  if(cadenceEl && ig.posts){
+    // Rough monthly rate: posts / 3 months
+    var monthly = Math.round((ig.posts||0) / 3);
+    cadenceEl.textContent = '~' + monthly + '/mo';
+  }
+}
+
+function renderCompetitorData(){
+  var cdata = window._competitorData;
+  if(!cdata) return;
+
+  // --- Top Reels table ---
+  var reelsTable = document.getElementById('top-reels-table');
+  if(reelsTable && cdata.patterns && cdata.patterns.top10 && cdata.patterns.top10.length){
+    var rows = '';
+    var top10 = Array.isArray(cdata.patterns.top10) ? cdata.patterns.top10 : Object.values(cdata.patterns.top10);
+    top10.forEach(function(r){
+      var likes = r.likesCount ? (r.likesCount >= 1000 ? (r.likesCount/1000).toFixed(1)+'K' : r.likesCount.toLocaleString()) : '\u2014';
+      var views = r.videoViewCount ? (r.videoViewCount >= 1000000 ? (r.videoViewCount/1000000).toFixed(1)+'M' : r.videoViewCount >= 1000 ? (r.videoViewCount/1000).toFixed(0)+'K' : r.videoViewCount.toLocaleString()) : '\u2014';
+      var eng = (r.likesCount && r.videoViewCount) ? ((r.likesCount/r.videoViewCount)*100).toFixed(1) + '%' : '\u2014';
+      var caption = (r.caption||'').substring(0,40) || '(no caption)';
+      var user = r.ownerUsername||'unknown';
+      var userLink = '<a href="https://www.instagram.com/' + user + '/" target="_blank" style="color:var(--ac);text-decoration:none">@' + user + '</a>';
+      var reelLink = r.shortCode ? '<a href="https://www.instagram.com/reel/' + r.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + caption + '</a>' : caption;
+      rows += '<tr><td>' + userLink + '</td><td>' + reelLink + '</td>' +
+        '<td style="color:var(--ac);font-weight:700">' + likes + '</td>' +
+        '<td>' + views + '</td>' +
+        '<td style="color:var(--gn);font-weight:700">' + eng + '</td>' +
+        '<td>' + (r.keyPattern||'') + '</td></tr>';
+    });
+    reelsTable.innerHTML = rows;
+  }
+
+  // --- Competitor Profiles table ---
+  var profTable = document.getElementById('competitor-profiles-table');
+  if(profTable && cdata.patterns && cdata.patterns.accountAvgs){
+    var accts = Array.isArray(cdata.patterns.accountAvgs) ? cdata.patterns.accountAvgs : Object.values(cdata.patterns.accountAvgs);
+    // Sort by avg engagement descending
+    accts.sort(function(a,b){ return (b.avgEng||0) - (a.avgEng||0); });
+    var prows = '';
+    accts.forEach(function(a){
+      var username = a.account || 'unknown';
+      var profileLink = '<a href="https://www.instagram.com/' + username + '/" target="_blank" style="color:var(--ac);text-decoration:none;font-weight:700">@' + username + '</a>';
+      var avgLikes = a.avgEng ? Math.round(a.avgEng).toLocaleString() : '\u2014';
+      var reelPct = a.reelPct ? Math.round(a.reelPct) + '%' : '\u2014';
+      prows += '<tr><td>' + profileLink + '</td>' +
+        '<td>\u2014</td>' +
+        '<td>' + (a.reels||0) + '</td>' +
+        '<td>' + avgLikes + '</td>' +
+        '<td>' + (a.posts||0) + ' posts, ' + reelPct + ' reels</td>' +
+        '<td><span class="tg tg-a">SCRAPED</span></td></tr>';
+    });
+    profTable.innerHTML = prows;
+  }
 }
 
 function renderScrapedAlerts(){
@@ -2145,19 +2321,73 @@ function renderScrapedAlerts(){
     });
     html += '</div>';
   });
+  // AI-generated alerts from weekly strategy
+  var strat = window._strategyData;
+  if(strat && strat.performanceAlerts && strat.performanceAlerts.length){
+    html += '<div style="margin-top:10px;margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#129302; AI PERFORMANCE INSIGHTS</div>';
+    strat.performanceAlerts.forEach(function(a){
+      var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.04);">'+icon+' '+a.message+'</div>';
+    });
+    html += '</div>';
+  }
+  if(strat && strat.opportunityAlerts && strat.opportunityAlerts.length){
+    html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#128161; AI OPPORTUNITIES</div>';
+    strat.opportunityAlerts.forEach(function(a){
+      var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(255,171,0,.04);">'+icon+' '+a.message+'</div>';
+    });
+    html += '</div>';
+  }
   area.innerHTML = html || '<div class="ds">No new alerts.</div>';
+}
+
+// ─── AI Content Render Functions ────────────────────────────────
+function renderPriorityFormats(formats){
+  var tbody = document.getElementById('priority-formats-body');
+  if(!tbody || !formats || !formats.length) return;
+  var html = '';
+  formats.forEach(function(f, i){
+    var impactClass = f.impact === 'HIGH' ? 'tg-g' : 'tg-a';
+    html += '<tr><td>'+(i+1)+'</td><td style="font-weight:700">'+f.format+'</td><td>'+f.evidence+'</td><td><span class="tg '+impactClass+'">'+f.impact+'</span></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function renderAvoidItems(items){
+  var area = document.getElementById('avoid-items-area');
+  if(!area || !items || !items.length) return;
+  var html = '';
+  items.forEach(function(item){
+    html += '<div class="c x"><div class="cl">'+item.title+'</div><div class="cs">'+item.reason+'</div></div>';
+  });
+  area.innerHTML = html;
+}
+
+function renderPostingCadence(data){
+  var area = document.getElementById('posting-cadence-area');
+  if(!area || !data) return;
+  var html = '<div class="c x"><div class="cl">YOU</div><div class="cv">'+data.you.rate+'</div><div class="cs">'+data.you.commentary+'</div></div>';
+  if(data.competitors){
+    data.competitors.forEach(function(c){
+      html += '<div class="c w"><div class="cl">'+c.name.toUpperCase()+'</div><div class="cv">'+c.rate+'</div><div class="cs">'+c.commentary+'</div></div>';
+    });
+  }
+  area.innerHTML = html;
 }
 
 function loadWeeklyStrategy(){
   db.ref('strategy/latest').once('value', function(snap){
     var s = snap.val();
+    window._strategyData = s;
     var area = document.getElementById('weekly-strategy-area');
     if(!area) return;
     if(!s){
       area.innerHTML = '<div class="ds">Weekly strategy will appear after the first Monday run.</div>';
       return;
     }
-    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+' &middot; Generated '+(s.generatedAt ? new Date(s.generatedAt).toLocaleString() : 'unknown')+'</div>';
+    var aiTag = s.aiGenerated ? ' <span style="color:var(--ac);font-size:8px;background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;margin-left:4px">&#129302; AI</span>' : '';
+    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+' &middot; Generated '+(s.generatedAt ? new Date(s.generatedAt).toLocaleString() : 'unknown')+aiTag+'</div>';
 
     // Priorities
     if(s.priorities && s.priorities.length){
@@ -2214,6 +2444,32 @@ function loadWeeklyStrategy(){
     }
 
     area.innerHTML = html;
+
+    // Render AI-powered Content Engine sections
+    if(s.priorityFormats) renderPriorityFormats(s.priorityFormats);
+    if(s.avoidItems) renderAvoidItems(s.avoidItems);
+    if(s.postingCadenceAnalysis) renderPostingCadence(s.postingCadenceAnalysis);
+
+    // Artist score insight
+    if(s.artistScoreInsight){
+      var insightEl = document.getElementById('artist-score-insight');
+      if(insightEl){
+        insightEl.innerHTML = '<span style="color:var(--ac);font-size:9px;font-weight:600">&#129302; AI INSIGHT</span><br>' + s.artistScoreInsight;
+        insightEl.style.display = '';
+      }
+    }
+
+    // Trend analysis
+    if(s.trendAnalysis){
+      var ta = document.getElementById('trend-analysis-text');
+      if(ta){
+        ta.innerHTML = '<span style="color:var(--gn);font-size:9px;font-weight:600">&#129302; AI TREND ANALYSIS</span><br>' + s.trendAnalysis;
+        ta.style.display = '';
+      }
+    }
+
+    // Re-render scraped alerts to include AI alerts
+    renderScrapedAlerts();
   });
 }
 
@@ -2480,6 +2736,7 @@ function renderContentCharts(){
 function init(){
   loadState();
   loadAnalytics();
+  loadCompetitors();
   loadHistory(function(){ renderTrendCharts(); });
   loadWeeklyStrategy();
   renderAgenda();
@@ -2587,6 +2844,7 @@ function init(){
       <div></div>
     </div>
   </div>
+  <div id="trend-analysis-text" style="margin-top:12px;padding:10px 12px;border-radius:6px;background:rgba(0,230,118,.05);border-left:3px solid var(--gn);font-size:11px;color:var(--tx);line-height:1.5;display:none"></div>
 </div>
 
 <!-- Daily Agenda -->
@@ -2618,31 +2876,31 @@ function init(){
 
 <!-- ==================== ANALYTICS SUB-TAB ==================== -->
 <div class="sub-c on" id="cs-analytics">
-<div class="ds">Last scraped: March 27, 2026 &middot; IG deep report: Dec 27 &ndash; Mar 26 (90 days)</div>
+<div class="ds"><span id="last-scraped-date">Last scraped: loading...</span> &middot; IG deep report: Dec 27 &ndash; Mar 26 (90 days)</div>
 
 <!-- CROSS-PLATFORM OVERVIEW -->
 <div class="acc-panel">
   <div class="acc-hdr acc-hdr-xplat" onclick="toggleAcc('acc-xplat')">
     <span class="acc-chevron open" id="acc-xplat-chevron">&#9654;</span>
     <span class="acc-title">Cross-Platform Overview</span>
-    <span class="acc-badge">3 platforms &middot; 381 total followers</span>
+    <span class="acc-badge" id="xplat-badge">3 platforms &middot; 381 total followers</span>
   </div>
   <div class="acc-body open" id="acc-xplat-body"><div class="acc-body-inner">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    <div id="xplat-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
       <div class="c ig" style="border-left:3px solid #E1306C">
         <div class="cl">INSTAGRAM</div>
-        <div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">312 followers</div>
-        <div class="cs" style="line-height:1.8">+65% growth &middot; +123 net<br>11,003 reached <span style="color:var(--gn)">(+1,056%)</span><br>1,500 interactions <span style="color:var(--gn)">(+831%)</span></div>
+        <div class="cv" style="background:linear-gradient(90deg,#833ab4,#fd1d1d,#fcb045);-webkit-background-clip:text;-webkit-text-fill-color:transparent">-- followers</div>
+        <div class="cs" style="line-height:1.8">Loading...</div>
       </div>
       <div class="c" style="border-left:3px solid #00f2ea">
         <div class="cl" style="color:#00f2ea">TIKTOK</div>
-        <div class="cv" style="color:#00f2ea">28 followers</div>
-        <div class="cs" style="line-height:1.8">5 posts &middot; 2,177 plays<br>Best: 1,141 (PUYB teaser)<br>Avg 435 plays/post</div>
+        <div class="cv" style="color:#00f2ea">-- followers</div>
+        <div class="cs" style="line-height:1.8">Loading...</div>
       </div>
       <div class="c" style="border-left:3px solid #ff5500">
         <div class="cl" style="color:#ff5500">SOUNDCLOUD</div>
-        <div class="cv" style="color:#ff5500">41 followers</div>
-        <div class="cs" style="line-height:1.8">9 tracks &middot; 603 all-time<br>29 plays (7d) <span style="color:var(--gn)">(+107%)</span><br>118 plays (30d)</div>
+        <div class="cv" style="color:#ff5500">-- followers</div>
+        <div class="cs" style="line-height:1.8">Loading...</div>
       </div>
     </div>
     <div class="chart-row">
@@ -2659,31 +2917,24 @@ function init(){
   <div class="acc-hdr acc-hdr-ig" onclick="toggleAcc('acc-ig')">
     <span class="acc-chevron open" id="acc-ig-chevron">&#9654;</span>
     <span class="acc-title" style="color:#E1306C">Instagram &mdash; @itselcapitan_</span>
-    <span class="acc-badge">90-day deep report &middot; 312 followers</span>
+    <span class="acc-badge" id="ig-badge">90-day deep report &middot; -- followers</span>
   </div>
   <div class="acc-body open" id="acc-ig-body"><div class="acc-body-inner">
-    <div class="g">
-      <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">312</div><div class="cs">+65% growth &middot; +123 net &middot; 13% unfollow rate</div></div>
-      <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">11,003</div><div class="cs"><span style="color:var(--gn)">+1,056%</span> &middot; 97.3% non-followers</div></div>
-      <div class="c ig"><div class="cl">IMPRESSIONS</div><div class="cv">45,344</div><div class="cs"><span style="color:var(--gn)">+1,625%</span> vs previous period</div></div>
-      <div class="c ig"><div class="cl">INTERACTIONS</div><div class="cv">1,500</div><div class="cs"><span style="color:var(--gn)">+831%</span> &middot; Posts 887, Reels 492, Stories 45</div></div>
-      <div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">2,564</div><div class="cs">23% visit rate &middot; 26 link clicks (1%)</div></div>
-      <div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">12&ndash;3pm</div><div class="cs">Tue&ndash;Wed &middot; Reels 65.1%, Stories 19.9%, Posts 15.0%</div></div>
+    <div class="g" id="ig-stats-grid">
+      <div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">--</div><div class="cs">Loading...</div></div>
+      <div class="c ig"><div class="cl">ENG RATE</div><div class="cv">--%</div><div class="cs">Loading...</div></div>
+      <div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">--</div><div class="cs">Loading...</div></div>
+      <div class="c ig"><div class="cl">IMPRESSIONS</div><div class="cv">--</div><div class="cs">Loading...</div></div>
+      <div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">--</div><div class="cs">Loading...</div></div>
+      <div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">--</div><div class="cs">Loading...</div></div>
     </div>
     <div class="chart-row">
       <div class="chart-cell"><div class="chart-label">Interactions by Content Type</div><canvas id="cc-interaction-type" height="180"></canvas></div>
       <div class="chart-cell"><div class="chart-label">Engagement Breakdown</div><canvas id="cc-engagement" height="180"></canvas></div>
       <div class="chart-cell"><div class="chart-label">View Share by Format</div><canvas id="cc-viewshare" height="180"></canvas></div>
     </div>
-    <div class="tw" style="margin-top:12px"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody>
-      <tr><td>Hunter Mtn lineup (co-author)</td><td>Image</td><td>Feb 18</td><td style="color:var(--ac);font-weight:700">117</td></tr>
-      <tr><td>(no caption) sidecar</td><td>Sidecar</td><td>Feb 2</td><td style="color:var(--ac)">84</td></tr>
-      <tr><td>"post more" sidecar</td><td>Sidecar</td><td>Nov 27</td><td style="color:var(--ac)">73</td></tr>
-      <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">hunter mtn nights (NEW)</td><td>Reel</td><td>Mar 16</td><td style="color:var(--gn);font-weight:700">51</td></tr>
-      <tr><td>Chibiza set on SC</td><td>Sidecar</td><td>May 13</td><td style="color:var(--ac)">52</td></tr>
-      <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">pack up ya bags (NEW)</td><td>Reel</td><td>Mar 17</td><td style="color:var(--gn)">25</td></tr>
-      <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">the money teaser (NEW)</td><td>Reel</td><td>Mar 22</td><td style="color:var(--gn)">&mdash;</td></tr>
-      <tr style="background:rgba(0,230,118,.04)"><td style="color:var(--gn)">&#x1F4B0; money drop (NEW)</td><td>Reel</td><td>Mar 24</td><td style="color:var(--gn)">&mdash;</td></tr>
+    <div class="tw" style="margin-top:12px"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Eng</th></tr></thead><tbody id="ig-posts-table">
+      <tr><td colspan="4" style="color:var(--dm)">Loading scraped posts...</td></tr>
     </tbody></table></div>
   </div></div>
 </div>
@@ -2693,22 +2944,18 @@ function init(){
   <div class="acc-hdr acc-hdr-tk" onclick="toggleAcc('acc-tk')">
     <span class="acc-chevron" id="acc-tk-chevron">&#9654;</span>
     <span class="acc-title" style="color:#00f2ea">TikTok &mdash; @itselcapitan</span>
-    <span class="acc-badge">2,177 plays &middot; 28 followers</span>
+    <span class="acc-badge" id="tt-badge">-- plays &middot; -- followers</span>
   </div>
   <div class="acc-body" id="acc-tk-body"><div class="acc-body-inner">
-    <div class="g" style="margin-bottom:12px">
-      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TOTAL PLAYS</div><div class="cv" style="color:#00f2ea">2,177</div><div class="cs">Across 5 posts in 7 days</div></div>
-      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">FOLLOWERS</div><div class="cv" style="color:#00f2ea">28</div><div class="cs">205 total likes &middot; 125 following</div></div>
-      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">AVG PLAYS/POST</div><div class="cv" style="color:#00f2ea">435</div><div class="cs">Best: 1,141 (PUYB teaser)</div></div>
+    <div class="g" id="tt-stats-grid" style="margin-bottom:12px">
+      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TOTAL PLAYS</div><div class="cv" style="color:#00f2ea">--</div><div class="cs">Loading...</div></div>
+      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">FOLLOWERS</div><div class="cv" style="color:#00f2ea">--</div><div class="cs">Loading...</div></div>
+      <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">AVG PLAYS/POST</div><div class="cv" style="color:#00f2ea">--</div><div class="cs">Loading...</div></div>
     </div>
     <div class="tw"><table>
       <thead><tr><th>Post</th><th>Date</th><th style="color:#00f2ea">Plays</th><th>Likes</th><th>Shares</th><th>Saves</th><th>Comments</th></tr></thead>
-      <tbody>
-        <tr style="background:rgba(0,242,234,.04)"><td style="font-weight:700;color:#00f2ea">Pack Up Ya Bags teaser</td><td>Mar 20</td><td style="font-weight:700;color:#00f2ea">1,141</td><td>147</td><td>1</td><td>5</td><td>1</td></tr>
-        <tr><td style="font-weight:700">Hunter Mtn Nights</td><td>Mar 20</td><td style="color:#00f2ea">487</td><td>39</td><td>5</td><td>1</td><td>0</td></tr>
-        <tr><td style="font-weight:700">The Money teaser</td><td>Mar 23</td><td style="color:#00f2ea">245</td><td>5</td><td>0</td><td>3</td><td>1</td></tr>
-        <tr><td style="font-weight:700">Money drop clip</td><td>Mar 25</td><td style="color:#00f2ea">219</td><td>10</td><td>8</td><td>0</td><td>0</td></tr>
-        <tr style="background:rgba(0,230,118,.04)"><td style="font-weight:700;color:var(--gn)">PUYB Release (NEW)</td><td>Mar 27</td><td style="color:var(--gn)">85</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+      <tbody id="tt-posts-table">
+        <tr><td colspan="7" style="color:var(--dm)">Loading scraped posts...</td></tr>
       </tbody>
     </table></div>
   </div></div>
@@ -2719,14 +2966,14 @@ function init(){
   <div class="acc-hdr acc-hdr-sc" onclick="toggleAcc('acc-sc')">
     <span class="acc-chevron" id="acc-sc-chevron">&#9654;</span>
     <span class="acc-title" style="color:#ff5500">SoundCloud &mdash; El Capit&aacute;n</span>
-    <span class="acc-badge">41 followers &middot; 603 all-time plays</span>
+    <span class="acc-badge" id="sc-badge">-- followers</span>
   </div>
   <div class="acc-body" id="acc-sc-body"><div class="acc-body-inner">
     <div class="g">
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (7D)</div><div class="cv" style="color:#ff5500">29</div><div class="cs"><span style="color:var(--gn)">(+107%)</span></div></div>
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (30D)</div><div class="cv" style="color:#ff5500">118</div><div class="cs"><span style="color:var(--rd)">(-47%)</span></div></div>
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">41</div><div class="cs">9 tracks &middot; 603 all-time plays</div></div>
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ENGAGEMENT (7D)</div><div class="cv" style="color:#ff5500">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts</div></div>
+      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (7D)</div><div class="cv" style="color:#ff5500">29</div><div class="cs"><span style="color:var(--gn)">(+107%)</span> <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
+      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (30D)</div><div class="cv" style="color:#ff5500">118</div><div class="cs"><span style="color:var(--rd)">(-47%)</span> <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
+      <div id="sc-stats-grid" style="display:contents"><div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">--</div><div class="cs">Loading...</div></div></div>
+      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ENGAGEMENT (7D)</div><div class="cv" style="color:#ff5500">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
       <div>
@@ -2846,8 +3093,8 @@ function init(){
 <div class="sub-c" id="cs-whatworks">
 <div id="c-strategy">
 <div class="sec">
-  <div class="sh"><span class="sn">&#9650;</span><span class="st">Priority Formats (from Master Strategy Engine)</span></div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Format</th><th>Evidence</th><th>Impact</th></tr></thead><tbody>
+  <div class="sh"><span class="sn">&#9650;</span><span class="st">Priority Formats (AI-powered)</span></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Format</th><th>Evidence</th><th>Impact</th></tr></thead><tbody id="priority-formats-body">
     <tr><td>1</td><td style="font-weight:700">Remix teaser with recognizable hook</td><td>Wally 14K, Chalant model, NIIKO 519K</td><td><span class="tg tg-g">HIGH</span></td></tr>
     <tr><td>2</td><td style="font-weight:700">Co-authored event promos</td><td>Your #1 at 72 avg eng</td><td><span class="tg tg-g">HIGH</span></td></tr>
     <tr><td>3</td><td style="font-weight:700">Three heaters weekly roundup</td><td>Chalant 6/30 reels, avg 460 likes</td><td><span class="tg tg-g">HIGH</span></td></tr>
@@ -2859,8 +3106,8 @@ function init(){
   </tbody></table></div>
 </div>
 <div class="sec">
-  <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">Avoid</span></div>
-  <div class="g">
+  <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">Avoid (AI-powered)</span></div>
+  <div class="g" id="avoid-items-area">
     <div class="c x"><div class="cl">CAPTIONLESS IMAGES</div><div class="cs">Avg 15 eng. Worst format.</div></div>
     <div class="c x"><div class="cl">TRENDING AUDIO</div><div class="cs">Every 10K+ account uses original audio.</div></div>
     <div class="c x"><div class="cl">HASHTAG SPAM</div><div class="cs">Top performers: 3-4 focused tags.</div></div>
@@ -2872,21 +3119,9 @@ function init(){
 <!-- REELS INTEL -->
 <div id="c-reels">
 <div class="sec">
-  <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (~200 scraped)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th></tr></thead><tbody>
-    <tr><td>@domdolla</td><td>rhyme dust interlude</td><td style="color:var(--ac);font-weight:700">736K</td><td>9M</td><td style="color:var(--gn);font-weight:700">8.2%</td><td>Raw studio + casual caption</td></tr>
-    <tr><td>@austinashtinmusic</td><td>FISHER playing Caramel</td><td>3.1K</td><td>40K</td><td style="color:var(--gn);font-weight:700">7.8%</td><td>Bigger DJ social proof</td></tr>
-    <tr><td>@niikoxswae</td><td>Rule The World w/ Tiesto</td><td style="color:var(--ac)">519K</td><td>8.5M</td><td style="color:var(--ac)">6.1%</td><td>Major collab + nostalgia flip</td></tr>
-    <tr><td>@domdolla</td><td>made this on the plane</td><td>196K</td><td>3.2M</td><td style="color:var(--ac)">6.1%</td><td>Studio-on-the-go</td></tr>
-    <tr><td>@domdolla</td><td>totally addicted to bass</td><td>76K</td><td>1.4M</td><td style="color:var(--ac)">5.4%</td><td>Release day, massive crowd</td></tr>
-    <tr><td>@bolothedj</td><td>taco shop rave</td><td>139K</td><td>2.9M</td><td>4.8%</td><td>Unexpected venue, energy</td></tr>
-    <tr><td>@lukealexvnder</td><td>a business idea</td><td>3.9K</td><td>94K</td><td>4.1%</td><td>Talking head DJ life take</td></tr>
-    <tr><td>@niikoxswae</td><td>Disco Inferno flip</td><td>24K</td><td>613K</td><td>3.9%</td><td>Nostalgia flip + artist tag</td></tr>
-    <tr><td>@chalantmusic</td><td>Legendary b3b</td><td>4.7K</td><td>165K</td><td>2.8%</td><td>Live energy, tagged artists</td></tr>
-    <tr><td>@zachhzachhzachh</td><td>fredagain/skepta mashup</td><td>145K</td><td>&mdash;</td><td>&mdash;</td><td>Meme + artist tag bait</td></tr>
-    <tr><td>@sidequestdj</td><td>Day 6/10 remix challenge</td><td>120K</td><td>&mdash;</td><td>&mdash;</td><td>Serial format, daily challenge</td></tr>
-    <tr><td>@wally_sounds</td><td>Peg (Wally Remix)</td><td>14K</td><td>&mdash;</td><td>&mdash;</td><td>Recognizable hook first 2sec</td></tr>
-    <tr><td>@zachhzachhzachh</td><td>COMMENT 4 RAWS</td><td>8.3K</td><td>&mdash;</td><td>&mdash;</td><td>Keyword CTA = 1,013 comments</td></tr>
+  <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (scraped from competitors)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th></tr></thead><tbody id="top-reels-table">
+    <tr><td colspan="6" style="color:var(--dm)">Loading competitor data...</td></tr>
   </tbody></table></div>
 </div>
 <div class="sec">
@@ -2906,26 +3141,17 @@ function init(){
 
 <!-- COMPETITOR PROFILES (merged from Growth tab) -->
 <div class="sec">
-  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (14 scraped)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody>
-    <tr><td style="font-weight:700">@chalantmusic</td><td>8,984</td><td>30</td><td>638</td><td>"Three heaters" Monday, other DJs playing tracks</td><td><span class="tg tg-g">HIGHEST</span></td></tr>
-    <tr><td style="font-weight:700">@wally_sounds</td><td>10,213</td><td>10</td><td>1,963</td><td>Recognizable hook remix, 3-reel rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@zachhzachhzachh</td><td>10,280</td><td>10</td><td>17,775</td><td>COMMENT keyword CTA, release rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@teeeebbbbb</td><td>7,355</td><td>10</td><td>454</td><td>Ultra-short captions, daily posting</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@keepdansyn</td><td>~5K</td><td>15</td><td>273</td><td>John Summit connection, journey narrative</td><td><span class="tg tg-a">MED</span></td></tr>
-    <tr><td style="font-weight:700">@austinashtinmusic</td><td>~15K</td><td>12</td><td>573</td><td>FISHER playing tracks, Catch&amp;Release</td><td><span class="tg tg-a">MED</span></td></tr>
-    <tr><td style="font-weight:700">@niikoxswae</td><td>202K</td><td>15</td><td>37,777</td><td>Same audio/diff visual, nostalgia flips</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@domdolla</td><td>800K+</td><td>12</td><td>122,945</td><td>Raw studio, casual captions</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@bolothedj</td><td>100K+</td><td>14</td><td>21,419</td><td>Fan competitions, "should I drop" CTA</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@sidequestdj</td><td>339K</td><td>10</td><td>33,019</td><td>DM keyword CTA, Day X/10 challenge</td><td><span class="tg tg-b">STUDY</span></td></tr>
+  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (scraped)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody id="competitor-profiles-table">
+    <tr><td colspan="6" style="color:var(--dm)">Loading competitor data...</td></tr>
   </tbody></table></div>
 </div>
 
 <!-- POSTING CADENCE (merged from Growth tab) -->
 <div class="sec">
-  <div class="sh"><span class="sn">&#128200;</span><span class="st">Posting Cadence vs Competitors</span></div>
-  <div class="g">
-    <div class="c x"><div class="cl">YOU</div><div class="cv">~3/mo</div><div class="cs">Target: 16-20/mo (4-5/week)</div></div>
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Posting Cadence vs Competitors (AI-powered)</span></div>
+  <div class="g" id="posting-cadence-area">
+    <div class="c x"><div class="cl">YOU</div><div class="cv" id="your-posting-cadence">~3/mo</div><div class="cs">Target: 16-20/mo (4-5/week)</div></div>
     <div class="c w"><div class="cl">CHALANT</div><div class="cv">~8/wk</div><div class="cs">30 reels in ~5 weeks. Near-daily.</div></div>
     <div class="c w"><div class="cl">TEEB</div><div class="cv">~7/wk</div><div class="cs">10 reels in 10 days. Daily poster.</div></div>
     <div class="c w"><div class="cl">WALLY</div><div class="cv">~6/wk</div><div class="cs">10 reels in 12 days. Near-daily.</div></div>

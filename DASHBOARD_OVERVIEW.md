@@ -156,6 +156,41 @@ Automated release campaign timelines.
 - **View-only mode:** `?view=1` URL parameter hides all edit controls
 - **PWA:** manifest.json + service worker for installable app experience
 
+## How Updates Work
+
+**Live URL (never changes):** https://itselcapitan.github.io/el-capitan-dashboard/
+
+### Two types of data:
+
+| Type | Where it lives | How to update |
+|---|---|---|
+| Tasks, tracks, checkboxes, campaigns, venues, labels | **Firebase** (real-time) | Edit directly in the dashboard — syncs automatically across all devices |
+| Dashboard structure, analytics data, new features, ad data imports | **The HTML code on GitHub** | Ask Claude, code gets pushed, auto-deploys in ~30 seconds |
+
+### Update workflow for code changes:
+
+1. You provide data in chat (CSV, screenshot, text, whatever)
+2. Claude edits `/Users/reidvanslette/Desktop/el-capitan-dashboard/index.html`
+3. Claude runs `git push` — takes 5 seconds
+4. GitHub Actions auto-deploys in ~30 seconds
+5. Live dashboard updates at the same URL on all devices
+
+**You never upload a file manually. Just talk to Claude.**
+
+### Examples:
+- To update analytics: drop an IG Professional Dashboard export or screenshot
+- To add ad data: export Meta Ads Manager as CSV, drop it in chat
+- To add new features: describe what you want
+- To update competitor data: provide handles or let Apify scrape them
+
+### Key files:
+- **Source of truth:** `/Users/reidvanslette/Desktop/el-capitan-dashboard/index.html` (~3,000 lines)
+- **Git repo:** `Itselcapitan/el-capitan-dashboard` on GitHub
+- **Deploy workflow:** `.github/workflows/deploy.yml` (auto-triggers on push to main)
+- **Firebase project:** `el-capitan-dashboard` (Realtime Database)
+
+---
+
 ## Data Sources
 
 - Apify scrapers for IG profile + posts
