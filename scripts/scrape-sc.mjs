@@ -76,20 +76,27 @@ async function main() {
             maxItems: 50,
           });
           const { items } = await client.dataset(run.defaultDatasetId).listItems();
-          // The actor returns user profile + tracks in the items array
-          const trackItems = items.filter(item => item.type === 'track' || item.playback_count !== undefined || item.title);
-          if (trackItems.length > 0) {
-            tracks = trackItems;
+          // Actor returns a single user object with trackList array
+          const userData = items[0];
+          if (userData?.trackList?.length) {
+            // Map Apify field names to soundcloud.ts format
+            tracks = userData.trackList.map(t => ({
+              id: t.id,
+              title: t.title,
+              permalink_url: t.url,
+              playback_count: t.plays || 0,
+              likes_count: t.likes || 0,
+              comment_count: t.comments || 0,
+              reposts_count: t.reposts || 0,
+              download_count: 0,
+              duration: t.duration || 0,
+              genre: t.genre || '',
+              created_at: t.createdAt,
+              artwork_url: t.imageUrl,
+            }));
             console.log(`  ✓ ${tracks.length} tracks found (via Apify actor)`);
-          } else if (items.length > 0) {
-            // If no track-type items, the actor may return a single user object with embedded track data
-            const userData = items[0];
-            if (userData.tracks && Array.isArray(userData.tracks)) {
-              tracks = userData.tracks;
-              console.log(`  ✓ ${tracks.length} tracks found (via Apify actor, embedded)`);
-            } else {
-              console.log(`  ⚠️ Apify returned ${items.length} items but no track data found`);
-            }
+          } else {
+            console.log(`  ⚠️ Apify returned profile but no trackList`);
           }
         } catch (err3) {
           console.warn(`  ⚠️ Apify fallback failed: ${err3.message}`);
