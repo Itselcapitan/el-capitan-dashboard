@@ -121,6 +121,47 @@ function buildDataSummary(latest, history, competitors, state) {
   const topReels = (competitors?.patterns?.top10 || []).slice(0, 5)
     .map(r => ({ account: r.ownerUsername, likes: r.likesCount || 0, caption: (r.caption || '').slice(0, 60) }));
 
+  // Post timing patterns for smart scheduling
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const igPostTiming = (latest?.igPosts || [])
+    .filter(p => p.timestamp)
+    .sort((a, b) => {
+      const eA = ((a.likesCount||0)+(a.commentsCount||0)+(a.savesCount||0)) / Math.max(a.videoPlayCount||1, 1);
+      const eB = ((b.likesCount||0)+(b.commentsCount||0)+(b.savesCount||0)) / Math.max(b.videoPlayCount||1, 1);
+      return eB - eA;
+    })
+    .slice(0, 20)
+    .map(p => {
+      const d = new Date(p.timestamp);
+      const eng = ((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100;
+      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+    });
+
+  const ttPostTiming = (latest?.ttPosts || [])
+    .filter(p => p.createTimeISO)
+    .sort((a, b) => (b.playCount||0) - (a.playCount||0))
+    .slice(0, 20)
+    .map(p => {
+      const d = new Date(p.createTimeISO);
+      const eng = ((p.diggCount||0)+(p.commentCount||0)+(p.shareCount||0)) / Math.max(p.playCount||1, 1) * 100;
+      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+    });
+
+  // Top own captions for caption generation
+  const topOwnCaptions = (latest?.igPosts || [])
+    .filter(p => p.caption && p.videoPlayCount > 0)
+    .sort((a, b) => {
+      const eA = ((a.likesCount||0)+(a.commentsCount||0)+(a.savesCount||0)) / Math.max(a.videoPlayCount||1, 1);
+      const eB = ((b.likesCount||0)+(b.commentsCount||0)+(b.savesCount||0)) / Math.max(b.videoPlayCount||1, 1);
+      return eB - eA;
+    })
+    .slice(0, 5)
+    .map(p => ({ caption: (p.caption||'').slice(0, 120), engRate: +(((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100).toFixed(1) }));
+
+  // Top competitor captions
+  const topCompCaptions = (competitors?.patterns?.top10 || []).slice(0, 5)
+    .map(r => ({ account: r.ownerUsername, caption: (r.caption || '').slice(0, 120), likes: r.likesCount || 0 }));
+
   return {
     ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, posts: ig.posts || 0 },
     tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0 },
@@ -134,8 +175,10 @@ function buildDataSummary(latest, history, competitors, state) {
     postsThisWeek: { ig: recentIG, tt: recentTT, total: recentIG + recentTT, target: POSTS_PER_WEEK_TARGET },
     tracks,
     campaigns,
-    competitors: { summary: compSummary, topReels },
+    competitors: { summary: compSummary, topReels, topCompCaptions },
     currentAlerts: (latest?.alerts || []).map(a => ({ msg: a.msg, level: a.level, category: a.category })),
+    postTiming: { ig: igPostTiming, tt: ttPostTiming },
+    topOwnCaptions,
   };
 }
 
@@ -194,7 +237,61 @@ Return a JSON object with EXACTLY these fields:
     "action": "start or maintain or pause or stop",
     "suggestion": "specific recommendation",
     "reason": "data-backed reason"
-  }
+  },
+
+  "actionableAlerts": [
+    {
+      "id": "unique-kebab-slug",
+      "type": "add_pipeline or add_task or suggestion",
+      "title": "Short action title",
+      "detail": "1-2 sentences explaining why, referencing specific metrics",
+      "action": {
+        "type": "add_pipeline or add_task",
+        "idea": "content idea name (for add_pipeline)",
+        "format": "Reel or Post or Story",
+        "track": "track name if relevant or null",
+        "priority": "HIGH or MED",
+        "taskTitle": "task title (for add_task)",
+        "taskCategory": "Marketing or Producing or Content"
+      }
+    }
+  ],
+
+  "weeklyReview": {
+    "headline": "1 punchy sentence summarizing the week",
+    "wins": ["specific win referencing numbers", "another win"],
+    "misses": ["specific miss referencing numbers", "another miss"],
+    "nextWeekFocus": "1-2 sentences on what to prioritize next week"
+  },
+
+  "competitorInsights": [
+    {
+      "account": "@username",
+      "topReel": "reel caption or description",
+      "likes": number,
+      "whyItWorked": "2-3 sentences analyzing why this content performed well",
+      "takeaway": "1 sentence actionable takeaway for El Capitán"
+    }
+  ],
+
+  "captionTemplates": [
+    {
+      "caption": "full ready-to-use caption text",
+      "platform": "IG or TikTok",
+      "format": "Reel or Post or Story",
+      "inspiration": "what this is based on (your data or competitor data)",
+      "hashtags": ["tag1", "tag2", "tag3"]
+    }
+  ],
+
+  "smartSchedule": [
+    {
+      "day": "Monday",
+      "time": "12:30 PM",
+      "platform": "IG or TikTok",
+      "reason": "reason referencing YOUR actual post timing data"
+    }
+  ]
 }
 
 RULES:
@@ -205,6 +302,11 @@ RULES:
 - priorityFormats: exactly 5-8 items ranked by impact, based on what works for competitors at this follower level
 - priorities: exactly 3 items
 - postIdeas: exactly 3 items, use actual track names from the data if available
+- actionableAlerts: 3-5 items. Types: add_pipeline (suggest content idea), add_task (suggest a task), suggestion (info only). Use real track names and metrics.
+- weeklyReview: 2-4 wins, 2-3 misses. Reference actual numbers from the data. Be honest about misses.
+- competitorInsights: 3-5 items, one per top competitor reel from the data. Explain WHY it worked.
+- captionTemplates: 5-8 items. Mix styles from the artist's top captions AND competitor top captions. Make them ready-to-post with hashtags.
+- smartSchedule: 5-7 items. Use the postTiming data to find patterns — which days/hours have highest engagement. Reference the artist's ACTUAL data in reasons.
 - Use ONLY the data provided. Do not invent metrics or track names.
 - Be specific: reference actual numbers, track names, and platform names.
 - Tone: direct, confident, slightly informal. Like a strategist briefing an artist.
@@ -256,8 +358,28 @@ function validateAIResponse(parsed) {
   if (parsed.campaignAction?.action && parsed.campaignAction?.suggestion)
     result.campaignAction = parsed.campaignAction;
 
+  // Actionable alerts
+  if (Array.isArray(parsed.actionableAlerts) && parsed.actionableAlerts.length >= 1 && parsed.actionableAlerts.every(a => a.id && a.type && a.title))
+    result.actionableAlerts = parsed.actionableAlerts.slice(0, 5);
+
+  // Weekly review
+  if (parsed.weeklyReview?.headline && Array.isArray(parsed.weeklyReview?.wins) && Array.isArray(parsed.weeklyReview?.misses))
+    result.weeklyReview = parsed.weeklyReview;
+
+  // Competitor insights
+  if (Array.isArray(parsed.competitorInsights) && parsed.competitorInsights.length >= 1 && parsed.competitorInsights.every(c => c.account && c.whyItWorked))
+    result.competitorInsights = parsed.competitorInsights.slice(0, 5);
+
+  // Caption templates
+  if (Array.isArray(parsed.captionTemplates) && parsed.captionTemplates.length >= 1 && parsed.captionTemplates.every(c => c.caption && c.platform))
+    result.captionTemplates = parsed.captionTemplates.slice(0, 8);
+
+  // Smart schedule
+  if (Array.isArray(parsed.smartSchedule) && parsed.smartSchedule.length >= 1 && parsed.smartSchedule.every(s => s.day && s.time && s.platform))
+    result.smartSchedule = parsed.smartSchedule.slice(0, 7);
+
   const validCount = Object.keys(result).length;
-  console.log(`  Validated ${validCount}/11 AI fields`);
+  console.log(`  Validated ${validCount}/17 AI fields`);
   return validCount > 0 ? result : null;
 }
 
@@ -521,6 +643,12 @@ async function main() {
     avoidItems: aiFields?.avoidItems || null,
     postingCadenceAnalysis: aiFields?.postingCadenceAnalysis || null,
     priorityFormats: aiFields?.priorityFormats || null,
+    // New AI features
+    actionableAlerts: aiFields?.actionableAlerts || null,
+    weeklyReview: aiFields?.weeklyReview || null,
+    competitorInsights: aiFields?.competitorInsights || null,
+    captionTemplates: aiFields?.captionTemplates || null,
+    smartSchedule: aiFields?.smartSchedule || null,
   };
 
   console.log('\n🎯 PRIORITIES:');

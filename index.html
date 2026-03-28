@@ -426,7 +426,7 @@ var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Produc
 var _uid = 1000;
 function uid(){ return 't'+(++_uid); }
 
-var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[] };
+var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[], pipeline:[] };
 var OUTREACH_STATUSES = ['Not Started','Researching','Contacted','Follow-Up Sent','Responded','Booked/Accepted','Rejected','On Hold'];
 var openVenueDetail = null;
 var openLabelDetail = null;
@@ -484,6 +484,65 @@ function defaultTasks(){
   return tasks;
 }
 
+function defaultPipeline(){
+  return [
+    {id:'pl1', idea:'Pack Up Ya Bags Reel 2 — "COMMENT remix"', format:'Release CTA', track:'PUYB', priority:'HIGH', status:'PLANNED'},
+    {id:'pl2', idea:'Wicked Game "should I drop this?"', format:'Gauge CTA', track:'WG', priority:'HIGH', status:'PLANNED'},
+    {id:'pl3', idea:'First "Three Heaters Monday"', format:'Weekly roundup', track:null, priority:'HIGH', status:'IDEA'},
+    {id:'pl4', idea:'Dashboard walkthrough reel', format:'Talking head', track:null, priority:'HIGH', status:'FILMED'},
+    {id:'pl5', idea:'Studio remix session unexpected location', format:'Studio on-the-go', track:'Next', priority:'MED', status:'IDEA'},
+    {id:'pl6', idea:'Film Santello reacting at gig', format:'Social proof', track:'Any', priority:'MED', status:'IDEA'},
+    {id:'pl7', idea:'"Started making remixes X months ago"', format:'Journey montage', track:null, priority:'MED', status:'IDEA'},
+    {id:'pl8', idea:"Every 1's A Winner clip + artist tag", format:'Remix promo', track:'E1AW', priority:'MED', status:'IDEA'}
+  ];
+}
+
+function renderPipeline(){
+  var tbody = document.getElementById('pipeline-table-body');
+  if(!tbody) return;
+  var items = STATE.pipeline || [];
+  if(!items.length){ tbody.innerHTML = '<tr><td colspan="6" class="ds">No ideas yet.</td></tr>'; return; }
+  var html = '';
+  items.forEach(function(p){
+    var prCls = p.priority==='HIGH' ? 'tg-g' : 'tg-a';
+    var stCls = p.status==='PLANNED' ? 'tg-a' : p.status==='FILMED' ? 'tg-p' : 'tg-b';
+    html += '<tr>';
+    html += '<td style="font-weight:700">'+p.idea+'</td>';
+    html += '<td>'+p.format+'</td>';
+    html += '<td>'+(p.track||'&mdash;')+'</td>';
+    html += '<td><span class="tg '+prCls+'">'+p.priority+'</span></td>';
+    html += '<td><span class="tg '+stCls+'">'+p.status+'</span></td>';
+    html += '<td><button onclick="removePipelineItem(\''+p.id+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:11px" title="Remove">&times;</button></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function addPipelineItem(idea, format, track, priority, status){
+  if(!idea) return;
+  STATE.pipeline.push({
+    id: uid(), idea: idea, format: format||'Reel',
+    track: track||null, priority: priority||'MED', status: status||'IDEA'
+  });
+  saveState();
+  renderPipeline();
+}
+
+function removePipelineItem(id){
+  STATE.pipeline = STATE.pipeline.filter(function(p){ return p.id !== id; });
+  saveState();
+  renderPipeline();
+}
+
+function addPipelineFromInput(){
+  var idea = document.getElementById('pipeline-idea-input').value.trim();
+  if(!idea) return;
+  var format = document.getElementById('pipeline-format-input').value;
+  var priority = document.getElementById('pipeline-priority-input').value;
+  addPipelineItem(idea, format, null, priority, 'IDEA');
+  document.getElementById('pipeline-idea-input').value = '';
+}
+
 function defaultVenues(){
   return [
     {id:'v1',name:'lowercase',market:'Capital Region',contact:'DM @lowercase518',status:'Not Started',demoLink:'',notes:'Need 60-min mix first. Shane connection.',lastContacted:null,nextFollowUp:null,priority:'red'},
@@ -537,7 +596,7 @@ function loadState(){
     }
     else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], _uid: _uid }; }
   } catch(e){
-    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], _uid: _uid };
+    STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], pipeline: defaultPipeline(), _uid: _uid };
   }
 
   // Then listen to Firebase for real-time sync
@@ -564,12 +623,15 @@ function loadState(){
         if(!Array.isArray(STATE.scores)) STATE.scores = Object.values(STATE.scores);
         if(!STATE.campaigns) STATE.campaigns = [];
         if(!Array.isArray(STATE.campaigns)) STATE.campaigns = Object.values(STATE.campaigns);
+        if(!STATE.pipeline) STATE.pipeline = defaultPipeline();
+        if(!Array.isArray(STATE.pipeline)) STATE.pipeline = Object.values(STATE.pipeline);
         _uid = STATE._uid || 1000;
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
         _firebaseReady = true;
         renderAgenda();
         renderMasterTasks();
+        renderPipeline();
         if(document.getElementById('t-tracks') && document.getElementById('t-tracks').classList.contains('on')){
           renderTracks();
         }
@@ -2472,6 +2534,234 @@ function renderPostingCadence(data){
   area.innerHTML = html;
 }
 
+// =====================================================
+// AI FEATURES: Actionable Alerts, Weekly Review, Competitor Insights, Captions, Smart Schedule
+// =====================================================
+
+function renderActionableAlerts(alerts){
+  var section = document.getElementById('ai-actions-section');
+  var area = document.getElementById('ai-actions-area');
+  if(!area || !alerts || !alerts.length){ if(section) section.style.display='none'; return; }
+
+  // Load dismissed alerts
+  db.ref('analytics/dismissedActions').once('value', function(snap){
+    var dismissed = snap.val() || {};
+    var visible = alerts.filter(function(a){ return !dismissed[a.id]; });
+    if(!visible.length){ section.style.display='none'; return; }
+    section.style.display='';
+    var html = '';
+    visible.forEach(function(a){
+      var typeColor = a.type==='add_pipeline' ? 'var(--ac)' : a.type==='add_task' ? 'var(--gn)' : 'var(--am)';
+      var typeLabel = a.type==='add_pipeline' ? 'PIPELINE' : a.type==='add_task' ? 'TASK' : 'TIP';
+      html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.1)">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">';
+      html += '<div style="flex:1"><span style="font-size:8px;color:'+typeColor+';background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;font-weight:600">'+typeLabel+'</span> ';
+      html += '<span style="font-weight:700;color:var(--fg)">'+a.title+'</span>';
+      html += '<div style="font-size:10px;color:var(--dm);margin-top:3px">'+a.detail+'</div></div>';
+      html += '<div style="display:flex;gap:4px;flex-shrink:0">';
+      if(a.type !== 'suggestion'){
+        html += '<button onclick="acceptAIAction('+JSON.stringify(a).replace(/"/g,'&quot;')+')" style="font-size:9px;padding:4px 10px;border-radius:4px;border:none;background:var(--gn);color:#000;cursor:pointer;font-weight:600">Accept</button>';
+      }
+      html += '<button onclick="dismissAIAction(\''+a.id+'\')" style="font-size:9px;padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:none;color:var(--dm);cursor:pointer">Dismiss</button>';
+      html += '</div></div></div>';
+    });
+    area.innerHTML = html;
+  });
+}
+
+function acceptAIAction(alert){
+  if(alert.type === 'add_pipeline' && alert.action){
+    addPipelineItem(
+      alert.action.idea || alert.title,
+      alert.action.format || 'Reel',
+      alert.action.track || null,
+      alert.action.priority || 'MED',
+      'IDEA'
+    );
+  } else if(alert.type === 'add_task' && alert.action){
+    addTask(
+      alert.action.taskTitle || alert.title,
+      alert.action.taskCategory || 'Social Media',
+      alert.action.priority === 'HIGH' ? 'red' : 'yellow'
+    );
+  }
+  dismissAIAction(alert.id);
+}
+
+function dismissAIAction(id){
+  db.ref('analytics/dismissedActions/'+id).set(true);
+  // Re-render
+  if(window._strategyData && window._strategyData.actionableAlerts){
+    renderActionableAlerts(window._strategyData.actionableAlerts);
+  }
+}
+
+var _reviewPages = [];
+var _reviewPageIdx = 0;
+
+function loadStrategyHistory(){
+  db.ref('strategy/history').orderByKey().limitToLast(20).once('value', function(snap){
+    var data = snap.val() || {};
+    _reviewPages = Object.keys(data)
+      .sort(function(a,b){ return b.localeCompare(a); })
+      .map(function(k){ return { weekOf: k, review: data[k].weeklyReview || null }; })
+      .filter(function(p){ return p.review; });
+    _reviewPageIdx = 0;
+    renderWeeklyReview();
+  });
+}
+
+function renderWeeklyReview(){
+  var section = document.getElementById('weekly-review-section');
+  var area = document.getElementById('weekly-review-area');
+  if(!area) return;
+
+  // Also include current strategy data if it has a review
+  if(window._strategyData && window._strategyData.weeklyReview && _reviewPages.length === 0){
+    _reviewPages = [{ weekOf: window._strategyData.weekOf, review: window._strategyData.weeklyReview }];
+  }
+
+  if(!_reviewPages.length){ if(section) section.style.display='none'; return; }
+  section.style.display='';
+
+  var page = _reviewPages[_reviewPageIdx];
+  var r = page.review;
+  var total = _reviewPages.length;
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html += '<button onclick="_reviewPageIdx=Math.min(_reviewPageIdx+1,'+(_reviewPages.length-1)+');renderWeeklyReview()" style="background:none;border:none;color:'+((_reviewPageIdx < total-1) ? 'var(--ac)' : 'var(--bd)')+';cursor:pointer;font-size:14px">&lsaquo;</button>';
+  html += '<span style="font-size:10px;color:var(--dm);font-weight:600">Week of '+page.weekOf+' ('+(_reviewPageIdx+1)+'/'+total+')</span>';
+  html += '<button onclick="_reviewPageIdx=Math.max(_reviewPageIdx-1,0);renderWeeklyReview()" style="background:none;border:none;color:'+((_reviewPageIdx > 0) ? 'var(--ac)' : 'var(--bd)')+';cursor:pointer;font-size:14px">&rsaquo;</button>';
+  html += '</div>';
+
+  html += '<div style="font-weight:700;color:var(--fg);margin-bottom:8px">'+r.headline+'</div>';
+
+  if(r.wins && r.wins.length){
+    html += '<div style="margin-bottom:6px">';
+    r.wins.forEach(function(w){
+      html += '<div style="font-size:11px;color:var(--gn);padding:2px 0">&#9650; '+w+'</div>';
+    });
+    html += '</div>';
+  }
+  if(r.misses && r.misses.length){
+    html += '<div style="margin-bottom:6px">';
+    r.misses.forEach(function(m){
+      html += '<div style="font-size:11px;color:var(--rd);padding:2px 0">&#9660; '+m+'</div>';
+    });
+    html += '</div>';
+  }
+  if(r.nextWeekFocus){
+    html += '<div style="font-size:10px;color:var(--am);margin-top:6px;padding:6px 10px;background:rgba(255,171,0,.06);border-radius:6px"><strong>Next week:</strong> '+r.nextWeekFocus+'</div>';
+  }
+
+  area.innerHTML = html;
+}
+
+function renderCompetitorInsights(insights){
+  var area = document.getElementById('competitor-insights-area');
+  if(!area || !insights || !insights.length) return;
+  var html = '';
+  insights.forEach(function(c){
+    html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(225,48,108,.04);border:1px solid rgba(225,48,108,.1)">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+    html += '<span style="font-weight:700;color:var(--fg)">'+c.account+'</span>';
+    html += '<span style="font-size:9px;color:var(--dm)">'+fmtK(c.likes)+' likes</span>';
+    html += '</div>';
+    html += '<div style="font-size:10px;color:var(--dm);margin-bottom:4px;font-style:italic">"'+(c.topReel||'').slice(0,80)+'"</div>';
+    html += '<div style="font-size:11px;color:var(--fg);margin-bottom:4px">'+c.whyItWorked+'</div>';
+    html += '<div style="font-size:10px;color:var(--ac);padding:4px 8px;background:rgba(0,229,255,.06);border-radius:4px;display:inline-block">&#128161; '+c.takeaway+'</div>';
+    html += '</div>';
+  });
+  area.innerHTML = html;
+}
+
+function renderCaptionTemplates(templates){
+  var area = document.getElementById('caption-templates-area');
+  if(!area || !templates || !templates.length) return;
+  var section = document.getElementById('caption-templates-section');
+  if(section) section.style.display = '';
+  var html = '';
+  templates.forEach(function(t, i){
+    var platColor = t.platform==='IG' ? '#E1306C' : '#00f2ea';
+    html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--bd)">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">';
+    html += '<div><span style="font-size:8px;color:'+platColor+';background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;font-weight:600">'+t.platform+'</span> ';
+    html += '<span style="font-size:8px;color:var(--dm);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:3px">'+t.format+'</span></div>';
+    html += '<button onclick="copyCaption('+i+')" style="font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:none;color:var(--dm);cursor:pointer">Copy</button>';
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--fg);margin-bottom:4px" id="caption-text-'+i+'">'+t.caption+'</div>';
+    if(t.hashtags && t.hashtags.length){
+      html += '<div style="font-size:10px;color:var(--ac)">'+t.hashtags.map(function(h){ return h.startsWith('#') ? h : '#'+h; }).join(' ')+'</div>';
+    }
+    if(t.inspiration){
+      html += '<div style="font-size:9px;color:var(--dm);margin-top:3px;font-style:italic">'+t.inspiration+'</div>';
+    }
+    html += '</div>';
+  });
+  area.innerHTML = html;
+}
+
+function copyCaption(idx){
+  var s = window._strategyData;
+  if(!s || !s.captionTemplates || !s.captionTemplates[idx]) return;
+  var t = s.captionTemplates[idx];
+  var text = t.caption;
+  if(t.hashtags && t.hashtags.length) text += '\n\n' + t.hashtags.map(function(h){ return h.startsWith('#') ? h : '#'+h; }).join(' ');
+  navigator.clipboard.writeText(text).then(function(){
+    var btn = document.querySelectorAll('#caption-templates-area button')[idx];
+    if(btn){ btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1500); }
+  });
+}
+
+function renderSmartSchedule(schedule){
+  var area = document.getElementById('smart-schedule-area');
+  if(!area || !schedule || !schedule.length) return;
+  var section = document.getElementById('smart-schedule-section');
+  if(section) section.style.display = '';
+
+  var dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var dayShort = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var grouped = {};
+  dayOrder.forEach(function(d){ grouped[d] = []; });
+  schedule.forEach(function(s){ if(grouped[s.day]) grouped[s.day].push(s); });
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px">';
+  dayOrder.forEach(function(d, i){
+    var items = grouped[d];
+    html += '<div style="text-align:center;padding:6px 2px;border-radius:6px;background:rgba(255,255,255,.03);min-height:60px">';
+    html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">'+dayShort[i]+'</div>';
+    if(items.length){
+      items.forEach(function(s){
+        var color = s.platform==='IG' ? '#E1306C' : '#00f2ea';
+        html += '<div style="margin-bottom:3px;cursor:help" title="'+s.reason.replace(/"/g,'&quot;')+'">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;background:'+color+';margin:0 auto 2px"></div>';
+        html += '<div style="font-size:8px;color:var(--fg)">'+s.time+'</div>';
+        html += '<div style="font-size:7px;color:'+color+'">'+s.platform+'</div>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="font-size:9px;color:var(--bd);margin-top:10px">&mdash;</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Detail list
+  html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">SCHEDULE DETAILS</div>';
+  schedule.forEach(function(s){
+    var color = s.platform==='IG' ? '#E1306C' : '#00f2ea';
+    html += '<div style="padding:4px 8px;margin-bottom:2px;border-radius:4px;background:rgba(255,255,255,.02);display:flex;align-items:center;gap:8px">';
+    html += '<div style="width:6px;height:6px;border-radius:50%;background:'+color+';flex-shrink:0"></div>';
+    html += '<span style="font-size:10px;color:var(--fg);font-weight:600;min-width:40px">'+s.day.slice(0,3)+'</span>';
+    html += '<span style="font-size:10px;color:var(--fg);min-width:55px">'+s.time+'</span>';
+    html += '<span style="font-size:9px;color:'+color+';min-width:20px">'+s.platform+'</span>';
+    html += '<span style="font-size:9px;color:var(--dm);flex:1">'+s.reason+'</span>';
+    html += '</div>';
+  });
+
+  area.innerHTML = html;
+}
+
 function loadWeeklyStrategy(){
   db.ref('strategy/latest').once('value', function(snap){
     var s = snap.val();
@@ -2566,6 +2856,13 @@ function loadWeeklyStrategy(){
 
     // Re-render scraped alerts to include AI alerts
     renderScrapedAlerts();
+
+    // New AI features
+    if(s.actionableAlerts) renderActionableAlerts(s.actionableAlerts);
+    if(s.weeklyReview) renderWeeklyReview();
+    if(s.competitorInsights) renderCompetitorInsights(s.competitorInsights);
+    if(s.captionTemplates) renderCaptionTemplates(s.captionTemplates);
+    if(s.smartSchedule) renderSmartSchedule(s.smartSchedule);
   });
 }
 
@@ -2836,8 +3133,10 @@ function init(){
   loadCompetitors();
   loadHistory(function(){ renderTrendCharts(); });
   loadWeeklyStrategy();
+  loadStrategyHistory();
   renderAgenda();
   renderMasterTasks();
+  renderPipeline();
   renderArtistScore();
   renderAlerts();
   renderTrackScores();
@@ -2909,6 +3208,18 @@ function init(){
   <div id="weekly-strategy-area">
     <div class="ds">Weekly strategy will appear after the first Monday run.</div>
   </div>
+</div>
+
+<!-- Actionable AI Alerts -->
+<div class="sec" id="ai-actions-section" style="display:none">
+  <div class="sh"><span class="sn">&#129302;</span><span class="st">AI Suggestions</span></div>
+  <div id="ai-actions-area"></div>
+</div>
+
+<!-- Weekly Performance Review (paginated) -->
+<div class="sec" id="weekly-review-section" style="display:none">
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Weekly Review</span></div>
+  <div id="weekly-review-area"></div>
 </div>
 
 <!-- Trend Charts (powered by daily scrape) -->
@@ -3007,6 +3318,14 @@ function init(){
       <strong>Combined Reach:</strong> ~13,180 impressions (11,003 IG + 2,177 TikTok). <strong style="color:var(--am)">Key Problem:</strong> You do NOT need more reach &mdash; you need to convert attention. 23% visit profile, only 1% click link.
     </div>
   </div></div>
+</div>
+
+<!-- Smart Schedule (AI-powered) -->
+<div class="sec" id="smart-schedule-section" style="display:none">
+  <div class="sh"><span class="sn">&#129302;</span><span class="st">Smart Schedule (AI-powered)</span></div>
+  <div id="smart-schedule-area">
+    <div class="ds">Smart scheduling will appear after the weekly strategy runs.</div>
+  </div>
 </div>
 
 <!-- INSTAGRAM DEEP REPORT -->
@@ -3217,6 +3536,14 @@ function init(){
     <div class="c x"><div class="cl">SINGLE-POST RELEASES</div><div class="cs">3-reel minimum per release.</div></div>
   </div>
 </div>
+
+<!-- Competitor Breakdown (AI-powered) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#129302;</span><span class="st">Competitor Breakdown (AI-powered)</span></div>
+  <div id="competitor-insights-area">
+    <div class="ds">Competitor insights will appear after the weekly strategy runs.</div>
+  </div>
+</div>
 </div>
 
 <!-- REELS INTEL -->
@@ -3288,6 +3615,14 @@ function init(){
 
 <!-- ==================== CREATE SUB-TAB ==================== -->
 <div class="sub-c" id="cs-create">
+<!-- AI Caption Ideas -->
+<div class="sec" id="caption-templates-section" style="display:none">
+  <div class="sh"><span class="sn">&#129302;</span><span class="st">Caption Ideas (AI-powered)</span></div>
+  <div id="caption-templates-area">
+    <div class="ds">Caption templates will appear after the weekly strategy runs.</div>
+  </div>
+</div>
+
 <!-- HOOK LIBRARY -->
 <div id="c-hooks">
 <div class="sec">
@@ -3333,20 +3668,25 @@ function init(){
 
 <!-- ==================== PIPELINE SUB-TAB ==================== -->
 <div class="sub-c" id="cs-pipeline">
-<!-- IDEA PIPELINE -->
+<!-- IDEA PIPELINE (dynamic) -->
 <div id="c-pipeline">
 <div class="sec">
   <div class="sh"><span class="sn">&#128161;</span><span class="st">Idea Pipeline</span></div>
-  <div class="tw"><table><thead><tr><th>Idea</th><th>Format</th><th>Track</th><th>Priority</th><th>Status</th></tr></thead><tbody>
-    <tr><td style="font-weight:700">Pack Up Ya Bags Reel 2 &mdash; "COMMENT remix"</td><td>Release CTA</td><td>PUYB</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-a">PLANNED</span></td></tr>
-    <tr><td style="font-weight:700">Wicked Game "should I drop this?"</td><td>Gauge CTA</td><td>WG</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-a">PLANNED</span></td></tr>
-    <tr><td style="font-weight:700">First "Three Heaters Monday"</td><td>Weekly roundup</td><td>&mdash;</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
-    <tr><td style="font-weight:700">Dashboard walkthrough reel</td><td>Talking head</td><td>&mdash;</td><td><span class="tg tg-g">HIGH</span></td><td><span class="tg tg-p">FILMED</span></td></tr>
-    <tr><td style="font-weight:700">Studio remix session unexpected location</td><td>Studio on-the-go</td><td>Next</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
-    <tr><td style="font-weight:700">Film Santello reacting at gig</td><td>Social proof</td><td>Any</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
-    <tr><td style="font-weight:700">"Started making remixes X months ago"</td><td>Journey montage</td><td>&mdash;</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
-    <tr><td style="font-weight:700">Every 1's A Winner clip + artist tag</td><td>Remix promo</td><td>E1AW</td><td><span class="tg tg-a">MED</span></td><td><span class="tg tg-b">IDEA</span></td></tr>
+  <div class="tw"><table><thead><tr><th>Idea</th><th>Format</th><th>Track</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody id="pipeline-table-body">
   </tbody></table></div>
+</div>
+<!-- Add Pipeline Idea -->
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <input class="add-task-input" id="pipeline-idea-input" placeholder="New content idea..." style="font-size:11px;padding:6px 10px;flex:1;min-width:150px" onkeydown="if(event.key==='Enter')addPipelineFromInput()">
+    <select id="pipeline-format-input" style="font-size:10px;padding:4px 6px;background:var(--c2);color:var(--fg);border:1px solid var(--bd);border-radius:4px">
+      <option>Reel</option><option>Post</option><option>Story</option><option>Release CTA</option><option>Gauge CTA</option><option>Weekly roundup</option><option>Talking head</option><option>Studio on-the-go</option><option>Social proof</option><option>Journey montage</option><option>Remix promo</option>
+    </select>
+    <select id="pipeline-priority-input" style="font-size:10px;padding:4px 6px;background:var(--c2);color:var(--fg);border:1px solid var(--bd);border-radius:4px">
+      <option>HIGH</option><option>MED</option>
+    </select>
+    <button class="add-task-btn" onclick="addPipelineFromInput()" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
 </div>
 <!-- Add Task -->
 <div class="mini-add-task">

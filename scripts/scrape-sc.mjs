@@ -43,10 +43,29 @@ async function main() {
   const user = await sc.users.get(SC_URL);
   console.log(`  ✓ @${user.permalink}: ${user.followers_count} followers, ${user.track_count} tracks`);
 
-  // Fetch all tracks
+  // Fetch all tracks (with fallback for datacenter IP 403s)
   console.log('📡 Fetching tracks...');
-  const tracks = await sc.users.tracks(SC_URL);
-  console.log(`  ✓ ${tracks.length} tracks found`);
+  let tracks = [];
+  try {
+    tracks = await sc.users.tracks(SC_URL);
+    console.log(`  ✓ ${tracks.length} tracks found (via soundcloud.ts)`);
+  } catch (err) {
+    console.warn(`  ⚠️ soundcloud.ts tracks failed: ${err.message}`);
+    console.log('  📡 Trying direct v2 API fallback...');
+    try {
+      const clientId = sc.api.clientID;
+      const userId = user.id;
+      const v2Url = `https://api-v2.soundcloud.com/users/${userId}/tracks?client_id=${clientId}&limit=50&offset=0`;
+      const v2Res = await fetch(v2Url);
+      if (!v2Res.ok) throw new Error(`v2 API returned ${v2Res.status}`);
+      const v2Data = await v2Res.json();
+      tracks = v2Data.collection || v2Data || [];
+      console.log(`  ✓ ${tracks.length} tracks found (via v2 API fallback)`);
+    } catch (err2) {
+      console.warn(`  ⚠️ v2 API fallback also failed: ${err2.message}`);
+      console.log('  ℹ️ Continuing with profile-only data (no tracks)');
+    }
+  }
 
   // Build track data
   const scTracks = tracks.map(t => ({
