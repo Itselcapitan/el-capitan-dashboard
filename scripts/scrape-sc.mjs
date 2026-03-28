@@ -4,7 +4,7 @@
 // Fetches profile stats + per-track analytics from public API
 // Stores to Firebase at analytics/latest (sc + scTracks)
 
-import Soundcloud from 'soundcloud.ts';
+import { Soundcloud } from 'soundcloud.ts';
 
 const SC_URL = 'https://soundcloud.com/itselcapitan';
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL;
