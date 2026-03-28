@@ -382,13 +382,20 @@ async function main() {
   console.log(`\n📋 Diff: IG ${igDiff.newCount} new, ${igDiff.updatedCount} updated | TT ${ttDiff.newCount} new, ${ttDiff.updatedCount} updated`);
 
   // Merge all platform data
+  // Preserve SC data from scrape-sc.mjs (which owns SC) when Apify returns zeros
+  const scResolved = scData.sc.followers > 0
+    ? scData.sc
+    : (previousData?.sc || scData.sc);
   const allData = {
     scrapedAt: now,
     ig: igData.ig,
     igPosts: igData.igPosts,
     tiktok: ttData.tiktok,
     ttPosts: ttData.ttPosts,
-    sc: scData.sc,
+    sc: scResolved,
+    // Preserve scTracks and scScrapedAt written by scrape-sc.mjs (daily PUT would otherwise delete them)
+    scTracks: previousData?.scTracks || null,
+    scScrapedAt: previousData?.scScrapedAt || null,
   };
 
   // Compute deltas

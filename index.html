@@ -1696,11 +1696,6 @@ function computeAlerts(){
   var postsThisWeek = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt) >= weekAgo; }).length;
   if(postsThisWeek < 4) alerts.push({level:'amber', msg:'Only '+postsThisWeek+'/5 posts this week \u2014 cadence below target'});
 
-  // SC 30d declining
-  if(MSE.sc.plays30dGrowth && MSE.sc.plays30dGrowth.indexOf('-') === 0){
-    alerts.push({level:'red', msg:'SoundCloud 30-day plays dropped '+MSE.sc.plays30dGrowth+' \u2014 need more releases'});
-  }
-
   // Overdue tasks
   var overdue = STATE.tasks.filter(function(t){ return t.status==='active' && t.dueDate && new Date(t.dueDate) < now && !t.parentId; });
   if(overdue.length > 0) alerts.push({level:'amber', msg:overdue.length+' task'+(overdue.length>1?'s':'')+' overdue \u2014 check Daily Agenda'});
@@ -1712,16 +1707,6 @@ function computeAlerts(){
   // No mix recorded
   var mixTask = STATE.tasks.find(function(t){ return t.title && t.title.indexOf('60-min') > -1 && t.status === 'active'; });
   if(mixTask) alerts.push({level:'red', msg:'60-min mix still not recorded \u2014 blocks all venue outreach'});
-
-  // IG conversion gap
-  if(MSE.ig.linkClickRate && MSE.ig.linkClickRate <= 2){
-    alerts.push({level:'red', msg:'IG link click rate at '+MSE.ig.linkClickRate+'% \u2014 23% visit profile but barely click. Fix bio CTA + link-in-bio page'});
-  }
-
-  // Hyper-local audience
-  if(MSE.ig.geoSchenectady && MSE.ig.geoSchenectady > 30){
-    alerts.push({level:'amber', msg:MSE.ig.geoSchenectady+'% of IG audience is Schenectady \u2014 need to break into NYC/Boston for venue growth'});
-  }
 
   // Ad budget near exhaustion
   STATE.ads.forEach(function(a){
@@ -2147,6 +2132,7 @@ function loadAnalytics(){
 
     // Re-render if visible
     if(document.getElementById('t-hq').classList.contains('on')){
+      renderArtistScore();
       setTimeout(function(){ renderHQCharts(); renderAlerts(); renderScrapedAlerts(); }, 100);
     }
     if(document.getElementById('t-content').classList.contains('on')){
