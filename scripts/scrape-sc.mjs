@@ -63,7 +63,26 @@ async function main() {
       console.log(`  ✓ ${tracks.length} tracks found (via v2 API fallback)`);
     } catch (err2) {
       console.warn(`  ⚠️ v2 API fallback also failed: ${err2.message}`);
-      console.log('  ℹ️ Continuing with profile-only data (no tracks)');
+      console.log('  📡 Trying profile page HTML fallback...');
+      try {
+        const pageRes = await fetch(SC_URL, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' },
+        });
+        if (!pageRes.ok) throw new Error(`Profile page returned ${pageRes.status}`);
+        const html = await pageRes.text();
+        const match = html.match(/<script>window\.__sc_hydration\s*=\s*(\[[\s\S]*?\]);<\/script>/);
+        if (!match) throw new Error('No __sc_hydration found in page HTML');
+        const hydration = JSON.parse(match[1]);
+        const sounds = hydration
+          .filter(h => h.hydratable === 'sound' && h.data)
+          .map(h => h.data);
+        if (!sounds.length) throw new Error('No sound entries in hydration data');
+        tracks = sounds;
+        console.log(`  ✓ ${tracks.length} tracks found (via profile page HTML)`);
+      } catch (err3) {
+        console.warn(`  ⚠️ HTML fallback also failed: ${err3.message}`);
+        console.log('  ℹ️ Continuing with profile-only data (no tracks)');
+      }
     }
   }
 
@@ -128,17 +147,23 @@ async function main() {
     await fbPatch('analytics/latest/deltas', { sc: deltas });
   }
 
+  // If no tracks fetched, preserve previous tracks from Firebase
+  const finalTracks = scTracks.length > 0 ? scTracks : (prevTracks || []);
+  if (!scTracks.length && prevTracks && prevTracks.length) {
+    console.log(`\n📌 Preserving ${prevTracks.length} previous tracks from Firebase (no fresh track data)`);
+  }
+
   // Write to Firebase
   console.log('\n💾 Writing to Firebase...');
   await Promise.all([
     fbPatch('analytics/latest', {
       sc: scData,
-      scTracks,
+      scTracks: finalTracks,
       scScrapedAt: new Date().toISOString(),
     }),
   ]);
 
-  console.log(`\n✅ Done! ${scTracks.length} tracks | ${scData.followers} followers | ${totalPlays} total plays`);
+  console.log(`\n✅ Done! ${finalTracks.length} tracks | ${scData.followers} followers | ${totalPlays} total plays`);
 }
 
 main().catch(err => {
