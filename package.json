@@ -5,9 +5,11 @@
   "scripts": {
     "scrape": "node scripts/scrape-daily.mjs",
     "scrape:competitors": "node scripts/scrape-competitors.mjs",
+    "scrape:sc": "node scripts/scrape-sc.mjs",
     "strategy": "node scripts/weekly-strategy.mjs"
   },
   "dependencies": {
-    "apify-client": "^2.9.0"
+    "apify-client": "^2.9.0",
+    "soundcloud.ts": "^0.7.4"
   }
 }

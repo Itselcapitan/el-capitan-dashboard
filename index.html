@@ -2261,10 +2261,45 @@ function renderContentStats(){
   var scGrid = document.getElementById('sc-stats-grid');
   if(scGrid){
     scGrid.innerHTML =
-      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks</div></div>';
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks</div></div>' +
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">TOTAL PLAYS</div><div class="cv" style="color:#ff5500">' + (sc.totalPlays||0).toLocaleString() + '</div><div class="cs">All-time across all tracks</div></div>' +
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">TOTAL LIKES</div><div class="cv" style="color:#ff5500">' + (sc.totalLikes||0).toLocaleString() + '</div><div class="cs">' + (sc.totalComments||0) + ' comments · ' + (sc.totalReposts||0) + ' reposts</div></div>';
   }
   var scBadge = document.getElementById('sc-badge');
-  if(scBadge) scBadge.textContent = (sc.followers||0).toLocaleString() + ' followers';
+  if(scBadge) scBadge.textContent = (sc.totalPlays||0).toLocaleString() + ' plays · ' + (sc.followers||0).toLocaleString() + ' followers';
+
+  // --- SoundCloud Tracks Table ---
+  var scTable = document.getElementById('sc-tracks-table');
+  if(scTable && data.scTracks && data.scTracks.length){
+    var sctrks = Array.isArray(data.scTracks) ? data.scTracks : Object.values(data.scTracks);
+    sctrks.sort(function(a,b){ return (b.playback_count||0) - (a.playback_count||0); });
+    var srows = '';
+    sctrks.forEach(function(t){
+      var title = (t.title||'(untitled)').substring(0,50);
+      var titleHtml = t.permalink_url ? '<a href="' + t.permalink_url + '" target="_blank" style="color:inherit;text-decoration:none">' + title + '</a>' : title;
+      var plays = t.playback_count || 0;
+      var likes = t.likes_count || 0;
+      var comments = t.comment_count || 0;
+      var reposts = t.reposts_count || 0;
+      var date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) : '';
+      var dur = t.duration ? Math.floor(t.duration/60000) + ':' + String(Math.floor((t.duration%60000)/1000)).padStart(2,'0') : '';
+      var engRate = plays > 0 ? ((likes + comments + reposts) / plays * 100) : 0;
+      var tid = t.id || '';
+      var promoted = window._promotedPosts && window._promotedPosts[tid];
+      var rateStr = engRate.toFixed(1) + '%' + (promoted ? '*' : '');
+      var badge = getRatingBadge(engRate, promoted);
+      var cb = '<input type="checkbox" title="Mark as promoted/ad" ' + (promoted?'checked ':'') + 'onchange="togglePromoted(\'' + String(tid).replace(/'/g,"\\'") + '\', this.checked)" style="cursor:pointer">';
+      srows += '<tr><td style="font-weight:700">' + titleHtml + '</td><td>' + dur + '</td><td>' + date + '</td>' +
+        '<td style="color:#ff5500;font-weight:700">' + fmtK(plays) + '</td>' +
+        '<td>' + likes.toLocaleString() + '</td>' +
+        '<td>' + comments.toLocaleString() + '</td>' +
+        '<td>' + reposts.toLocaleString() + '</td>' +
+        '<td style="font-weight:700;color:#ff5500">' + rateStr + '</td>' +
+        '<td>' + badge + '</td>' +
+        '<td style="text-align:center">' + cb + '</td></tr>';
+    });
+    scTable.innerHTML = srows;
+  }
 
   // --- Last scraped date ---
   var lsd = document.getElementById('last-scraped-date');
@@ -3037,6 +3072,12 @@ function init(){
       <div id="sc-stats-grid" style="display:contents"><div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">--</div><div class="cs">Loading...</div></div></div>
       <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ENGAGEMENT (7D)</div><div class="cv" style="color:#ff5500">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
     </div>
+    <div class="tw" style="margin-top:12px;overflow-x:auto"><table>
+      <thead><tr><th>Track</th><th>Dur</th><th>Date</th><th style="color:#ff5500">Plays</th><th>Likes</th><th>Comments</th><th>Reposts</th><th>Eng Rate</th><th>Rating</th><th>Ad</th></tr></thead>
+      <tbody id="sc-tracks-table">
+        <tr><td colspan="10" style="color:var(--dm)">Loading tracks... (runs after first SC scrape)</td></tr>
+      </tbody>
+    </table></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
       <div>
         <div style="font-size:10px;color:var(--dm);margin-bottom:6px;font-weight:600">TOP TRACKS (7D)</div>

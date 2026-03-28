@@ -1,0 +1,19 @@
+name: SoundCloud Scrape (daily)
+on:
+  schedule:
+    - cron: '42 13 * * *' # ~9:42 AM ET daily (5 min after main scrape)
+  workflow_dispatch: {} # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node scripts/scrape-sc.mjs
+        env:
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}

@@ -13,7 +13,7 @@
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const POSTS_PER_WEEK_TARGET = 5;
 
@@ -43,37 +43,51 @@ async function writeFirebase(path, data) {
 
 // ─── Gemini AI helpers ──────────────────────────────────────────
 
-async function callGemini(prompt) {
+async function callGemini(prompt, retries = 2) {
   if (!GEMINI_API_KEY) return null;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    const res = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.7,
-        },
-      }),
-    });
-    clearTimeout(timeout);
-    if (!res.ok) {
-      const text = await res.text();
-      console.error(`  Gemini API error: ${res.status} ${text.slice(0, 200)}`);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      if (attempt > 0) console.log(`  Retry ${attempt}/${retries} after rate limit...`);
+      const res = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.7,
+          },
+        }),
+      });
+      clearTimeout(timeout);
+      if (res.status === 429 && attempt < retries) {
+        const wait = (attempt + 1) * 30; // 30s, 60s
+        console.warn(`  Gemini 429 rate limited — waiting ${wait}s before retry...`);
+        await new Promise(r => setTimeout(r, wait * 1000));
+        continue;
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`  Gemini API error: ${res.status} ${text.slice(0, 200)}`);
+        return null;
+      }
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) { console.error('  Gemini returned empty response'); return null; }
+      return JSON.parse(text);
+    } catch (err) {
+      console.error(`  Gemini call failed: ${err.message}`);
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 15000));
+        continue;
+      }
       return null;
     }
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) { console.error('  Gemini returned empty response'); return null; }
-    return JSON.parse(text);
-  } catch (err) {
-    console.error(`  Gemini call failed: ${err.message}`);
-    return null;
   }
+  return null;
 }
 
 function buildDataSummary(latest, history, competitors, state) {
