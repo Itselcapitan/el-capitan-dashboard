@@ -5,10 +5,12 @@
 // Stores to Firebase at analytics/latest (sc + scTracks)
 
 import { Soundcloud } from 'soundcloud.ts';
+import { ApifyClient } from 'apify-client';
 
 const SC_URL = 'https://soundcloud.com/itselcapitan';
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL;
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET;
+const APIFY_TOKEN = process.env.APIFY_TOKEN;
 
 if (!FIREBASE_DB_URL || !FIREBASE_DB_SECRET) {
   console.error('❌ Missing FIREBASE_DB_URL or FIREBASE_DB_SECRET');
@@ -63,24 +65,37 @@ async function main() {
       console.log(`  ✓ ${tracks.length} tracks found (via v2 API fallback)`);
     } catch (err2) {
       console.warn(`  ⚠️ v2 API fallback also failed: ${err2.message}`);
-      console.log('  📡 Trying profile page HTML fallback...');
-      try {
-        const pageRes = await fetch(SC_URL, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' },
-        });
-        if (!pageRes.ok) throw new Error(`Profile page returned ${pageRes.status}`);
-        const html = await pageRes.text();
-        const match = html.match(/<script>window\.__sc_hydration\s*=\s*(\[[\s\S]*?\]);<\/script>/);
-        if (!match) throw new Error('No __sc_hydration found in page HTML');
-        const hydration = JSON.parse(match[1]);
-        const sounds = hydration
-          .filter(h => h.hydratable === 'sound' && h.data)
-          .map(h => h.data);
-        if (!sounds.length) throw new Error('No sound entries in hydration data');
-        tracks = sounds;
-        console.log(`  ✓ ${tracks.length} tracks found (via profile page HTML)`);
-      } catch (err3) {
-        console.warn(`  ⚠️ HTML fallback also failed: ${err3.message}`);
+      // Fallback 3: Apify SoundCloud scraper (runs on Apify's proxied infra, avoids datacenter IP blocks)
+      if (APIFY_TOKEN) {
+        console.log('  📡 Trying Apify SoundCloud scraper fallback...');
+        try {
+          const client = new ApifyClient({ token: APIFY_TOKEN });
+          const run = await client.actor('cryptosignals/soundcloud-scraper').call({
+            action: 'user',
+            url: SC_URL,
+            maxItems: 50,
+          });
+          const { items } = await client.dataset(run.defaultDatasetId).listItems();
+          // The actor returns user profile + tracks in the items array
+          const trackItems = items.filter(item => item.type === 'track' || item.playback_count !== undefined || item.title);
+          if (trackItems.length > 0) {
+            tracks = trackItems;
+            console.log(`  ✓ ${tracks.length} tracks found (via Apify actor)`);
+          } else if (items.length > 0) {
+            // If no track-type items, the actor may return a single user object with embedded track data
+            const userData = items[0];
+            if (userData.tracks && Array.isArray(userData.tracks)) {
+              tracks = userData.tracks;
+              console.log(`  ✓ ${tracks.length} tracks found (via Apify actor, embedded)`);
+            } else {
+              console.log(`  ⚠️ Apify returned ${items.length} items but no track data found`);
+            }
+          }
+        } catch (err3) {
+          console.warn(`  ⚠️ Apify fallback failed: ${err3.message}`);
+        }
+      }
+      if (!tracks.length) {
         console.log('  ℹ️ Continuing with profile-only data (no tracks)');
       }
     }

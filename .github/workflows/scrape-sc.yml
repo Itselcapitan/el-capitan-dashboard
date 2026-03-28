@@ -17,3 +17,4 @@ jobs:
         env:
           FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
