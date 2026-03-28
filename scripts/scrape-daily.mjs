@@ -89,6 +89,8 @@ async function scrapeIG() {
       caption: (x.caption || '').slice(0, 200),
       likesCount: x.likesCount || 0,
       commentsCount: x.commentsCount || 0,
+      videoPlayCount: x.videoPlayCount || 0,
+      savesCount: x.savesCount || 0,
       type: x.type || x.productType || 'unknown',
       timestamp: x.timestamp,
       url: x.url,
