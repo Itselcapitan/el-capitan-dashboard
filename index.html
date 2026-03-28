@@ -2162,7 +2162,8 @@ function renderContentStats(){
       var eng = (p.likesCount||0) + (p.commentsCount||0);
       var date = p.timestamp ? new Date(p.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
       var type = p.type || (p.isReel ? 'Reel' : 'Post');
-      rows += '<tr><td>' + caption + '</td><td>' + type + '</td><td>' + date + '</td><td style="color:var(--ac);font-weight:700">' + eng + '</td></tr>';
+      var captionHtml = p.shortCode ? '<a href="https://www.instagram.com/p/' + p.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + caption + '</a>' : caption;
+      rows += '<tr><td>' + captionHtml + '</td><td>' + type + '</td><td>' + date + '</td><td style="color:var(--ac);font-weight:700">' + eng + '</td></tr>';
     });
     igTable.innerHTML = rows;
   }
@@ -2185,8 +2186,9 @@ function renderContentStats(){
     var trows = '';
     tposts.forEach(function(p){
       var desc = (p.desc||p.text||'(no caption)').substring(0,50);
-      var date = p.createTime ? new Date(p.createTime*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      trows += '<tr><td style="font-weight:700">' + desc + '</td><td>' + date + '</td>' +
+      var date = p.createTimeISO ? new Date(p.createTimeISO).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (p.createTime ? new Date(p.createTime*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '');
+      var descHtml = p.url ? '<a href="' + p.url + '" target="_blank" style="color:inherit;text-decoration:none">' + desc + '</a>' : desc;
+      trows += '<tr><td style="font-weight:700">' + descHtml + '</td><td>' + date + '</td>' +
         '<td style="color:#00f2ea;font-weight:700">' + (p.playCount||0).toLocaleString() + '</td>' +
         '<td>' + (p.diggCount||0).toLocaleString() + '</td>' +
         '<td>' + (p.shareCount||0).toLocaleString() + '</td>' +
