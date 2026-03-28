@@ -1,0 +1,13 @@
+{
+  "name": "el-capitan-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node scripts/scrape-daily.mjs",
+    "scrape:competitors": "node scripts/scrape-competitors.mjs",
+    "strategy": "node scripts/weekly-strategy.mjs"
+  },
+  "dependencies": {
+    "apify-client": "^2.9.0"
+  }
+}

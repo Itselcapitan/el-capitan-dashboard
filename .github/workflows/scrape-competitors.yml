@@ -1,0 +1,19 @@
+name: Competitor Scrape (2x/week)
+on:
+  schedule:
+    - cron: '12 14 * * 2,5' # ~10:12 AM ET on Tue + Fri
+  workflow_dispatch: {} # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: node scripts/scrape-competitors.mjs
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com

@@ -604,11 +604,12 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); renderTrackScores(); setTimeout(renderHQCharts, 100); }
+  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); renderTrackScores(); renderScrapedAlerts(); loadWeeklyStrategy(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
   if(id==='content'){ setTimeout(renderContentCharts, 200); }
   if(id==='campaigns'){ renderCampaigns(); renderReleaseTimelines(); renderAds(); }
   if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
+  if(id==='settings'){ loadJobsLog(); }
 }
 function showSub(tabId, subId){
   var tab = document.getElementById(tabId);
@@ -2048,6 +2049,317 @@ function deleteAd(adId){
 }
 
 // =====================================================
+// ANALYTICS AUTOMATION (Firebase live data)
+// =====================================================
+function loadAnalytics(){
+  db.ref('analytics/latest').once('value', function(snap){
+    var data = snap.val();
+    if(!data) return;
+
+    // Merge IG data
+    if(data.ig){
+      Object.keys(data.ig).forEach(function(k){ MSE.ig[k] = data.ig[k]; });
+    }
+    // Merge TikTok data
+    if(data.tiktok){
+      Object.keys(data.tiktok).forEach(function(k){ MSE.tiktok[k] = data.tiktok[k]; });
+    }
+    // Merge SoundCloud data
+    if(data.sc){
+      Object.keys(data.sc).forEach(function(k){ MSE.sc[k] = data.sc[k]; });
+    }
+
+    MSE.lastUpdated = data.scrapedAt ? data.scrapedAt.slice(0,10) : MSE.lastUpdated;
+
+    // Store deltas and alerts for HQ
+    window._scrapedDeltas = data.deltas || null;
+    window._scrapedAlerts = data.alerts || [];
+
+    // Update settings display
+    var el = document.getElementById('last-scrape-time');
+    if(el) el.textContent = data.scrapedAt ? new Date(data.scrapedAt).toLocaleString() : 'Never';
+
+    // Re-render if visible
+    if(document.getElementById('t-hq').classList.contains('on')){
+      setTimeout(function(){ renderHQCharts(); renderAlerts(); renderScrapedAlerts(); }, 100);
+    }
+    if(document.getElementById('t-content').classList.contains('on')){
+      setTimeout(renderContentCharts, 200);
+    }
+  });
+}
+
+function renderScrapedAlerts(){
+  var alerts = window._scrapedAlerts || [];
+  var deltas = window._scrapedDeltas || {};
+  var area = document.getElementById('scraped-alerts-area');
+  if(!area) return;
+  if(!alerts.length && !deltas){
+    area.innerHTML = '<div class="ds">Smart alerts will appear after the first daily scrape runs.</div>';
+    return;
+  }
+  var html = '';
+  // Show deltas summary
+  if(deltas && deltas.ig){
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">';
+    var dItems = [
+      {label:'IG Followers', d: deltas.ig.followers, color:'var(--ac)'},
+      {label:'IG Eng Rate', d: deltas.ig.engRate, color:'var(--gn)', suffix:'%'},
+      {label:'TT Followers', d: deltas.tiktok ? deltas.tiktok.followers : null, color:'#00f2ea'},
+      {label:'TT Hearts', d: deltas.tiktok ? deltas.tiktok.hearts : null, color:'#00f2ea'},
+      {label:'SC Followers', d: deltas.sc ? deltas.sc.followers : null, color:'#ff5500'},
+    ];
+    dItems.forEach(function(item){
+      if(!item.d) return;
+      var sign = item.d.value > 0 ? '+' : '';
+      var valColor = item.d.value > 0 ? 'var(--gn)' : item.d.value < 0 ? 'var(--rd)' : 'var(--dm)';
+      html += '<div class="tg" style="background:rgba(0,229,255,.06);padding:4px 8px">';
+      html += '<span style="color:var(--dm);font-size:9px">'+item.label+'</span> ';
+      html += '<span style="color:'+valColor+';font-weight:600">'+sign+item.d.value+(item.suffix||'')+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  // Group alerts by category
+  var groups = {performance:[], risk:[], opportunity:[]};
+  alerts.forEach(function(a){
+    var cat = a.category || 'performance';
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(a);
+  });
+  var sections = [
+    {key:'performance', label:'Performance', icon:'&#x1F7E2;', bg:'rgba(0,230,118,.08)'},
+    {key:'risk', label:'Risk', icon:'&#x1F534;', bg:'rgba(255,61,87,.08)'},
+    {key:'opportunity', label:'Opportunity', icon:'&#x1F7E1;', bg:'rgba(255,171,0,.08)'}
+  ];
+  sections.forEach(function(sec){
+    var items = groups[sec.key];
+    if(!items || !items.length) return;
+    html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">'+sec.icon+' '+sec.label+'</div>';
+    items.forEach(function(a){
+      var levelIcon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:'+sec.bg+';">';
+      html += levelIcon+' '+a.msg+'</div>';
+    });
+    html += '</div>';
+  });
+  area.innerHTML = html || '<div class="ds">No new alerts.</div>';
+}
+
+function loadWeeklyStrategy(){
+  db.ref('strategy/latest').once('value', function(snap){
+    var s = snap.val();
+    var area = document.getElementById('weekly-strategy-area');
+    if(!area) return;
+    if(!s){
+      area.innerHTML = '<div class="ds">Weekly strategy will appear after the first Monday run.</div>';
+      return;
+    }
+    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+' &middot; Generated '+(s.generatedAt ? new Date(s.generatedAt).toLocaleString() : 'unknown')+'</div>';
+
+    // Priorities
+    if(s.priorities && s.priorities.length){
+      html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">TOP PRIORITIES</div>';
+      s.priorities.forEach(function(p,i){
+        html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.06);display:flex;justify-content:space-between;align-items:center">';
+        html += '<div><span style="color:var(--ac);font-weight:700">'+(i+1)+'.</span> <span style="color:var(--fg)">'+p.priority+'</span><br><span style="font-size:10px;color:var(--dm)">'+p.reason+'</span></div>';
+        html += '<div style="font-size:9px;color:var(--dm)">U:'+p.urgency+' I:'+p.impact+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Post ideas
+    if(s.postIdeas && s.postIdeas.length){
+      html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">POST IDEAS</div>';
+      s.postIdeas.forEach(function(p){
+        html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(225,48,108,.06)">';
+        html += '<span class="tg" style="background:rgba(225,48,108,.2);color:#E1306C;font-size:9px;padding:1px 5px;margin-right:6px">'+p.format+'</span>';
+        html += '<span style="color:var(--fg)">'+p.idea+'</span><br><span style="font-size:10px;color:var(--dm)">'+p.reason+'</span></div>';
+      });
+      html += '</div>';
+    }
+
+    // Track to push + Campaign action (side by side)
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">';
+    if(s.trackToPush){
+      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(0,230,118,.06)">';
+      html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:3px">TRACK TO PUSH</div>';
+      html += '<div style="color:var(--gn);font-weight:700">'+s.trackToPush.name+'</div>';
+      html += '<div style="font-size:10px;color:var(--dm)">M:'+s.trackToPush.momentum+' R:'+s.trackToPush.readiness+' &middot; '+s.trackToPush.reason+'</div></div>';
+    } else {
+      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(0,230,118,.06)"><div style="font-size:9px;color:var(--dm);font-weight:600">TRACK TO PUSH</div><div class="ds">None selected</div></div>';
+    }
+    if(s.campaignAction){
+      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(255,171,0,.06)">';
+      html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:3px">CAMPAIGN ACTION</div>';
+      html += '<div style="color:var(--am);font-weight:700">'+s.campaignAction.action.toUpperCase()+'</div>';
+      html += '<div style="font-size:10px;color:var(--dm)">'+s.campaignAction.suggestion+'</div></div>';
+    } else {
+      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(255,171,0,.06)"><div style="font-size:9px;color:var(--dm);font-weight:600">CAMPAIGN ACTION</div><div class="ds">No data</div></div>';
+    }
+    html += '</div>';
+
+    // Alerts to handle
+    if(s.alertsToHandle && s.alertsToHandle.length){
+      html += '<div><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">ALERTS TO HANDLE</div>';
+      s.alertsToHandle.forEach(function(a){
+        var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
+        html += '<div style="padding:4px 10px;margin-bottom:2px;border-radius:6px;background:rgba(255,255,255,.03)">';
+        html += icon+' '+a.msg+'</div>';
+      });
+      html += '</div>';
+    }
+
+    area.innerHTML = html;
+  });
+}
+
+function loadJobsLog(){
+  var area = document.getElementById('jobs-log-area');
+  if(!area) return;
+  Promise.all([
+    new Promise(function(r){ db.ref('jobs/daily').orderByKey().limitToLast(5).once('value', function(s){ r(s.val()); }); }),
+    new Promise(function(r){ db.ref('jobs/competitors').orderByKey().limitToLast(5).once('value', function(s){ r(s.val()); }); }),
+    new Promise(function(r){ db.ref('jobs/strategy').orderByKey().limitToLast(5).once('value', function(s){ r(s.val()); }); })
+  ]).then(function(results){
+    var daily = results[0] || {};
+    var comp = results[1] || {};
+    var strat = results[2] || {};
+    var rows = [];
+    function addRows(obj, type){
+      Object.keys(obj).forEach(function(k){
+        var j = obj[k];
+        rows.push({date:k, type:type, status:j.status, duration:j.duration, records:j.records, estimatedCost:j.estimatedCost, error:j.error, completedAt:j.completedAt||j.startedAt});
+      });
+    }
+    addRows(daily, 'Daily');
+    addRows(comp, 'Competitors');
+    addRows(strat, 'Strategy');
+    rows.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+    if(!rows.length){
+      area.innerHTML = '<div class="ds">No job runs recorded yet. Jobs will appear after the first automated scrape.</div>';
+      return;
+    }
+
+    var totalCost = 0;
+    var html = '<div class="tw"><table><thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Duration</th><th>Records</th><th>Cost</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var statusColor = r.status==='success'?'var(--gn)':'var(--rd)';
+      var dur = r.duration ? (r.duration/1000).toFixed(1)+'s' : '-';
+      var rec = '-';
+      if(r.records){
+        var parts = [];
+        Object.keys(r.records).forEach(function(k){ parts.push(r.records[k]+' '+k); });
+        rec = parts.join(', ');
+      }
+      var cost = r.estimatedCost ? '$'+r.estimatedCost.toFixed(4) : '$0';
+      totalCost += r.estimatedCost || 0;
+      html += '<tr><td>'+r.date+'</td><td>'+r.type+'</td>';
+      html += '<td style="color:'+statusColor+';font-weight:600">'+r.status+'</td>';
+      html += '<td>'+dur+'</td><td style="font-size:10px">'+rec+'</td><td>'+cost+'</td></tr>';
+      if(r.error){
+        html += '<tr><td colspan="6" style="color:var(--rd);font-size:10px;padding:2px 10px">'+r.error+'</td></tr>';
+      }
+    });
+    html += '</tbody></table></div>';
+    html += '<div style="margin-top:8px;font-size:10px;color:var(--dm)">Running total cost: <span style="color:var(--ac)">$'+totalCost.toFixed(4)+'</span></div>';
+    area.innerHTML = html;
+  });
+}
+
+function loadHistory(callback){
+  db.ref('analytics/history').orderByKey().limitToLast(30).once('value', function(snap){
+    var data = snap.val();
+    window._analyticsHistory = data ? Object.entries(data).map(function(e){ return Object.assign({date: e[0]}, e[1]); }) : [];
+    if(callback) callback();
+  });
+}
+
+function renderTrendCharts(){
+  var hist = window._analyticsHistory || [];
+  if(hist.length < 2) {
+    var area = document.getElementById('trend-charts-area');
+    if(area) area.innerHTML = '<div class="ds">Trend data will appear after 2+ daily scrapes run.</div>';
+    return;
+  }
+
+  // Destroy previous trend charts
+  if(window._trendCharts){
+    window._trendCharts.forEach(function(c){ try{c.destroy();}catch(e){} });
+  }
+  window._trendCharts = [];
+
+  var labels = hist.map(function(h){ return h.date ? h.date.slice(5) : ''; }); // MM-DD
+  var chartOpts = function(label, color){
+    return {
+      type:'line',
+      data:{
+        labels: labels,
+        datasets:[{
+          label: label,
+          data: [],
+          borderColor: color,
+          backgroundColor: color.replace('1)', '0.1)'),
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{color:'#8888aa',font:{size:8}},grid:{display:false}},
+          y:{ticks:{color:'#8888aa',font:{size:8}},grid:{color:'rgba(42,42,58,.3)'}}
+        }
+      }
+    };
+  };
+
+  // Followers trend
+  var c1El = document.getElementById('trend-followers');
+  if(c1El){
+    var cfg1 = chartOpts('Followers', 'rgba(0,229,255,1)');
+    cfg1.data.datasets[0].data = hist.map(function(h){ return h.ig ? h.ig.followers : null; });
+    window._trendCharts.push(new Chart(c1El, cfg1));
+  }
+
+  // Engagement rate trend
+  var c2El = document.getElementById('trend-engagement');
+  if(c2El){
+    var cfg2 = chartOpts('Eng Rate %', 'rgba(0,230,118,1)');
+    cfg2.data.datasets[0].data = hist.map(function(h){ return h.ig ? h.ig.engRate : null; });
+    window._trendCharts.push(new Chart(c2El, cfg2));
+  }
+
+  // TikTok followers trend
+  var c3El = document.getElementById('trend-tt-followers');
+  if(c3El){
+    var cfg3 = chartOpts('TT Followers', 'rgba(0,242,234,1)');
+    cfg3.data.datasets[0].data = hist.map(function(h){ return h.tiktok ? h.tiktok.followers : null; });
+    window._trendCharts.push(new Chart(c3El, cfg3));
+  }
+
+  // SC followers trend
+  var c4El = document.getElementById('trend-sc-followers');
+  if(c4El){
+    var cfg4 = chartOpts('SC Followers', 'rgba(255,85,0,1)');
+    cfg4.data.datasets[0].data = hist.map(function(h){ return h.sc ? h.sc.followers : null; });
+    window._trendCharts.push(new Chart(c4El, cfg4));
+  }
+
+  // TikTok avg plays trend
+  var c5El = document.getElementById('trend-tt-plays');
+  if(c5El){
+    var cfg5 = chartOpts('TT Avg Plays', 'rgba(0,242,234,1)');
+    cfg5.data.datasets[0].data = hist.map(function(h){ return h.tiktok ? h.tiktok.avgPlays : null; });
+    window._trendCharts.push(new Chart(c5El, cfg5));
+  }
+}
+
+// =====================================================
 // HQ CHARTS
 // =====================================================
 function renderHQCharts(){
@@ -2165,10 +2477,14 @@ function renderContentCharts(){
 // =====================================================
 function init(){
   loadState();
+  loadAnalytics();
+  loadHistory(function(){ renderTrendCharts(); });
+  loadWeeklyStrategy();
   renderAgenda();
   renderMasterTasks();
   renderArtistScore();
   renderAlerts();
+  renderTrackScores();
   // Render charts after a tick to ensure DOM is ready
   setTimeout(function(){
     renderHQCharts();
@@ -2223,6 +2539,54 @@ function init(){
   <div id="track-scores-area"></div>
 </div>
 
+<!-- Smart Alerts (from daily scrape) -->
+<div class="sec">
+  <div class="sh"><span class="sn">AI</span><span class="st">Smart Alerts</span></div>
+  <div id="scraped-alerts-area">
+    <div class="ds">Smart alerts will appear after the first daily scrape runs.</div>
+  </div>
+</div>
+
+<!-- Weekly Strategy (from Monday strategy generator) -->
+<div class="sec">
+  <div class="sh"><span class="sn">STRATEGY</span><span class="st">This Week</span></div>
+  <div id="weekly-strategy-area">
+    <div class="ds">Weekly strategy will appear after the first Monday run.</div>
+  </div>
+</div>
+
+<!-- Trend Charts (powered by daily scrape) -->
+<div class="sec">
+  <div class="sh"><span class="sn">TRENDS</span><span class="st">30-Day Trends</span></div>
+  <div id="trend-charts-area">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+      <div>
+        <div class="cl" style="margin-bottom:4px">IG Followers</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-followers" height="120"></canvas></div>
+      </div>
+      <div>
+        <div class="cl" style="margin-bottom:4px">IG Eng Rate %</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-engagement" height="120"></canvas></div>
+      </div>
+      <div>
+        <div class="cl" style="margin-bottom:4px">TT Followers</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-tt-followers" height="120"></canvas></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div>
+        <div class="cl" style="margin-bottom:4px">TT Avg Plays</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-tt-plays" height="120"></canvas></div>
+      </div>
+      <div>
+        <div class="cl" style="margin-bottom:4px">SC Followers</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-sc-followers" height="120"></canvas></div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
 <!-- Daily Agenda -->
 <div class="sec">
   <div class="sh"><span class="sn">&#9733;</span><span class="st">Daily Agenda</span></div>
@@ -2235,7 +2599,7 @@ function init(){
   <div id="master-tasks"></div>
 </div>
 
-<div class="ds">All derived from MASTER_STRATEGY_ENGINE + live STATE data. Last updated: March 27, 2026.</div>
+<div class="ds">All derived from MASTER_STRATEGY_ENGINE + live STATE data + daily automated scrapes.</div>
 </div>
 
 <!-- ============================================================ -->
@@ -3000,17 +3364,38 @@ function init(){
   </div>
 </div>
 <div class="sec">
+  <div class="sh"><span class="sn">&#128260;</span><span class="st">Automation</span></div>
+  <div class="nb">
+    <strong style="color:var(--ac)">Daily Scrape</strong> (9:37 AM ET)<br>
+    IG profile + 12 posts, TikTok profile + 12 posts, SoundCloud profile<br>
+    Auto-calculates deltas, generates smart alerts, writes time-series history<br><br>
+    <strong style="color:var(--ac)">Competitor Scrape</strong> (Tue + Fri, 10:12 AM ET)<br>
+    8 competitor accounts &times; 5 latest reels = ~40 reels analyzed<br>
+    Reels-first filtering, diff-based processing, pattern analysis<br><br>
+    <strong style="color:var(--ac)">Weekly Strategy</strong> (Monday, 8:03 AM ET)<br>
+    Top 3 priorities, post ideas, track to push, campaign action<br>
+    Reads Firebase only &mdash; no Apify cost<br><br>
+    <strong>Last scrape:</strong> <span id="last-scrape-time" style="color:var(--ac)">Loading...</span><br>
+    <strong>Data path:</strong> Firebase <code>/analytics/</code> + <code>/competitors/</code><br>
+    <strong>Manual trigger:</strong> GitHub &rarr; Actions &rarr; select workflow &rarr; Run<br><br>
+    <strong>Setup required:</strong> Add <code>APIFY_TOKEN</code> to GitHub repo secrets
+  </div>
+</div>
+<div class="sec">
   <div class="sh"><span class="sn">&#128451;</span><span class="st">Data Sources</span></div>
   <div class="nb">
     <strong>Master Dataset:</strong> ~200 reels, 14 accounts, 6 Apify datasets<br>
-    <strong>IG Profile:</strong> Apify profile + post scraper (Mar 17, 2026)<br>
-    <strong>SoundCloud:</strong> Artist Pro screenshots (Mar 12, 2026)<br>
+    <strong>IG Profile:</strong> Auto-scraped daily via Apify (profile + post scraper)<br>
+    <strong>SoundCloud:</strong> Public profile stats auto-scraped daily; Artist Pro analytics added via manual screenshots<br>
     <strong>Competitors:</strong> 6 reel scraper datasets (Mar 12-17, 2026)<br><br>
     <strong>Dataset IDs:</strong><br>
     WrwLABGVcPGpMFEuV &middot; bgc7XdP0IIexl1gDD &middot; fypmt26TUtE0KawEP<br>
-    5XRX4HzWS9F1WY82g &middot; diquoIcUI9wZeYHyk &middot; Svx9Gx8MJyVjyU3dj<br><br>
-    <strong>Refresh:</strong> Say "pull my analytics again" to re-scrape and update MSE.
+    5XRX4HzWS9F1WY82g &middot; diquoIcUI9wZeYHyk &middot; Svx9Gx8MJyVjyU3dj
   </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">JOBS</span><span class="st">Automation Log</span></div>
+  <div id="jobs-log-area"><div class="ds">Loading...</div></div>
 </div>
 <div class="sec">
   <div class="sh"><span class="sn">&#128190;</span><span class="st">Data Management</span></div>
