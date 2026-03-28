@@ -8,10 +8,11 @@
  * Runs every Monday at 8:03 AM ET via GitHub Actions.
  * No Apify needed — only reads Firebase.
  *
- * Env vars: FIREBASE_DB_URL
+ * Env vars: FIREBASE_DB_URL, FIREBASE_DB_SECRET
  */
 
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
+const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 
 const POSTS_PER_WEEK_TARGET = 5;
 
@@ -25,7 +26,8 @@ async function readFirebase(path) {
 }
 
 async function writeFirebase(path, data) {
-  const url = `${FIREBASE_DB_URL}/${path}.json`;
+  const auth = FIREBASE_DB_SECRET ? `?auth=${FIREBASE_DB_SECRET}` : '';
+  const url = `${FIREBASE_DB_URL}/${path}.json${auth}`;
   const res = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

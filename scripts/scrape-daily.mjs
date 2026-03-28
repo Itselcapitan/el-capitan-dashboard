@@ -5,13 +5,14 @@
  * Diff-based: only deeply processes new/changed content.
  * Computes deltas, generates categorized alerts, logs job metadata.
  *
- * Env vars: APIFY_TOKEN, FIREBASE_DB_URL
+ * Env vars: APIFY_TOKEN, FIREBASE_DB_URL, FIREBASE_DB_SECRET
  */
 
 import { ApifyClient } from 'apify-client';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
+const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 
 const IG_USERNAME = 'itselcapitan_';
 const TT_USERNAME = 'itselcapitan';
@@ -36,7 +37,8 @@ async function readFirebase(path) {
 }
 
 async function writeFirebase(path, data) {
-  const url = `${FIREBASE_DB_URL}/${path}.json`;
+  const auth = FIREBASE_DB_SECRET ? `?auth=${FIREBASE_DB_SECRET}` : '';
+  const url = `${FIREBASE_DB_URL}/${path}.json${auth}`;
   const res = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

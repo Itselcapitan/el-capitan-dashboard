@@ -588,10 +588,12 @@ function saveState(){
   STATE._uid = _uid;
   // Save to localStorage immediately
   try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
+  // Only sync to Firebase if not in view-only mode
+  if(document.body.classList.contains('view-only')) return;
   // Debounce Firebase writes (300ms)
   clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(function(){
-    db.ref('state').set(STATE);
+    db.ref('state').set(STATE).catch(function(){});
   }, 300);
 }
 
