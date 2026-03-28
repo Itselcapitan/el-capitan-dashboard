@@ -2307,7 +2307,7 @@ function renderContentStats(){
 
   // --- SoundCloud stats ---
   var scGrid = document.getElementById('sc-stats-grid');
-  if(scGrid){
+  if(scGrid && sc.followers !== undefined){
     scGrid.innerHTML =
       '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks</div></div>' +
       '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">TOTAL PLAYS</div><div class="cv" style="color:#ff5500">' + (sc.totalPlays||0).toLocaleString() + '</div><div class="cs">All-time across all tracks</div></div>' +
@@ -2454,14 +2454,21 @@ function renderScrapedAlerts(){
     {key:'risk', label:'Risk', icon:'&#x1F534;', bg:'rgba(255,61,87,.08)'},
     {key:'opportunity', label:'Opportunity', icon:'&#x1F7E1;', bg:'rgba(255,171,0,.08)'}
   ];
+  var scrapedDismissed = [];
+  try { scrapedDismissed = JSON.parse(localStorage.getItem('elcap_dismissed_scraped') || '[]'); } catch(e){}
+
   sections.forEach(function(sec){
     var items = groups[sec.key];
     if(!items || !items.length) return;
     html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">'+sec.icon+' '+sec.label+'</div>';
     items.forEach(function(a){
+      var key = (a.msg||'').slice(0,40);
+      if(scrapedDismissed.indexOf(key) > -1) return;
       var levelIcon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:'+sec.bg+';">';
-      html += levelIcon+' '+a.msg+'</div>';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:'+sec.bg+';display:flex;align-items:center;gap:6px">';
+      html += '<span style="flex:1">'+levelIcon+' '+a.msg+'</span>';
+      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
+      html += '</div>';
     });
     html += '</div>';
   });
@@ -2470,20 +2477,38 @@ function renderScrapedAlerts(){
   if(strat && strat.performanceAlerts && strat.performanceAlerts.length){
     html += '<div style="margin-top:10px;margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#129302; AI PERFORMANCE INSIGHTS</div>';
     strat.performanceAlerts.forEach(function(a){
+      var key = (a.message||'').slice(0,40);
+      if(scrapedDismissed.indexOf(key) > -1) return;
       var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.04);">'+icon+' '+a.message+'</div>';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.04);display:flex;align-items:center;gap:6px">';
+      html += '<span style="flex:1">'+icon+' '+a.message+'</span>';
+      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
+      html += '</div>';
     });
     html += '</div>';
   }
   if(strat && strat.opportunityAlerts && strat.opportunityAlerts.length){
     html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#128161; AI OPPORTUNITIES</div>';
     strat.opportunityAlerts.forEach(function(a){
+      var key = (a.message||'').slice(0,40);
+      if(scrapedDismissed.indexOf(key) > -1) return;
       var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(255,171,0,.04);">'+icon+' '+a.message+'</div>';
+      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(255,171,0,.04);display:flex;align-items:center;gap:6px">';
+      html += '<span style="flex:1">'+icon+' '+a.message+'</span>';
+      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
+      html += '</div>';
     });
     html += '</div>';
   }
   area.innerHTML = html || '<div class="ds">No new alerts.</div>';
+}
+
+function dismissScrapedAlert(key){
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_scraped') || '[]'); } catch(e){}
+  if(dismissed.indexOf(key) === -1) dismissed.push(key);
+  localStorage.setItem('elcap_dismissed_scraped', JSON.stringify(dismissed));
+  renderScrapedAlerts();
 }
 
 // ─── AI Content Render Functions ────────────────────────────────
@@ -3371,11 +3396,8 @@ function init(){
     <span class="acc-badge" id="sc-badge">-- followers</span>
   </div>
   <div class="acc-body" id="acc-sc-body"><div class="acc-body-inner">
-    <div class="g">
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (7D)</div><div class="cv" style="color:#ff5500">29</div><div class="cs"><span style="color:var(--gn)">(+107%)</span> <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (30D)</div><div class="cv" style="color:#ff5500">118</div><div class="cs"><span style="color:var(--rd)">(-47%)</span> <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
-      <div id="sc-stats-grid" style="display:contents"><div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">--</div><div class="cs">Loading...</div></div></div>
-      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ENGAGEMENT (7D)</div><div class="cv" style="color:#ff5500">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts <span style="color:var(--dm);font-size:9px">(Artist Pro)</span></div></div>
+    <div class="g" id="sc-stats-grid">
+      <div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">--</div><div class="cs">Loading...</div></div>
     </div>
     <div class="tw" style="margin-top:12px;overflow-x:auto"><table>
       <thead><tr><th>Track</th><th>Dur</th><th>Date</th><th style="color:#ff5500">Plays</th><th>Likes</th><th>Comments</th><th>Reposts</th><th>Eng Rate</th><th>Rating</th><th>Ad</th></tr></thead>
@@ -3383,26 +3405,6 @@ function init(){
         <tr><td colspan="10" style="color:var(--dm)">Loading tracks... (runs after first SC scrape)</td></tr>
       </tbody>
     </table></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-      <div>
-        <div style="font-size:10px;color:var(--dm);margin-bottom:6px;font-weight:600">TOP TRACKS (7D)</div>
-        <div class="g"><div class="c" style="border-left:3px solid #ff5500"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">11 plays</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">7 plays</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">5 plays</div></div></div>
-      </div>
-      <div>
-        <div style="font-size:10px;color:var(--dm);margin-bottom:6px;font-weight:600">TOP TRACKS (30D)</div>
-        <div class="g"><div class="c" style="border-left:3px solid #ff5500"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">74 plays</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">21 plays</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">11 plays</div></div></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-      <div>
-        <div style="font-size:10px;color:var(--dm);margin-bottom:6px;font-weight:600">TOP LISTENERS (7D)</div>
-        <div class="g"><div class="c" style="border-left:3px solid #ff5500"><div class="cl">UNION ATHLETICS</div><div class="cv" style="font-size:12px">6 plays</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">DiAZ(PR)</div><div class="cv" style="font-size:12px">5 plays</div><div class="cs">21 followers</div></div><div class="c" style="border-left:3px solid #ff5500"><div class="cl">JESSE JONES</div><div class="cv" style="font-size:12px">3 plays</div><div class="cs">30 followers</div></div></div>
-      </div>
-      <div>
-        <div style="font-size:10px;color:var(--dm);margin-bottom:6px;font-weight:600">TOP LOCATIONS (7D)</div>
-        <div class="geo"><div class="geo-i"><div class="geo-v">7</div><div class="geo-l">Schenectady</div></div><div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Ashburn</div></div><div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Bayam&oacute;n, PR</div></div></div>
-      </div>
-    </div>
   </div></div>
 </div>
 
