@@ -604,10 +604,10 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); setTimeout(renderHQCharts, 100); }
-  if(id==='content'){ renderReleaseTimelines(); setTimeout(renderContentCharts, 200); }
-  if(id==='growth'){ renderCampaigns(); }
-  if(id==='tracks'){ try{ renderTracks(); renderAds(); }catch(e){ console.error('renderTracks error:',e); } }
+  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); renderTrackScores(); setTimeout(renderHQCharts, 100); }
+  if(id==='content'){ setTimeout(renderContentCharts, 200); }
+  if(id==='campaigns'){ renderCampaigns(); renderReleaseTimelines(); renderAds(); }
+  if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
 }
 function showSub(tabId, subId){
@@ -1592,6 +1592,33 @@ function getTrackScoreBadge(track){
 }
 
 // =====================================================
+// TRACK SCORES SUMMARY (HQ)
+// =====================================================
+function renderTrackScores(){
+  var area = document.getElementById('track-scores-area');
+  if(!area) return;
+  var tracks = (STATE.tracks || []).filter(function(t){ return t.status !== 'KILL'; });
+  if(!tracks.length){ area.innerHTML = '<div class="ds">No active tracks</div>'; return; }
+  var html = '<div class="g">';
+  tracks.forEach(function(t){
+    var statusColor = t.status==='PUSH'?'var(--gn)':t.status==='FINISH'?'var(--am)':t.status==='HOLD'?'var(--dm)':'var(--rd)';
+    var mColor = (t.momentumScore||0)>=70?'var(--gn)':(t.momentumScore||0)>=40?'var(--am)':'var(--rd)';
+    var rColor = (t.readinessScore||0)>=70?'var(--gn)':(t.readinessScore||0)>=40?'var(--am)':'var(--rd)';
+    html += '<div class="c" style="padding:10px;min-width:160px">';
+    html += '<div class="cl" style="margin-bottom:6px">'+t.name+'</div>';
+    html += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
+    html += '<span class="tg" style="background:rgba(0,229,255,.08);color:'+statusColor+'">'+t.status+'</span>';
+    html += '<span class="tg" style="background:rgba(0,229,255,.08);color:'+mColor+'">M: '+(t.momentumScore||0)+'</span>';
+    html += '<span class="tg" style="background:rgba(0,229,255,.08);color:'+rColor+'">R: '+(t.readinessScore||0)+'</span>';
+    html += '</div>';
+    if(t.nextAction) html += '<div style="color:var(--dm);font-size:10px;margin-top:4px">'+t.nextAction+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+// =====================================================
 // GROWTH THRESHOLD ALERTS
 // =====================================================
 function computeAlerts(){
@@ -1610,7 +1637,7 @@ function computeAlerts(){
 
   // Overdue tasks
   var overdue = STATE.tasks.filter(function(t){ return t.status==='active' && t.dueDate && new Date(t.dueDate) < now && !t.parentId; });
-  if(overdue.length > 0) alerts.push({level:'amber', msg:overdue.length+' task'+(overdue.length>1?'s':'')+' overdue \u2014 check Focus Right Now'});
+  if(overdue.length > 0) alerts.push({level:'amber', msg:overdue.length+' task'+(overdue.length>1?'s':'')+' overdue \u2014 check Daily Agenda'});
 
   // Blocked tracks
   var blocked = STATE.tracks.filter(function(t){ return t.bottleneck && t.bottleneck !== 'none' && t.stage < 15; });
@@ -2161,10 +2188,10 @@ function init(){
 
 <div class="tb"><div class="tb-in">
   <button class="t-btn on" onclick="showTab('hq')">HQ</button>
-  <button class="t-btn" onclick="showTab('content')">CONTENT</button>
-  <button class="t-btn" onclick="showTab('growth')">GROWTH</button>
-  <button class="t-btn" onclick="showTab('outreach')">OUTREACH</button>
+  <button class="t-btn" onclick="showTab('content')">CONTENT ENGINE</button>
   <button class="t-btn" onclick="showTab('tracks')">TRACKS</button>
+  <button class="t-btn" onclick="showTab('campaigns')">CAMPAIGNS</button>
+  <button class="t-btn" onclick="showTab('outreach')">OUTREACH</button>
   <button class="t-btn" onclick="showTab('settings')">SETTINGS</button>
 </div></div>
 
@@ -2190,45 +2217,16 @@ function init(){
   <div id="growth-alerts-area"></div>
 </div>
 
+<!-- Track Scores Summary -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#127925;</span><span class="st">Track Scores</span></div>
+  <div id="track-scores-area"></div>
+</div>
+
 <!-- Daily Agenda -->
 <div class="sec">
   <div class="sh"><span class="sn">&#9733;</span><span class="st">Daily Agenda</span></div>
   <div class="agenda-card" id="daily-agenda"></div>
-</div>
-
-<!-- Focus Right Now (moved up from below) -->
-<div class="sec">
-  <div class="sh"><span class="sn" style="color:var(--am)">!</span><span class="st">Focus Right Now</span></div>
-  <div class="g">
-    <div class="c p"><div class="cl">THIS WEEK</div><div class="cs"><strong>1.</strong> Post Wicked Game "should I drop this?" reel (OVERDUE &mdash; due Mar 28)<br><strong>2.</strong> Launch first "Three Heaters Monday" (OVERDUE &mdash; due Mar 23)<br><strong>3.</strong> Post dashboard walkthrough reel (already filmed)<br><strong>4.</strong> <s style="color:var(--dm)">Create TikTok</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">PUYB Reel 2</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Money teaser</s> <span style="color:var(--gn)">&#10003; DONE</span> &mdash; <s style="color:var(--dm)">Votion demo</s> <span style="color:var(--gn)">&#10003; DONE</span></div></div>
-    <div class="c p"><div class="cl">THIS MONTH</div><div class="cs"><strong>5.</strong> Record 60-min tech house mix (unlocks all venue outreach)<br><strong>6.</strong> DM @lowercase518 with mix link<br><strong>7.</strong> Email 518 Craft for Friday rotation<br><strong>8.</strong> Post 12+ reels across IG + TikTok (currently at ~8)<br><strong>9.</strong> Push Wicked Game to mastering</div></div>
-    <div class="c p"><div class="cl">90 DAYS</div><div class="cs"><strong>10.</strong> Release Wicked Game remix<br><strong>11.</strong> Start Harry Styles "Aperture" bootleg<br><strong>12.</strong> Hit 500 IG followers + 200 TikTok followers<br><strong>13.</strong> Get first Capital Region or Boston booking<br><strong>14.</strong> Finish The Money &amp; move to mastering</div></div>
-  </div>
-</div>
-
-<!-- What's Working -->
-<div class="sec">
-  <div class="sh"><span class="sn" style="color:var(--gn)">&#10003;</span><span class="st">What's Working</span></div>
-  <div class="g">
-    <div class="c w"><div class="cl">IG ENGAGEMENT RATE</div><div class="cv">7.3%</div><div class="cs">312 followers. Industry avg 1-3%. 65% views from non-followers. Reels drive 75.5% of interactions.</div></div>
-    <div class="c w"><div class="cl">TIKTOK LAUNCH</div><div class="cv">2,177 plays</div><div class="cs">28 followers, 5 posts, 205 likes in first week. PUYB teaser = 1,141 plays (12.9% like rate). Outpacing IG on reach.</div></div>
-    <div class="c w"><div class="cl">CROSS-POSTING</div><div class="cv">3 platforms</div><div class="cs">IG + TikTok + SoundCloud = ~5,992 combined reach. Same content, 3x eyeballs, minimal effort.</div></div>
-    <div class="c w"><div class="cl">RELEASE PIPELINE</div><div class="cv">8 tracks</div><div class="cs">PUYB at teaser stage. Wicked Game at demo/feedback. The Money in production polish. Bando + Tuyo started. Pipeline is full.</div></div>
-    <div class="c w"><div class="cl">REMIX TEASERS</div><div class="cv">Top format</div><div class="cs">Recognizable hook + drop = proven formula. Best performer on both IG and TikTok. 8.2% eng rate benchmark from Dom Dolla.</div></div>
-    <div class="c w"><div class="cl">OUTREACH STARTED</div><div class="cv">&#10003; 2 sent</div><div class="cs">Votion Records demo submitted. Label EPK followed up. First real outreach in motion.</div></div>
-  </div>
-</div>
-
-<!-- What's Not Working -->
-<div class="sec">
-  <div class="sh"><span class="sn" style="color:var(--rd)">&#10007;</span><span class="st">What's Not Working</span></div>
-  <div class="g">
-    <div class="c x"><div class="cl">POSTING CADENCE</div><div class="cv">~5/mo</div><div class="cs">Competitors avg 8-10 reels/week. You're at ~1/week. This is the #1 growth bottleneck by far.</div></div>
-    <div class="c x"><div class="cl">"THREE HEATERS" OVERDUE</div><div class="cv">4 days late</div><div class="cs">Due Mar 23, still not posted. Weekly recurring format is critical for algorithm consistency. Launch this week.</div></div>
-    <div class="c x"><div class="cl">SC 30D DECLINING</div><div class="cv">-47%</div><div class="cs">118 plays (30d) down from prior period. 7d is up (+107%) but need more releases to sustain. Only PUYB in pipeline.</div></div>
-    <div class="c x"><div class="cl">NO MIX RECORDED</div><div class="cv">0 / 1</div><div class="cs">60-min tech house mix still not done. Blocks all venue outreach (lowercase, 518 Craft, No Fun). Record this week.</div></div>
-    <div class="c x"><div class="cl">3 TRACKS BLOCKED</div><div class="cv">marketing</div><div class="cs">Every 1's A Winner + Sports Car on HOLD (need marketing push). Tuyo blocked on arrangement. Unblock or kill.</div></div>
-  </div>
 </div>
 
 <!-- Master Task Tracker -->
@@ -2237,20 +2235,7 @@ function init(){
   <div id="master-tasks"></div>
 </div>
 
-<!-- Master Strategy -->
-<div class="sec">
-  <div class="sh"><span class="sn">ENGINE</span><span class="st">Master Strategy</span></div>
-  <div class="nb">
-    <strong>PRIMARY FOCUS:</strong> Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.<br><br>
-    <strong>FORMAT:</strong> 60% Reels, 25% Carousels, 15% Images (release art only)<br>
-    <strong>FREQUENCY:</strong> 4-5 reels/week. Daily during release weeks.<br>
-    <strong>AUDIO:</strong> Always your own music. Never trending sounds.<br>
-    <strong>HASHTAGS:</strong> <span id="core-hashtags">#techhouse #dj #housemusic #remix</span> (same 4, every post)
-    <button id="copy-hashtags-btn" onclick="navigator.clipboard.writeText(document.getElementById('core-hashtags').textContent);var b=this;b.textContent='Copied!';b.style.background='var(--gn)';setTimeout(function(){b.textContent='Copy Hashtags';b.style.background='var(--ac)'},1500)" style="margin-left:8px;background:var(--ac);color:#000;border:none;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Copy Hashtags</button>
-  </div>
-</div>
-
-<div class="ds">All derived from MASTER_STRATEGY_ENGINE + live STATE data. Last updated: March 27, 2026. Source: Apify live scrape + SoundCloud Artist Pro + TikTok + Firebase task tracker</div>
+<div class="ds">All derived from MASTER_STRATEGY_ENGINE + live STATE data. Last updated: March 27, 2026.</div>
 </div>
 
 <!-- ============================================================ -->
@@ -2260,10 +2245,9 @@ function init(){
 
 <div class="sub-tabs" id="content-tabs">
   <button class="sub-btn on" data-sub="cs-analytics" onclick="showSub('t-content','cs-analytics')">Analytics</button>
-  <button class="sub-btn" data-sub="cs-playbook" onclick="showSub('t-content','cs-playbook')">Playbook</button>
-  <button class="sub-btn" data-sub="cs-library" onclick="showSub('t-content','cs-library')">Creative Library</button>
+  <button class="sub-btn" data-sub="cs-whatworks" onclick="showSub('t-content','cs-whatworks')">What Works</button>
+  <button class="sub-btn" data-sub="cs-create" onclick="showSub('t-content','cs-create')">Create</button>
   <button class="sub-btn" data-sub="cs-pipeline" onclick="showSub('t-content','cs-pipeline')">Pipeline</button>
-  <button class="sub-btn" data-sub="cs-releases" onclick="showSub('t-content','cs-releases');renderReleaseTimelines()">Release Timing</button>
 </div>
 
 <!-- ==================== ANALYTICS SUB-TAB ==================== -->
@@ -2492,8 +2476,8 @@ function init(){
 </div>
 </div><!-- end cs-analytics -->
 
-<!-- ==================== PLAYBOOK SUB-TAB ==================== -->
-<div class="sub-c" id="cs-playbook">
+<!-- ==================== WHAT WORKS SUB-TAB ==================== -->
+<div class="sub-c" id="cs-whatworks">
 <div id="c-strategy">
 <div class="sec">
   <div class="sh"><span class="sn">&#9650;</span><span class="st">Priority Formats (from Master Strategy Engine)</span></div>
@@ -2553,10 +2537,62 @@ function init(){
   </tbody></table></div>
 </div>
 </div>
-</div><!-- end cs-playbook -->
 
-<!-- ==================== CREATIVE LIBRARY SUB-TAB ==================== -->
-<div class="sub-c" id="cs-library">
+<!-- COMPETITOR PROFILES (merged from Growth tab) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (14 scraped)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">@chalantmusic</td><td>8,984</td><td>30</td><td>638</td><td>"Three heaters" Monday, other DJs playing tracks</td><td><span class="tg tg-g">HIGHEST</span></td></tr>
+    <tr><td style="font-weight:700">@wally_sounds</td><td>10,213</td><td>10</td><td>1,963</td><td>Recognizable hook remix, 3-reel rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@zachhzachhzachh</td><td>10,280</td><td>10</td><td>17,775</td><td>COMMENT keyword CTA, release rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@teeeebbbbb</td><td>7,355</td><td>10</td><td>454</td><td>Ultra-short captions, daily posting</td><td><span class="tg tg-g">HIGH</span></td></tr>
+    <tr><td style="font-weight:700">@keepdansyn</td><td>~5K</td><td>15</td><td>273</td><td>John Summit connection, journey narrative</td><td><span class="tg tg-a">MED</span></td></tr>
+    <tr><td style="font-weight:700">@austinashtinmusic</td><td>~15K</td><td>12</td><td>573</td><td>FISHER playing tracks, Catch&amp;Release</td><td><span class="tg tg-a">MED</span></td></tr>
+    <tr><td style="font-weight:700">@niikoxswae</td><td>202K</td><td>15</td><td>37,777</td><td>Same audio/diff visual, nostalgia flips</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@domdolla</td><td>800K+</td><td>12</td><td>122,945</td><td>Raw studio, casual captions</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@bolothedj</td><td>100K+</td><td>14</td><td>21,419</td><td>Fan competitions, "should I drop" CTA</td><td><span class="tg tg-b">STUDY</span></td></tr>
+    <tr><td style="font-weight:700">@sidequestdj</td><td>339K</td><td>10</td><td>33,019</td><td>DM keyword CTA, Day X/10 challenge</td><td><span class="tg tg-b">STUDY</span></td></tr>
+  </tbody></table></div>
+</div>
+
+<!-- POSTING CADENCE (merged from Growth tab) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Posting Cadence vs Competitors</span></div>
+  <div class="g">
+    <div class="c x"><div class="cl">YOU</div><div class="cv">~3/mo</div><div class="cs">Target: 16-20/mo (4-5/week)</div></div>
+    <div class="c w"><div class="cl">CHALANT</div><div class="cv">~8/wk</div><div class="cs">30 reels in ~5 weeks. Near-daily.</div></div>
+    <div class="c w"><div class="cl">TEEB</div><div class="cv">~7/wk</div><div class="cs">10 reels in 10 days. Daily poster.</div></div>
+    <div class="c w"><div class="cl">WALLY</div><div class="cv">~6/wk</div><div class="cs">10 reels in 12 days. Near-daily.</div></div>
+  </div>
+</div>
+
+<!-- COMMUNITY WISDOM (merged from Growth tab) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#128172;</span><span class="st">Community Wisdom &amp; Mentor Notes</span></div>
+  <div class="nb" style="margin-bottom:10px">Advice from other producers, DJs, and mentors. Save what resonates.</div>
+  <div style="background:rgba(0,242,234,.04);border:1px solid rgba(0,242,234,.15);border-radius:8px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="color:var(--cy);font:700 11px/1 'Space Mono',monospace">CHALANT</span>
+      <span style="color:var(--dm);font-size:10px">Mar 2026</span>
+    </div>
+    <div style="color:var(--tx);font-size:12px;line-height:1.6">
+      <p style="margin:0 0 8px">&bull; For me it all started with remixes, great way to get your name out there.</p>
+      <p style="margin:0 0 8px">&bull; Push your music out with content. Try to upload daily.</p>
+      <p style="margin:0 0 8px">&bull; The most important thing is <strong style="color:var(--cy)">consistency</strong>. If you keep posting people will notice and start to recognize you.</p>
+      <p style="margin:0 0 8px">&bull; The more you force yourself to finish tracks and put them out, the better you'll get at it.</p>
+      <p style="margin:0 0 8px">&bull; It's a marathon &mdash; if you love it then the journey is just part of the fun.</p>
+      <p style="margin:0">&bull; No extra Hypeddit stuff. All just from putting stuff out on SoundCloud and building hype organically.</p>
+    </div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);color:var(--dm);font-size:10px">
+      <strong>Key takeaway:</strong> Volume + consistency + organic SoundCloud growth &gt; paid promotion at this stage.
+    </div>
+  </div>
+</div>
+
+</div><!-- end cs-whatworks -->
+
+<!-- ==================== CREATE SUB-TAB ==================== -->
+<div class="sub-c" id="cs-create">
 <!-- HOOK LIBRARY -->
 <div id="c-hooks">
 <div class="sec">
@@ -2598,7 +2634,7 @@ function init(){
   </tbody></table></div>
 </div>
 </div>
-</div><!-- end cs-library -->
+</div><!-- end cs-create -->
 
 <!-- ==================== PIPELINE SUB-TAB ==================== -->
 <div class="sub-c" id="cs-pipeline">
@@ -2627,146 +2663,20 @@ function init(){
 </div>
 </div><!-- end cs-pipeline -->
 
-<!-- ==================== RELEASE TIMING SUB-TAB ==================== -->
-<div class="sub-c" id="cs-releases">
-<!-- RELEASE TIMING ENGINE -->
-<div id="c-release-timing">
-<div class="sec">
-  <div class="sh"><span class="sn" style="background:rgba(0,188,212,.1);color:var(--cy)">&#128197;</span><span class="st">Release Timing Engine</span></div>
-  <div class="nb" style="margin-bottom:12px"><strong>Tracks approaching release get an auto-generated timeline.</strong> Set a release date on any track in the pipeline to activate. Click dots to mark steps done. Workflow: album cover &rarr; SC upload &rarr; release &rarr; reel + TikTok + HypedIt &rarr; update bios.</div>
-  <div id="release-timelines-area"></div>
-</div>
-</div>
-</div><!-- end cs-releases -->
-
 </div><!-- end t-content -->
 
 <!-- ============================================================ -->
-<!--  GROWTH — SC + Competitors + Cadence                         -->
+<!--  CAMPAIGNS — Campaign Builder + Release Timing + Paid Media   -->
 <!-- ============================================================ -->
-<div class="tc" id="t-growth">
-<div class="sub-tabs" id="growth-tabs">
-  <button class="sub-btn on" data-sub="g-sc" onclick="showSub('t-growth','g-sc')">SoundCloud</button>
-  <button class="sub-btn" data-sub="g-comp" onclick="showSub('t-growth','g-comp')">Competitors</button>
-  <button class="sub-btn" data-sub="g-cadence" onclick="showSub('t-growth','g-cadence')">Posting Cadence</button>
-  <button class="sub-btn" data-sub="g-wisdom" onclick="showSub('t-growth','g-wisdom')">Community Wisdom</button>
-  <button class="sub-btn" data-sub="g-campaigns" onclick="showSub('t-growth','g-campaigns');renderCampaigns()">Campaigns</button>
+<div class="tc" id="t-campaigns">
+<div class="sub-tabs" id="campaigns-tabs">
+  <button class="sub-btn on" data-sub="cmp-builder" onclick="showSub('t-campaigns','cmp-builder')">Campaigns</button>
+  <button class="sub-btn" data-sub="cmp-releases" onclick="showSub('t-campaigns','cmp-releases');renderReleaseTimelines()">Release Timing</button>
+  <button class="sub-btn" data-sub="cmp-ads" onclick="showSub('t-campaigns','cmp-ads');renderAds()">Paid Media</button>
 </div>
 
-<div class="sub-c on" id="g-sc">
-<div class="sec">
-  <div class="sh"><span class="sn">SC</span><span class="st">SoundCloud — Last 7 Days</span></div>
-  <div class="g">
-    <div class="c sc"><div class="cl">PLAYS (7D)</div><div class="cv">29</div><div class="cs"><span style="color:var(--gn)">(+107%)</span></div></div>
-    <div class="c sc"><div class="cl">PLAYS (30D)</div><div class="cv">118</div><div class="cs"><span style="color:var(--rd)">(-47%)</span></div></div>
-    <div class="c sc"><div class="cl">FOLLOWERS</div><div class="cv">41</div></div>
-    <div class="c sc"><div class="cl">ENGAGEMENT (7D)</div><div class="cv">2L / 0C / 0R</div><div class="cs">2 likes &middot; 0 comments &middot; 0 reposts</div></div>
-  </div>
-</div>
-<div class="sec">
-  <div class="sh"><span class="sn">&#127942;</span><span class="st">Top Tracks (7D)</span></div>
-  <div class="g">
-    <div class="c sc"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">11 plays</div></div>
-    <div class="c sc"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">7 plays</div></div>
-    <div class="c sc"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">5 plays</div></div>
-  </div>
-</div>
-<div class="sec">
-  <div class="sh"><span class="sn">&#127911;</span><span class="st">Top Listeners (7D)</span></div>
-  <div class="g">
-    <div class="c sc"><div class="cl">UNION ATHLETICS</div><div class="cv" style="font-size:12px">6 plays</div></div>
-    <div class="c sc"><div class="cl">DiAZ(PR)</div><div class="cv" style="font-size:12px">5 plays</div><div class="cs">21 followers &middot; 1 track</div></div>
-    <div class="c sc"><div class="cl">JESSE JONES</div><div class="cv" style="font-size:12px">3 plays</div><div class="cs">30 followers</div></div>
-  </div>
-</div>
-<div class="sec">
-  <div class="sh"><span class="sn">&#127760;</span><span class="st">Top Locations (7D)</span></div>
-  <div class="geo">
-    <div class="geo-i"><div class="geo-v">7</div><div class="geo-l">Schenectady</div></div>
-    <div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Ashburn</div></div>
-    <div class="geo-i"><div class="geo-v">3</div><div class="geo-l">Bayam&oacute;n, PR</div></div>
-  </div>
-</div>
-<div class="sec">
-  <div class="sh"><span class="sn">&#127942;</span><span class="st">Top Tracks (30D)</span></div>
-  <div class="g">
-    <div class="c sc"><div class="cl">1.</div><div class="cv" style="font-size:13px">Every 1's A Winner</div><div class="cs">74 plays</div></div>
-    <div class="c sc"><div class="cl">2.</div><div class="cv" style="font-size:13px">UNION WLAX MIX '26</div><div class="cs">21 plays</div></div>
-    <div class="c sc"><div class="cl">3.</div><div class="cv" style="font-size:13px">DANCE.</div><div class="cs">11 plays</div></div>
-  </div>
-</div>
-<div class="sec">
-  <div class="sh"><span class="sn">&#127911;</span><span class="st">Top Listeners (30D)</span></div>
-  <div class="g">
-    <div class="c sc"><div class="cl">BINKY</div><div class="cv" style="font-size:12px">8 plays</div><div class="cs">16 followers &middot; 1 track</div></div>
-    <div class="c sc"><div class="cl">SHAPS</div><div class="cv" style="font-size:12px">6 plays</div><div class="cs">39 followers &middot; 1 track</div></div>
-    <div class="c sc"><div class="cl">UNION ATHLETICS</div><div class="cv" style="font-size:12px">6 plays</div></div>
-  </div>
-</div>
-<!-- Add Task -->
-<div class="mini-add-task">
-  <div style="display:flex;gap:6px;align-items:center">
-    <input class="add-task-input" id="growth-task-input" placeholder="Add analytics task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('growth-task-input','Analytics')">
-    <button class="add-task-btn" onclick="addTaskFromTab('growth-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
-  </div>
-</div>
-</div>
-
-<div class="sub-c" id="g-comp">
-<div class="sec">
-  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (14 scraped)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody>
-    <tr><td style="font-weight:700">@chalantmusic</td><td>8,984</td><td>30</td><td>638</td><td>"Three heaters" Monday, other DJs playing tracks</td><td><span class="tg tg-g">HIGHEST</span></td></tr>
-    <tr><td style="font-weight:700">@wally_sounds</td><td>10,213</td><td>10</td><td>1,963</td><td>Recognizable hook remix, 3-reel rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@zachhzachhzachh</td><td>10,280</td><td>10</td><td>17,775</td><td>COMMENT keyword CTA, release rollout</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@teeeebbbbb</td><td>7,355</td><td>10</td><td>454</td><td>Ultra-short captions, daily posting</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">@keepdansyn</td><td>~5K</td><td>15</td><td>273</td><td>John Summit connection, journey narrative</td><td><span class="tg tg-a">MED</span></td></tr>
-    <tr><td style="font-weight:700">@austinashtinmusic</td><td>~15K</td><td>12</td><td>573</td><td>FISHER playing tracks, Catch&amp;Release</td><td><span class="tg tg-a">MED</span></td></tr>
-    <tr><td style="font-weight:700">@niikoxswae</td><td>202K</td><td>15</td><td>37,777</td><td>Same audio/diff visual, nostalgia flips</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@domdolla</td><td>800K+</td><td>12</td><td>122,945</td><td>Raw studio, casual captions</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@bolothedj</td><td>100K+</td><td>14</td><td>21,419</td><td>Fan competitions, "should I drop" CTA</td><td><span class="tg tg-b">STUDY</span></td></tr>
-    <tr><td style="font-weight:700">@sidequestdj</td><td>339K</td><td>10</td><td>33,019</td><td>DM keyword CTA, Day X/10 challenge</td><td><span class="tg tg-b">STUDY</span></td></tr>
-  </tbody></table></div>
-</div>
-</div>
-
-<div class="sub-c" id="g-cadence">
-<div class="sec">
-  <div class="sh"><span class="sn">&#128200;</span><span class="st">Posting Cadence vs Competitors</span></div>
-  <div class="g">
-    <div class="c x"><div class="cl">YOU</div><div class="cv">~3/mo</div><div class="cs">Target: 16-20/mo (4-5/week)</div></div>
-    <div class="c w"><div class="cl">CHALANT</div><div class="cv">~8/wk</div><div class="cs">30 reels in ~5 weeks. Near-daily.</div></div>
-    <div class="c w"><div class="cl">TEEB</div><div class="cv">~7/wk</div><div class="cs">10 reels in 10 days. Daily poster.</div></div>
-    <div class="c w"><div class="cl">WALLY</div><div class="cv">~6/wk</div><div class="cs">10 reels in 12 days. Near-daily.</div></div>
-  </div>
-</div>
-</div>
-
-<div class="sub-c" id="g-wisdom">
-<div class="sec">
-  <div class="sh"><span class="sn">&#128172;</span><span class="st">Community Wisdom &amp; Mentor Notes</span></div>
-  <div class="nb" style="margin-bottom:10px">Advice from other producers, DJs, and mentors. Save what resonates.</div>
-  <div style="background:rgba(0,242,234,.04);border:1px solid rgba(0,242,234,.15);border-radius:8px;padding:14px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <span style="color:var(--cy);font:700 11px/1 'Space Mono',monospace">CHALANT</span>
-      <span style="color:var(--dm);font-size:10px">Mar 2026</span>
-    </div>
-    <div style="color:var(--tx);font-size:12px;line-height:1.6">
-      <p style="margin:0 0 8px">&bull; For me it all started with remixes, great way to get your name out there.</p>
-      <p style="margin:0 0 8px">&bull; Push your music out with content. Try to upload daily.</p>
-      <p style="margin:0 0 8px">&bull; The most important thing is <strong style="color:var(--cy)">consistency</strong>. If you keep posting people will notice and start to recognize you.</p>
-      <p style="margin:0 0 8px">&bull; The more you force yourself to finish tracks and put them out, the better you'll get at it.</p>
-      <p style="margin:0 0 8px">&bull; It's a marathon &mdash; if you love it then the journey is just part of the fun.</p>
-      <p style="margin:0">&bull; No extra Hypeddit stuff. All just from putting stuff out on SoundCloud and building hype organically.</p>
-    </div>
-    <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);color:var(--dm);font-size:10px">
-      <strong>Key takeaway:</strong> Volume + consistency + organic SoundCloud growth &gt; paid promotion at this stage.
-    </div>
-  </div>
-</div>
-</div>
-
-<div class="sub-c" id="g-campaigns">
+<!-- CAMPAIGN BUILDER -->
+<div class="sub-c on" id="cmp-builder">
 <div class="sec">
   <div class="sh"><span class="sn" style="background:rgba(123,47,247,.1);color:#b388ff">&#128640;</span><span class="st">Campaign Builder</span></div>
   <div class="nb" style="margin-bottom:12px"><strong>Plan and execute multi-step campaigns.</strong> For track releases: album cover &rarr; SC release info &rarr; release on SC &rarr; reel + TikTok + HypedIt &rarr; update bios. All steps are trackable.</div>
@@ -2774,7 +2684,30 @@ function init(){
 </div>
 </div>
 
+<!-- RELEASE TIMING -->
+<div class="sub-c" id="cmp-releases">
+<div class="sec">
+  <div class="sh"><span class="sn" style="background:rgba(0,188,212,.1);color:var(--cy)">&#128197;</span><span class="st">Release Timing Engine</span></div>
+  <div class="nb" style="margin-bottom:12px"><strong>Tracks approaching release get an auto-generated timeline.</strong> Set a release date on any track in the pipeline to activate. Click dots to mark steps done. Workflow: album cover &rarr; SC upload &rarr; release &rarr; reel + TikTok + HypedIt &rarr; update bios.</div>
+  <div id="release-timelines-area"></div>
 </div>
+</div>
+
+<!-- PAID MEDIA -->
+<div class="sub-c" id="cmp-ads">
+<div class="sec">
+  <div class="sh"><span class="sn">&#128176;</span><span class="st">Paid Media Command Center</span></div>
+  <div id="ads-command-center"></div>
+</div>
+<div class="mini-add-task">
+  <div style="display:flex;gap:6px;align-items:center">
+    <input class="add-task-input" id="ads-task-input" placeholder="Add campaign task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('ads-task-input','Analytics')">
+    <button class="add-task-btn" onclick="addTaskFromTab('ads-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
+  </div>
+</div>
+</div>
+
+</div><!-- end t-campaigns -->
 
 <!-- ============================================================ -->
 <!--  OUTREACH — Venues + Labels                                   -->
@@ -2840,13 +2773,8 @@ function init(){
 <!--  TRACKS — Production Pipeline + Rollout + Execution          -->
 <!-- ============================================================ -->
 <div class="tc" id="t-tracks">
-<div class="sub-tabs" id="tracks-tabs">
-  <button class="sub-btn on" data-sub="trk-table" onclick="showSub('t-tracks','trk-table')">Track Pipeline</button>
-  <button class="sub-btn" data-sub="trk-perf" onclick="showSub('t-tracks','trk-perf')">Track Performance</button>
-  <button class="sub-btn" data-sub="trk-ads" onclick="showSub('t-tracks','trk-ads');renderAds()">Paid Media</button>
-</div>
 
-<div class="sub-c on" id="trk-table">
+<div id="trk-table">
 <div class="sec">
   <div class="sh"><span class="sn">&#127925;</span><span class="st">Track Pipeline</span></div>
   <div class="tw"><table>
@@ -3045,7 +2973,6 @@ function init(){
 </div>
 
 <!-- TRACK PERFORMANCE -->
-<div class="sub-c" id="trk-perf">
 <div class="sec">
   <div class="sh"><span class="sn">&#128200;</span><span class="st">Track Performance</span></div>
   <div class="tw"><table><thead><tr><th>Track</th><th>SC Plays</th><th>IG Posts</th><th>Best Post Eng</th><th>Best Format</th></tr></thead><tbody>
@@ -3057,22 +2984,7 @@ function init(){
   </tbody></table></div>
   <div class="nb" style="margin-top:10px"><strong>Insight:</strong> Your top 3 SC tracks (238, 185, 112 plays) have ZERO Instagram promotion. This is the single biggest missed opportunity.</div>
 </div>
-</div>
 
-<!-- ADS & ANALYTICS -->
-<div class="sub-c" id="trk-ads">
-<div class="sec">
-  <div class="sh"><span class="sn">&#128176;</span><span class="st">Paid Media Command Center</span></div>
-  <div id="ads-command-center"></div>
-</div>
-<!-- Add Task -->
-<div class="mini-add-task">
-  <div style="display:flex;gap:6px;align-items:center">
-    <input class="add-task-input" id="ads-task-input" placeholder="Add analytics task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('ads-task-input','Analytics')">
-    <button class="add-task-btn" onclick="addTaskFromTab('ads-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
-  </div>
-</div>
-</div>
 </div>
 
 <!-- ============================================================ -->
