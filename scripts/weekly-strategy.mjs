@@ -162,6 +162,42 @@ function buildDataSummary(latest, history, competitors, state) {
   const topCompCaptions = (competitors?.patterns?.top10 || []).slice(0, 5)
     .map(r => ({ account: r.ownerUsername, caption: (r.caption || '').slice(0, 120), likes: r.likesCount || 0 }));
 
+  // All posts for AI track-to-post matching (capped to keep prompt lean)
+  const allIGPosts = (latest?.igPosts || []).slice(0, 25).map(p => ({
+    caption: (p.caption || '(no caption)').slice(0, 120),
+    views: p.videoPlayCount || 0,
+    likes: p.likesCount || 0,
+    comments: p.commentsCount || 0,
+    date: p.timestamp ? p.timestamp.slice(0, 10) : '',
+    type: p.videoPlayCount > 0 ? 'Reel' : 'Image',
+  }));
+  const allTTPosts = (latest?.ttPosts || []).slice(0, 25).map(p => ({
+    caption: (p.text || '(no caption)').slice(0, 120),
+    views: p.playCount || 0,
+    likes: p.diggCount || 0,
+    date: p.createTimeISO ? p.createTimeISO.slice(0, 10) : '',
+  }));
+  const allTrackNames = (state?.tracks || []).map(t => t.name);
+
+  // DJ/producer industry best practices (static context for Gemini)
+  const industryBestPractices = [
+    'TikTok > Instagram for artist discovery — prioritize it early career',
+    'Engagement rate matters more than follower count for algorithm reach',
+    '5 consistent posts/week outperforms 1 viral post/month long-term',
+    'Co-authored content gets 2-3x organic reach vs solo posts',
+    'Use recognizable hook vocals or melodies in reel first 2 seconds',
+    'Crowd reaction clips trigger dopamine — highest share rate',
+    'Bio CTA + link-in-bio landing page are the conversion funnel',
+    'Niche audience targeting (tech house fans) outperforms broad for small ad budgets',
+    'B2B sets instantly introduce you to a partner\'s entire fanbase',
+    'Tag venues and collaborators generously — they reshare to their audience',
+    'Follow up within 24h of any booking conversation — cadence > initial impression',
+    'Study the top 3 tracks in your genre technically to understand what makes them work',
+    'Know target venue bookers by name and track outreach history',
+    'Post about gigs you attend (not just your own) — builds scene credibility',
+    'Release consistently: algorithm rewards regular output over sporadic drops',
+  ];
+
   return {
     ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, posts: ig.posts || 0 },
     tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0 },
@@ -179,6 +215,10 @@ function buildDataSummary(latest, history, competitors, state) {
     currentAlerts: (latest?.alerts || []).map(a => ({ msg: a.msg, level: a.level, category: a.category })),
     postTiming: { ig: igPostTiming, tt: ttPostTiming },
     topOwnCaptions,
+    allIGPosts,
+    allTTPosts,
+    allTrackNames,
+    industryBestPractices,
   };
 }
 
@@ -284,6 +324,23 @@ Return a JSON object with EXACTLY these fields:
     }
   ],
 
+  "keyInsights": {
+    "summary": "2-3 sentences synthesizing the single most important strategic insight from ALL data. This appears on the HQ dashboard — make it specific and actionable, not generic.",
+    "wins": ["specific win with actual numbers", "another win"],
+    "gaps": ["specific gap with actual numbers", "another gap"],
+    "nextPriority": "The single most important 30-day focus for El Capitán right now",
+    "strategicPosition": "1-2 sentences on where El Capitán is in their growth trajectory and what growth phase they are in"
+  },
+
+  "trackPostMatches": [
+    {
+      "trackName": "exact name from allTrackNames",
+      "igPosts": [{"caption": "snippet", "views": 0, "likes": 0, "engRate": 0.0, "date": "YYYY-MM-DD"}],
+      "ttPosts": [{"caption": "snippet", "views": 0, "likes": 0, "engRate": 0.0, "date": "YYYY-MM-DD"}],
+      "insight": "1 sentence about this track's social media performance based on matched posts"
+    }
+  ],
+
   "smartSchedule": [
     {
       "day": "Monday",
@@ -295,6 +352,7 @@ Return a JSON object with EXACTLY these fields:
 }
 
 RULES:
+- Use industryBestPractices context to inform all recommendations.
 - performanceAlerts: exactly 2-3 items
 - opportunityAlerts: exactly 2-3 items
 - avoidItems: exactly 3-4 items based on what the DATA shows doesn't work, not generic advice
@@ -306,7 +364,9 @@ RULES:
 - weeklyReview: 2-4 wins, 2-3 misses. Reference actual numbers from the data. Be honest about misses.
 - competitorInsights: 3-5 items, one per top competitor reel from the data. Explain WHY it worked.
 - captionTemplates: 5-8 items. Mix styles from the artist's top captions AND competitor top captions. Make them ready-to-post with hashtags.
-- smartSchedule: 5-7 items. Use the postTiming data to find patterns — which days/hours have highest engagement. Reference the artist's ACTUAL data in reasons.
+- smartSchedule: 5-7 items. Use the postTiming data to find patterns. If postTiming.ig has fewer than 8 posts OR postTiming.tt has fewer than 8 posts, add "(low confidence — small sample)" to that platform's reason fields.
+- keyInsights: required. summary must be HQ-appropriate — specific numbers, not generic. Synthesize across all platforms and tracks.
+- trackPostMatches: match posts from allIGPosts/allTTPosts to tracks in allTrackNames using caption keywords, track name mentions, or date proximity to known release dates. Calculate engRate = (likes / views * 100) for reels, (likes + comments) / ig.followers * 100 for images. Only include tracks with at least 1 matched post. Omit tracks with zero matches.
 - Use ONLY the data provided. Do not invent metrics or track names.
 - Be specific: reference actual numbers, track names, and platform names.
 - Tone: direct, confident, slightly informal. Like a strategist briefing an artist.
@@ -378,8 +438,16 @@ function validateAIResponse(parsed) {
   if (Array.isArray(parsed.smartSchedule) && parsed.smartSchedule.length >= 1 && parsed.smartSchedule.every(s => s.day && s.time && s.platform))
     result.smartSchedule = parsed.smartSchedule.slice(0, 7);
 
+  // Key insights
+  if (parsed.keyInsights?.summary && typeof parsed.keyInsights.summary === 'string' && parsed.keyInsights.summary.length > 10)
+    result.keyInsights = parsed.keyInsights;
+
+  // Track post matches
+  if (Array.isArray(parsed.trackPostMatches) && parsed.trackPostMatches.length >= 1 && parsed.trackPostMatches.every(t => t.trackName))
+    result.trackPostMatches = parsed.trackPostMatches.slice(0, 10);
+
   const validCount = Object.keys(result).length;
-  console.log(`  Validated ${validCount}/17 AI fields`);
+  console.log(`  Validated ${validCount}/19 AI fields`);
   return validCount > 0 ? result : null;
 }
 
@@ -649,6 +717,8 @@ async function main() {
     competitorInsights: aiFields?.competitorInsights || null,
     captionTemplates: aiFields?.captionTemplates || null,
     smartSchedule: aiFields?.smartSchedule || null,
+    keyInsights: aiFields?.keyInsights || null,
+    trackPostMatches: aiFields?.trackPostMatches || null,
   };
 
   console.log('\n🎯 PRIORITIES:');

@@ -3073,7 +3073,59 @@ function loadWeeklyStrategy(){
     if(s.competitorInsights) renderCompetitorInsights(s.competitorInsights);
     if(s.captionTemplates) renderCaptionTemplates(s.captionTemplates);
     if(s.smartSchedule) renderSmartSchedule(s.smartSchedule);
+    if(s.keyInsights) renderKeyInsights();
+    if(s.trackPostMatches) renderTrackPerformance();
   });
+}
+
+function renderKeyInsights(){
+  var inner = document.querySelector('#acc-insights-body .acc-body-inner');
+  if(!inner) return;
+  var s = window._strategyData;
+  if(!s || !s.keyInsights) return;
+  var ki = s.keyInsights;
+  var html = '<div class="nb" style="line-height:1.9">';
+  (ki.wins || []).forEach(function(w){ html += '<div><strong style="color:var(--gn)">&#9650;</strong> '+w+'</div>'; });
+  (ki.gaps || []).forEach(function(g){ html += '<div><strong style="color:var(--am)">&#9660;</strong> '+g+'</div>'; });
+  html += '</div>';
+  if(ki.strategicPosition){
+    html += '<div style="margin-top:10px;padding:10px;background:rgba(123,47,247,.06);border:1px solid rgba(123,47,247,.15);border-radius:5px;font-size:10px;color:#b388ff;line-height:1.8"><strong>Strategic Position:</strong> '+ki.strategicPosition+'</div>';
+  }
+  if(ki.nextPriority){
+    html += '<div style="margin-top:8px;padding:8px;background:rgba(0,230,118,.05);border-left:3px solid var(--gn);font-size:10px;color:var(--tx);border-radius:5px"><strong>Next 30 days:</strong> '+ki.nextPriority+'</div>';
+  }
+  inner.innerHTML = html;
+  // Feed summary to HQ AI Insight block
+  if(ki.summary){
+    var aiEl = document.getElementById('artist-score-insight');
+    if(aiEl){
+      aiEl.innerHTML = '<span style="color:var(--ac);font-size:9px;font-weight:600">&#129302; AI INSIGHT</span><br>'+ki.summary;
+      aiEl.style.display = '';
+    }
+  }
+}
+
+function renderTrackPerformance(){
+  var tbody = document.getElementById('track-perf-body');
+  if(!tbody) return;
+  var s = window._strategyData;
+  if(!s || !s.trackPostMatches || !s.trackPostMatches.length) return;
+  var arr = Array.isArray(s.trackPostMatches) ? s.trackPostMatches : Object.values(s.trackPostMatches);
+  var html = '';
+  arr.forEach(function(t){
+    var igPosts = Array.isArray(t.igPosts) ? t.igPosts : [];
+    var ttPosts = Array.isArray(t.ttPosts) ? t.ttPosts : [];
+    var bestIG = igPosts.slice().sort(function(a,b){ return (b.engRate||0)-(a.engRate||0); })[0];
+    var bestTT = ttPosts.slice().sort(function(a,b){ return (b.views||0)-(a.views||0); })[0];
+    html += '<tr>';
+    html += '<td style="font-weight:700">'+t.trackName+'</td>';
+    html += '<td style="color:var(--ac)">'+igPosts.length+(igPosts.length===1?' post':' posts')+'</td>';
+    html += '<td>'+(bestIG ? '<span style="color:var(--gn)">'+parseFloat(bestIG.engRate||0).toFixed(1)+'%</span>' : '—')+'</td>';
+    html += '<td>'+(bestTT ? (bestTT.views||0).toLocaleString()+' plays' : '—')+'</td>';
+    html += '<td style="font-size:10px;color:var(--dm)">'+((t.insight||'').slice(0,80))+'</td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
 }
 
 function loadJobsLog(){
@@ -3139,84 +3191,97 @@ function loadHistory(callback){
 }
 
 function renderTrendCharts(){
-  var hist = window._analyticsHistory || [];
-  if(hist.length < 2) {
-    var area = document.getElementById('trend-charts-area');
-    if(area) area.innerHTML = '<div class="ds">Trend data will appear after 2+ daily scrapes run.</div>';
-    return;
+  // ── Engagement Heatmap (from post-level data) ──────────────────
+  var latestData = window._latestData || {};
+  var heatEl = document.getElementById('posting-heatmap');
+  if(heatEl){
+    var allPosts = [];
+    (latestData.igPosts || []).forEach(function(p){
+      if(!p.timestamp) return;
+      var d = new Date(p.timestamp);
+      var eng = (p.videoPlayCount||0) > 0 ? ((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / p.videoPlayCount * 100 : 0;
+      allPosts.push({day: d.getDay(), hour: d.getHours(), eng: eng});
+    });
+    (latestData.ttPosts || []).forEach(function(p){
+      if(!p.createTimeISO) return;
+      var d = new Date(p.createTimeISO);
+      var eng = (p.playCount||0) > 0 ? ((p.diggCount||0)+(p.commentCount||0)) / p.playCount * 100 : 0;
+      allPosts.push({day: d.getDay(), hour: d.getHours(), eng: eng});
+    });
+
+    if(allPosts.length > 0){
+      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      var bucketLabels = ['12–4a','4–8a','8a–12p','12–4p','4–8p','8p–12a'];
+      var grid = {};
+      allPosts.forEach(function(p){
+        var b = Math.floor(p.hour / 4);
+        var key = p.day+'_'+b;
+        if(!grid[key]) grid[key] = {total:0,count:0};
+        grid[key].total += p.eng;
+        grid[key].count++;
+      });
+      var maxEng = 0;
+      Object.values(grid).forEach(function(v){ var avg = v.count ? v.total/v.count : 0; if(avg > maxEng) maxEng = avg; });
+      if(!maxEng) maxEng = 1;
+
+      var h = '<table style="border-collapse:collapse;width:100%;font-size:9px"><tr>';
+      h += '<th style="padding:2px 4px;color:var(--dm);text-align:right;min-width:40px"></th>';
+      days.forEach(function(d){ h += '<th style="padding:3px 2px;color:var(--dm);font-weight:600;text-align:center">'+d+'</th>'; });
+      h += '</tr>';
+      bucketLabels.forEach(function(bl,b){
+        h += '<tr><td style="padding:2px 4px;color:var(--dm);text-align:right;white-space:nowrap">'+bl+'</td>';
+        days.forEach(function(d,di){
+          var cell = grid[di+'_'+b];
+          var avg = cell && cell.count ? cell.total/cell.count : 0;
+          var ratio = avg / maxEng;
+          var bg, tx;
+          if(!cell||!cell.count){ bg='rgba(255,255,255,.03)'; tx='transparent'; }
+          else if(ratio>0.6){ bg='rgba(0,230,118,'+Math.min(.75,ratio*.8)+')'; tx='var(--fg)'; }
+          else if(ratio>0.25){ bg='rgba(255,171,0,'+Math.min(.6,ratio*.7)+')'; tx='var(--fg)'; }
+          else { bg='rgba(0,229,255,'+Math.min(.3,ratio*.4)+')'; tx='var(--dm)'; }
+          var lbl = cell&&cell.count ? cell.count+'p' : '';
+          h += '<td title="'+(cell&&cell.count ? avg.toFixed(1)+'% eng, '+cell.count+' post'+(cell.count>1?'s':'') : 'no posts')+'" style="padding:4px 2px;background:'+bg+';border-radius:3px;text-align:center"><span style="color:'+tx+';font-size:8px">'+lbl+'</span></td>';
+        });
+        h += '</tr>';
+      });
+      h += '</table><div style="font-size:9px;color:var(--dm);margin-top:5px">&#x25A0; Green = high avg eng rate &nbsp;&#x25A0; Numbers = posts in that slot</div>';
+      heatEl.innerHTML = h;
+    } else {
+      heatEl.innerHTML = '<div class="ds">Post data needed — runs after daily scrape.</div>';
+    }
   }
 
-  // Destroy previous trend charts
+  // ── Multi-line Followers Growth Chart ──────────────────────────
+  var hist = window._analyticsHistory || [];
+  if(hist.length < 2) return;
+
   if(window._trendCharts){
     window._trendCharts.forEach(function(c){ try{c.destroy();}catch(e){} });
   }
   window._trendCharts = [];
 
-  var labels = hist.map(function(h){ return h.date ? h.date.slice(5) : ''; }); // MM-DD
-  var chartOpts = function(label, color){
-    return {
+  var labels = hist.map(function(h){ return h.date ? h.date.slice(5) : ''; });
+  var c1El = document.getElementById('trend-followers-combined');
+  if(c1El){
+    window._trendCharts.push(new Chart(c1El, {
       type:'line',
       data:{
         labels: labels,
-        datasets:[{
-          label: label,
-          data: [],
-          borderColor: color,
-          backgroundColor: color.replace('1)', '0.1)'),
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2
-        }]
+        datasets:[
+          {label:'IG',data:hist.map(function(h){return h.ig?h.ig.followers:null;}),borderColor:'rgba(225,48,108,1)',backgroundColor:'rgba(225,48,108,.05)',tension:0.3,pointRadius:2},
+          {label:'TT',data:hist.map(function(h){return h.tiktok?h.tiktok.followers:null;}),borderColor:'rgba(0,242,234,1)',backgroundColor:'rgba(0,242,234,.05)',tension:0.3,pointRadius:2},
+          {label:'SC',data:hist.map(function(h){return h.sc?h.sc.followers:null;}),borderColor:'rgba(255,85,0,1)',backgroundColor:'rgba(255,85,0,.05)',tension:0.3,pointRadius:2}
+        ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
+        plugins:{legend:{labels:{color:'#8888aa',font:{size:9}}}},
         scales:{
           x:{ticks:{color:'#8888aa',font:{size:8}},grid:{display:false}},
           y:{ticks:{color:'#8888aa',font:{size:8}},grid:{color:'rgba(42,42,58,.3)'}}
         }
       }
-    };
-  };
-
-  // Followers trend
-  var c1El = document.getElementById('trend-followers');
-  if(c1El){
-    var cfg1 = chartOpts('Followers', 'rgba(0,229,255,1)');
-    cfg1.data.datasets[0].data = hist.map(function(h){ return h.ig ? h.ig.followers : null; });
-    window._trendCharts.push(new Chart(c1El, cfg1));
-  }
-
-  // Engagement rate trend
-  var c2El = document.getElementById('trend-engagement');
-  if(c2El){
-    var cfg2 = chartOpts('Eng Rate %', 'rgba(0,230,118,1)');
-    cfg2.data.datasets[0].data = hist.map(function(h){ return h.ig ? h.ig.engRate : null; });
-    window._trendCharts.push(new Chart(c2El, cfg2));
-  }
-
-  // TikTok followers trend
-  var c3El = document.getElementById('trend-tt-followers');
-  if(c3El){
-    var cfg3 = chartOpts('TT Followers', 'rgba(0,242,234,1)');
-    cfg3.data.datasets[0].data = hist.map(function(h){ return h.tiktok ? h.tiktok.followers : null; });
-    window._trendCharts.push(new Chart(c3El, cfg3));
-  }
-
-  // SC followers trend
-  var c4El = document.getElementById('trend-sc-followers');
-  if(c4El){
-    var cfg4 = chartOpts('SC Followers', 'rgba(255,85,0,1)');
-    cfg4.data.datasets[0].data = hist.map(function(h){ return h.sc ? h.sc.followers : null; });
-    window._trendCharts.push(new Chart(c4El, cfg4));
-  }
-
-  // TikTok avg plays trend
-  var c5El = document.getElementById('trend-tt-plays');
-  if(c5El){
-    var cfg5 = chartOpts('TT Avg Plays', 'rgba(0,242,234,1)');
-    cfg5.data.datasets[0].data = hist.map(function(h){ return h.tiktok ? h.tiktok.avgPlays : null; });
-    window._trendCharts.push(new Chart(c5El, cfg5));
+    }));
   }
 }
 
@@ -3435,30 +3500,15 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn">TRENDS</span><span class="st">30-Day Trends</span></div>
   <div id="trend-charts-area">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start">
       <div>
-        <div class="cl" style="margin-bottom:4px">IG Followers</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-followers" height="120"></canvas></div>
+        <div class="cl" style="margin-bottom:6px">Best Posting Times — Avg Engagement by Day &amp; Slot</div>
+        <div id="posting-heatmap"><div class="ds">Post data loads after daily scrape.</div></div>
       </div>
       <div>
-        <div class="cl" style="margin-bottom:4px">IG Eng Rate %</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-engagement" height="120"></canvas></div>
+        <div class="cl" style="margin-bottom:4px">Follower Growth (IG / TT / SC)</div>
+        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-followers-combined" height="180"></canvas></div>
       </div>
-      <div>
-        <div class="cl" style="margin-bottom:4px">TT Followers</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-tt-followers" height="120"></canvas></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-      <div>
-        <div class="cl" style="margin-bottom:4px">TT Avg Plays</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-tt-plays" height="120"></canvas></div>
-      </div>
-      <div>
-        <div class="cl" style="margin-bottom:4px">SC Followers</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-sc-followers" height="120"></canvas></div>
-      </div>
-      <div></div>
     </div>
   </div>
   <div id="trend-analysis-text" style="margin-top:12px;padding:10px 12px;border-radius:6px;background:rgba(0,230,118,.05);border-left:3px solid var(--gn);font-size:11px;color:var(--tx);line-height:1.5;display:none"></div>
@@ -3672,19 +3722,15 @@ function init(){
   </div>
   <div class="acc-body" id="acc-insights-body"><div class="acc-body-inner">
     <div class="nb" style="line-height:2">
-      <strong style="color:var(--gn)">Reach is exploding:</strong> 11,003 reached (+1,056%), 45,344 impressions (+1,625%)<br>
-      <strong style="color:var(--gn)">Non-follower discovery:</strong> 97.3% of reach from non-followers<br>
-      <strong style="color:var(--gn)">Total interactions up 831%:</strong> 1,500 total (Posts 887, Reels 492, Stories 45)<br>
-      <strong style="color:var(--am)">Conversion gap #1 problem:</strong> 23% visit profile, only 1% click link<br>
-      <strong style="color:var(--am)">Low save rate (7 saves / 90d):</strong> Shares are social/contextual, not value-driven<br>
-      <strong style="color:var(--am)">Audience hyper-local:</strong> 41.3% Schenectady &mdash; need NYC/Boston expansion<br>
-      <strong>Demographics:</strong> 58.3% age 18-24, 70.5% male &mdash; perfect college/club market<br>
-      <strong>PUYB breakout:</strong> 1,141 TikTok plays + 147 likes (12.9% rate)<br>
-      <strong>Peak window:</strong> 12pm&ndash;3pm Tue&ndash;Wed
+      <strong style="color:var(--gn)">&#9650;</strong> Reach is exploding: 11,003 reached (+1,056%), 45,344 impressions (+1,625%)<br>
+      <strong style="color:var(--gn)">&#9650;</strong> Non-follower discovery: 97.3% of reach from non-followers<br>
+      <strong style="color:var(--am)">&#9660;</strong> Conversion gap: 23% visit profile, only 1% click link<br>
+      <strong style="color:var(--am)">&#9660;</strong> Low save rate (7 saves / 90d): shares are social, not value-driven
     </div>
     <div style="margin-top:10px;padding:10px;background:rgba(123,47,247,.06);border:1px solid rgba(123,47,247,.15);border-radius:5px;font-size:10px;color:#b388ff;line-height:1.8">
-      <strong>Strategic Position:</strong> "Algorithm Exposure + Attention Spike" &rarr; next: "Audience Conversion + Brand Lock-In." You do NOT need more reach. Focus: bio CTA, link-in-bio landing, "save this" hooks, identity-building content.
+      <strong>Strategic Position:</strong> "Algorithm Exposure + Attention Spike" &rarr; next: "Audience Conversion + Brand Lock-In." Focus: bio CTA, link-in-bio, "save this" hooks, identity-building content.
     </div>
+    <div style="margin-top:6px;font-size:9px;color:var(--dm)">&#129302; This section updates with AI-powered analysis on each weekly strategy run.</div>
   </div></div>
 </div>
 
@@ -3905,7 +3951,7 @@ function init(){
 <div class="sub-c" id="cmp-releases">
 <div class="sec">
   <div class="sh"><span class="sn" style="background:rgba(0,188,212,.1);color:var(--cy)">&#128197;</span><span class="st">Release Timing Engine</span></div>
-  <div class="nb" style="margin-bottom:12px"><strong>Tracks approaching release get an auto-generated timeline.</strong> Set a release date on any track in the pipeline to activate. Click dots to mark steps done. Workflow: album cover &rarr; SC upload &rarr; release &rarr; reel + TikTok + HypedIt &rarr; update bios.</div>
+  <div class="nb" style="margin-bottom:12px"><strong>Release logistics calendar — different from the Tracks tab.</strong> Tracks tab = production status (score, momentum, next action). This tab = date-anchored pre/post release checklist (what to do D-14 through D+7). Set a release date on any FINISH-status track to activate its timeline. Click each step to mark it done.</div>
   <div id="release-timelines-area"></div>
 </div>
 </div>
@@ -4191,15 +4237,10 @@ function init(){
 
 <!-- TRACK PERFORMANCE -->
 <div class="sec">
-  <div class="sh"><span class="sn">&#128200;</span><span class="st">Track Performance</span></div>
-  <div class="tw"><table><thead><tr><th>Track</th><th>SC Plays</th><th>IG Posts</th><th>Best Post Eng</th><th>Best Format</th></tr></thead><tbody>
-    <tr><td>Every 1's A Winner</td><td style="color:var(--ac);font-weight:700">238</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
-    <tr><td>Sports Car</td><td style="color:var(--ac)">185</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
-    <tr><td>DANCE.</td><td>112</td><td>0</td><td>&mdash;</td><td>Not yet promoted on IG</td></tr>
-    <tr><td>Pack Up Ya Bags</td><td>&mdash;</td><td>1</td><td>25</td><td>Teaser reel</td></tr>
-    <tr><td>Wicked Game</td><td>6</td><td>1 (bg)</td><td>51 (indirect)</td><td>Event recap with remix audio</td></tr>
+  <div class="sh"><span class="sn">&#128200;</span><span class="st">Track Performance (AI-matched)</span></div>
+  <div class="tw"><table><thead><tr><th>Track</th><th>IG Posts</th><th>Best IG Eng</th><th>Best TT Plays</th><th>Insight</th></tr></thead><tbody id="track-perf-body">
+    <tr><td colspan="5" style="color:var(--dm);text-align:center;padding:10px">Waiting for AI track matching — runs with next weekly strategy.</td></tr>
   </tbody></table></div>
-  <div class="nb" style="margin-top:10px"><strong>Insight:</strong> Your top 3 SC tracks (238, 185, 112 plays) have ZERO Instagram promotion. This is the single biggest missed opportunity.</div>
 </div>
 
 </div>
