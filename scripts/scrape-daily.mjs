@@ -55,10 +55,8 @@ async function writeFirebase(path, data) {
 
 async function scrapeIG() {
   console.log('\n📸 Scraping Instagram...');
-  const [profileRun, postsRun] = await Promise.all([
-    client.actor('apify/instagram-profile-scraper').call({ usernames: [IG_USERNAME] }),
-    client.actor('apify/instagram-post-scraper').call({ username: [IG_USERNAME], resultsLimit: 12 }),
-  ]);
+  const profileRun = await client.actor('apify/instagram-profile-scraper').call({ usernames: [IG_USERNAME] });
+  const postsRun = await client.actor('apify/instagram-post-scraper').call({ username: [IG_USERNAME], resultsLimit: 12 });
 
   const { items: profiles } = await client.dataset(profileRun.defaultDatasetId).listItems();
   const { items: posts } = await client.dataset(postsRun.defaultDatasetId).listItems();
@@ -368,12 +366,10 @@ async function main() {
   // Get previous data for diffs + deltas
   const previousData = await readFirebase('analytics/latest');
 
-  // Run all scrapers in parallel
-  const [igData, ttData, scData] = await Promise.all([
-    scrapeIG(),
-    scrapeTikTok(),
-    scrapeSoundCloud(),
-  ]);
+  // Run scrapers sequentially to stay within Apify free-tier memory limit (8 GB)
+  const igData = await scrapeIG();
+  const ttData = await scrapeTikTok();
+  const scData = await scrapeSoundCloud();
 
   // Diff-based processing
   const igDiff = diffPosts(igData.igPosts, previousData?.igPosts, 'id');
