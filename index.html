@@ -2161,26 +2161,33 @@ function renderAds(){
   html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL SPEND</div><div class="cv">$'+totalSpend.toFixed(2)+'</div><div class="cs">'+STATE.ads.length+' campaigns</div></div>';
   html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL IMPRESSIONS</div><div class="cv">'+totalImpressions.toLocaleString()+'</div></div>';
   html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">TOTAL RESULTS</div><div class="cv">'+totalResults+'</div><div class="cs">Link clicks + profile visits</div></div>';
-  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">AVG CPR</div><div class="cv">$'+(totalResults>0?(totalSpend/totalResults).toFixed(2):'--')+'</div></div>';
+  var totalImp = 0; STATE.ads.forEach(function(a){ totalImp += (a.impressions||0); });
+  var avgCpm = (totalImp>0) ? '$'+((totalSpend/totalImp)*1000).toFixed(2) : '--';
+  html += '<div class="c" style="border-left:3px solid var(--a2)"><div class="cl">AVG CPM</div><div class="cv">'+avgCpm+'</div><div class="cs">Cost per 1,000 impressions</div></div>';
   html += '</div>';
 
   // Platform spend chart
   html += '<div class="chart-wrap"><canvas id="ads-platform-chart" height="180"></canvas></div>';
 
   // Campaign table
-  html += '<div class="tw"><table class="ads-table"><thead><tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Objective</th><th>Results</th><th>CPR</th><th>Budget</th><th>Spent</th><th>Impressions</th><th></th></tr></thead><tbody>';
+  html += '<div class="tw"><table class="ads-table"><thead><tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Dates</th><th>Budget</th><th>Spent</th><th>Impressions</th><th>CPM</th><th>Clicks</th><th>CPC</th><th>Notes</th><th></th></tr></thead><tbody>';
   STATE.ads.forEach(function(a){
     var statusCls = a.status==='active'?'tg-g':a.status==='paused'?'tg-a':'tg-gr';
+    var cpm = (a.impressions>0) ? ((a.spent/a.impressions)*1000).toFixed(2) : '--';
+    var cpc = (a.clicks>0) ? (a.spent/a.clicks).toFixed(2) : '--';
+    var dates = (a.startDate||'') + (a.endDate ? ' → '+a.endDate : '');
     html += '<tr>';
     html += '<td style="font-weight:700">'+(a.campaignName||'')+'</td>';
     html += '<td>'+(a.platform||'')+'</td>';
     html += '<td><span class="tg '+statusCls+'">'+a.status.toUpperCase()+'</span></td>';
-    html += '<td>'+(a.objective||'').replace('_',' ')+'</td>';
-    html += '<td style="color:var(--ac);font-weight:700">'+(a.clicks||0)+'</td>';
-    html += '<td>$'+(a.clicks>0?(a.spent/a.clicks).toFixed(2):'--')+'</td>';
+    html += '<td style="font-size:10px;color:var(--dm)">'+dates+'</td>';
     html += '<td>$'+(a.budget||0)+'</td>';
     html += '<td>$'+(a.spent||0).toFixed(2)+'</td>';
     html += '<td>'+(a.impressions||0).toLocaleString()+'</td>';
+    html += '<td style="color:var(--ac)">$'+cpm+'</td>';
+    html += '<td style="color:var(--ac);font-weight:700">'+(a.clicks||0)+'</td>';
+    html += '<td>$'+cpc+'</td>';
+    html += '<td style="font-size:10px;color:var(--dm);max-width:120px">'+(a.notes||'')+'</td>';
     html += '<td><button class="add-task-btn" onclick="deleteAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;border-color:var(--rd);color:var(--rd)">\u2715</button></td>';
     html += '</tr>';
   });
@@ -2192,17 +2199,20 @@ function renderAds(){
   html += '<div class="ad-form" style="background:var(--s);border:1px solid var(--bd);border-radius:9px">';
   html += '<div><label>CAMPAIGN NAME</label><input id="ad-name" placeholder="e.g. Pack Up Ya Bags Launch"></div>';
   html += '<div><label>PLATFORM</label><select id="ad-platform"><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></div>';
+  html += '<div><label>START DATE</label><input type="date" id="ad-start"></div>';
+  html += '<div><label>END DATE</label><input type="date" id="ad-end"></div>';
+  html += '<div><label>BUDGET ($)</label><input type="number" id="ad-budget" placeholder="0.00" step="0.01"></div>';
+  html += '<div><label>AMOUNT SPENT ($)</label><input type="number" id="ad-spent" placeholder="0.00" step="0.01"></div>';
+  html += '<div><label>IMPRESSIONS</label><input type="number" id="ad-impressions" placeholder="0"></div>';
+  html += '<div><label>CLICKS</label><input type="number" id="ad-clicks" placeholder="0"></div>';
+  html += '<div><label>OBJECTIVE</label><select id="ad-objective"><option value="engagement">Engagement</option><option value="link_clicks">Link Clicks</option><option value="reach">Reach</option><option value="profile_visits">Profile Visits</option></select></div>';
+  html += '<div><label>STATUS</label><select id="ad-status"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option></select></div>';
   html += '<div><label>TRACK (OPTIONAL)</label><select id="ad-track"><option value="">None</option>';
   STATE.tracks.forEach(function(t){ html += '<option value="'+t.id+'">'+t.name+'</option>'; });
   html += '</select></div>';
-  html += '<div><label>OBJECTIVE</label><select id="ad-objective"><option value="engagement">Engagement</option><option value="link_clicks">Link Clicks</option><option value="reach">Reach</option><option value="profile_visits">Profile Visits</option></select></div>';
-  html += '<div><label>BUDGET ($)</label><input type="number" id="ad-budget" value="25"></div>';
-  html += '<div><label>STATUS</label><select id="ad-status"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option></select></div>';
+  html += '<div><label>NOTES</label><input id="ad-notes" placeholder="Audience, creative notes..."></div>';
   html += '<div style="grid-column:span 2;text-align:right"><button class="add-task-btn" onclick="addAd()" style="background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)">Save Campaign</button></div>';
   html += '</div></div>';
-
-  // Insights
-  html += '<div class="nb" style="margin-top:12px"><strong>Best performing:</strong> Remix teasers + niche audience targeting (Tech House DJ Fans). Link click objective outperforms profile visits.</div>';
 
   el.innerHTML = html;
 
@@ -2230,16 +2240,23 @@ function toggleAdForm(){
 }
 
 function addAd(){
+  var name = document.getElementById('ad-name').value.trim();
+  if(!name) return;
   var ad = {
     id: uid(),
-    campaignName: document.getElementById('ad-name').value,
+    campaignName: name,
     platform: document.getElementById('ad-platform').value,
-    trackId: document.getElementById('ad-track').value || null,
+    trackId: (document.getElementById('ad-track').value || null),
     objective: document.getElementById('ad-objective').value,
     budget: parseFloat(document.getElementById('ad-budget').value) || 0,
+    spent: parseFloat(document.getElementById('ad-spent').value) || 0,
+    impressions: parseInt(document.getElementById('ad-impressions').value) || 0,
+    clicks: parseInt(document.getElementById('ad-clicks').value) || 0,
     status: document.getElementById('ad-status').value,
-    spent:0, impressions:0, reach:0, clicks:0, engagements:0, cpe:0, ctr:0,
-    startDate: new Date().toISOString().slice(0,10), endDate:'', notes:''
+    startDate: document.getElementById('ad-start').value || new Date().toISOString().slice(0,10),
+    endDate: document.getElementById('ad-end').value || '',
+    notes: document.getElementById('ad-notes').value.trim(),
+    reach:0, engagements:0
   };
   STATE.ads.push(ad);
   saveState();
