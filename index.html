@@ -26,9 +26,18 @@
     appId: "1:53148407042:web:a1afd9442be57328649e1b"
   });
   var db = firebase.database();
-  // Sign in anonymously so Firebase security rules (auth != null) allow access
+  // Wait for anonymous auth before initializing the app — rules require auth != null
+  var _authReady = false;
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (user && !_authReady) {
+      _authReady = true;
+      if (typeof init === 'function') init();
+    }
+  });
   firebase.auth().signInAnonymously().catch(function(err) {
     console.error('Firebase anonymous auth failed:', err.message);
+    // Fallback: init anyway with localStorage-only data
+    if (!_authReady) { _authReady = true; if (typeof init === 'function') init(); }
   });
 </script>
 <style>
@@ -3432,7 +3441,7 @@ function init(){
 }
 </script>
 </head>
-<body onload="init();if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}">
+<body onload="if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}">
 <script>if(new URLSearchParams(window.location.search).get('view')==='1'){document.body.classList.add('view-only');}</script>
 <div class="view-badge">&#128274; VIEW ONLY</div>
 <div class="app">
