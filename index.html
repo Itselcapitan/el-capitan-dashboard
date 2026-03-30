@@ -2219,7 +2219,10 @@ function renderAds(){
     html += '<td style="color:var(--gn)">'+(a.newFollowers||0)+'</td>';
     html += '<td>'+(a.profileViews||0)+'</td>';
     html += '<td style="font-size:10px;color:var(--dm);max-width:120px">'+(a.notes||'')+'</td>';
-    html += '<td><button class="add-task-btn" onclick="deleteAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;border-color:var(--rd);color:var(--rd)">\u2715</button></td>';
+    html += '<td style="white-space:nowrap">';
+    html += '<button class="add-task-btn" onclick="editAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;margin-right:3px">✎</button>';
+    html += '<button class="add-task-btn" onclick="deleteAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;border-color:var(--rd);color:var(--rd)">\u2715</button>';
+    html += '</td>';
     html += '</tr>';
   });
   html += '</tbody></table></div>';
@@ -2246,7 +2249,7 @@ function renderAds(){
   STATE.tracks.forEach(function(t){ html += '<option value="'+t.id+'">'+t.name+'</option>'; });
   html += '</select></div>';
   html += '<div><label>NOTES</label><input id="ad-notes" placeholder="Audience, creative notes..."></div>';
-  html += '<div style="grid-column:span 2;text-align:right"><button class="add-task-btn" onclick="addAd()" style="background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)">Save Campaign</button></div>';
+  html += '<div style="grid-column:span 2;display:flex;justify-content:space-between;align-items:center"><span id="ad-edit-label" style="font-size:9px;color:var(--ac)"></span><button class="add-task-btn" onclick="saveAd()" style="background:rgba(0,230,118,.1);border-color:var(--gn);color:var(--gn)" id="ad-save-btn">Save Campaign</button></div>';
   html += '</div></div>';
 
   el.innerHTML = html;
@@ -2269,9 +2272,74 @@ function renderAds(){
   }, 100);
 }
 
+var _editingAdId = null;
+
 function toggleAdForm(){
   var f = document.getElementById('ad-form-area');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if(f.style.display === 'none'){ f.style.display='block'; _editingAdId=null; }
+  else { f.style.display='none'; _editingAdId=null; }
+}
+
+function editAd(adId){
+  var a = STATE.ads.find(function(x){ return x.id===adId; });
+  if(!a) return;
+  _editingAdId = adId;
+  var f = document.getElementById('ad-form-area');
+  f.style.display = 'block';
+  // Pre-fill all fields
+  document.getElementById('ad-name').value = a.campaignName||'';
+  document.getElementById('ad-platform').value = a.platform||'instagram';
+  document.getElementById('ad-start').value = a.startDate||'';
+  document.getElementById('ad-end').value = a.endDate||'';
+  document.getElementById('ad-budget').value = a.budget||0;
+  document.getElementById('ad-spent').value = a.spent||0;
+  document.getElementById('ad-impressions').value = a.impressions||0;
+  document.getElementById('ad-clicks').value = a.clicks||0;
+  document.getElementById('ad-likes').value = a.likes||0;
+  document.getElementById('ad-comments').value = a.comments||0;
+  document.getElementById('ad-new-followers').value = a.newFollowers||0;
+  document.getElementById('ad-profile-views').value = a.profileViews||0;
+  document.getElementById('ad-objective').value = a.objective||'engagement';
+  document.getElementById('ad-status').value = a.status||'active';
+  document.getElementById('ad-track').value = a.trackId||'';
+  document.getElementById('ad-notes').value = a.notes||'';
+  var lbl = document.getElementById('ad-edit-label');
+  if(lbl) lbl.textContent = 'Editing: '+a.campaignName;
+  var btn = document.getElementById('ad-save-btn');
+  if(btn) btn.textContent = 'Update Campaign';
+  f.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function saveAd(){
+  var name = document.getElementById('ad-name').value.trim();
+  if(!name) return;
+  var data = {
+    campaignName: name,
+    platform: document.getElementById('ad-platform').value,
+    trackId: document.getElementById('ad-track').value || null,
+    objective: document.getElementById('ad-objective').value,
+    budget: parseFloat(document.getElementById('ad-budget').value) || 0,
+    spent: parseFloat(document.getElementById('ad-spent').value) || 0,
+    impressions: parseInt(document.getElementById('ad-impressions').value) || 0,
+    clicks: parseInt(document.getElementById('ad-clicks').value) || 0,
+    likes: parseInt(document.getElementById('ad-likes').value) || 0,
+    comments: parseInt(document.getElementById('ad-comments').value) || 0,
+    newFollowers: parseInt(document.getElementById('ad-new-followers').value) || 0,
+    profileViews: parseInt(document.getElementById('ad-profile-views').value) || 0,
+    status: document.getElementById('ad-status').value,
+    startDate: document.getElementById('ad-start').value || new Date().toISOString().slice(0,10),
+    endDate: document.getElementById('ad-end').value || '',
+    notes: document.getElementById('ad-notes').value.trim()
+  };
+  if(_editingAdId){
+    var idx = STATE.ads.findIndex(function(x){ return x.id===_editingAdId; });
+    if(idx > -1) STATE.ads[idx] = Object.assign(STATE.ads[idx], data);
+    _editingAdId = null;
+  } else {
+    data.id = uid(); data.reach=0; data.engagements=0;
+    STATE.ads.push(data);
+  }
+  saveState(); renderAds();
 }
 
 function addAd(){
