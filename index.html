@@ -2197,7 +2197,7 @@ function renderAds(){
   html += '<div class="chart-wrap"><canvas id="ads-platform-chart" height="180"></canvas></div>';
 
   // Campaign table
-  html += '<div class="tw"><table class="ads-table"><thead><tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Dates</th><th>Budget</th><th>Spent</th><th>Impressions</th><th>CPM</th><th>Clicks</th><th>CPC</th><th>Notes</th><th></th></tr></thead><tbody>';
+  html += '<div class="tw"><table class="ads-table"><thead><tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Dates</th><th>Budget</th><th>Spent</th><th>Impressions</th><th>CPM</th><th>Clicks</th><th>CPC</th><th>Likes</th><th>Comments</th><th>New Followers</th><th>Profile Views</th><th>Notes</th><th></th></tr></thead><tbody>';
   STATE.ads.forEach(function(a){
     var statusCls = a.status==='active'?'tg-g':a.status==='paused'?'tg-a':'tg-gr';
     var cpm = (a.impressions>0) ? ((a.spent/a.impressions)*1000).toFixed(2) : '--';
@@ -2214,6 +2214,10 @@ function renderAds(){
     html += '<td style="color:var(--ac)">$'+cpm+'</td>';
     html += '<td style="color:var(--ac);font-weight:700">'+(a.clicks||0)+'</td>';
     html += '<td>$'+cpc+'</td>';
+    html += '<td>'+(a.likes||0)+'</td>';
+    html += '<td>'+(a.comments||0)+'</td>';
+    html += '<td style="color:var(--gn)">'+(a.newFollowers||0)+'</td>';
+    html += '<td>'+(a.profileViews||0)+'</td>';
     html += '<td style="font-size:10px;color:var(--dm);max-width:120px">'+(a.notes||'')+'</td>';
     html += '<td><button class="add-task-btn" onclick="deleteAd(\''+a.id+'\')" style="font-size:8px;padding:3px 6px;border-color:var(--rd);color:var(--rd)">\u2715</button></td>';
     html += '</tr>';
@@ -2232,6 +2236,10 @@ function renderAds(){
   html += '<div><label>AMOUNT SPENT ($)</label><input type="number" id="ad-spent" placeholder="0.00" step="0.01"></div>';
   html += '<div><label>IMPRESSIONS</label><input type="number" id="ad-impressions" placeholder="0"></div>';
   html += '<div><label>CLICKS</label><input type="number" id="ad-clicks" placeholder="0"></div>';
+  html += '<div><label>LIKES</label><input type="number" id="ad-likes" placeholder="0"></div>';
+  html += '<div><label>COMMENTS</label><input type="number" id="ad-comments" placeholder="0"></div>';
+  html += '<div><label>NEW FOLLOWERS</label><input type="number" id="ad-new-followers" placeholder="0"></div>';
+  html += '<div><label>PROFILE VIEWS</label><input type="number" id="ad-profile-views" placeholder="0"></div>';
   html += '<div><label>OBJECTIVE</label><select id="ad-objective"><option value="engagement">Engagement</option><option value="link_clicks">Link Clicks</option><option value="reach">Reach</option><option value="profile_visits">Profile Visits</option></select></div>';
   html += '<div><label>STATUS</label><select id="ad-status"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Completed</option></select></div>';
   html += '<div><label>TRACK (OPTIONAL)</label><select id="ad-track"><option value="">None</option>';
@@ -2279,6 +2287,10 @@ function addAd(){
     spent: parseFloat(document.getElementById('ad-spent').value) || 0,
     impressions: parseInt(document.getElementById('ad-impressions').value) || 0,
     clicks: parseInt(document.getElementById('ad-clicks').value) || 0,
+    likes: parseInt(document.getElementById('ad-likes').value) || 0,
+    comments: parseInt(document.getElementById('ad-comments').value) || 0,
+    newFollowers: parseInt(document.getElementById('ad-new-followers').value) || 0,
+    profileViews: parseInt(document.getElementById('ad-profile-views').value) || 0,
     status: document.getElementById('ad-status').value,
     startDate: document.getElementById('ad-start').value || new Date().toISOString().slice(0,10),
     endDate: document.getElementById('ad-end').value || '',
