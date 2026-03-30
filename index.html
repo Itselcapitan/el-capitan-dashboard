@@ -663,6 +663,12 @@ function loadState(){
         if(!Array.isArray(STATE.campaigns)) STATE.campaigns = Object.values(STATE.campaigns);
         if(!STATE.pipeline) STATE.pipeline = defaultPipeline();
         if(!Array.isArray(STATE.pipeline)) STATE.pipeline = Object.values(STATE.pipeline);
+        if(!STATE.hooks || !STATE.hooks.length) STATE.hooks = defaultHooks();
+        if(!Array.isArray(STATE.hooks)) STATE.hooks = Object.values(STATE.hooks);
+        if(!STATE.captionTemplatesUser || !STATE.captionTemplatesUser.length) STATE.captionTemplatesUser = defaultCaptionTemplatesUser();
+        if(!Array.isArray(STATE.captionTemplatesUser)) STATE.captionTemplatesUser = Object.values(STATE.captionTemplatesUser);
+        if(!STATE.scenes || !STATE.scenes.length) STATE.scenes = defaultScenes();
+        if(!Array.isArray(STATE.scenes)) STATE.scenes = Object.values(STATE.scenes);
         _uid = STATE._uid || 1000;
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
@@ -670,6 +676,7 @@ function loadState(){
         renderAgenda();
         renderMasterTasks();
         renderPipeline();
+        renderLibraries();
         if(document.getElementById('t-tracks') && document.getElementById('t-tracks').classList.contains('on')){
           renderTracks();
         }
@@ -2636,11 +2643,13 @@ function renderScrapedAlerts(){
     ];
     dItems.forEach(function(item){
       if(!item.d) return;
-      var sign = item.d.value > 0 ? '+' : '';
-      var valColor = item.d.value > 0 ? 'var(--gn)' : item.d.value < 0 ? 'var(--rd)' : 'var(--dm)';
+      var rawVal = item.d.value;
+      var dispVal = item.suffix === '%' ? parseFloat(rawVal).toFixed(1) : rawVal;
+      var sign = rawVal > 0 ? '+' : '';
+      var valColor = rawVal > 0 ? 'var(--gn)' : rawVal < 0 ? 'var(--rd)' : 'var(--dm)';
       html += '<div class="tg" style="background:rgba(0,229,255,.06);padding:4px 8px">';
       html += '<span style="color:var(--dm);font-size:9px">'+item.label+'</span> ';
-      html += '<span style="color:'+valColor+';font-weight:600">'+sign+item.d.value+(item.suffix||'')+'</span>';
+      html += '<span style="color:'+valColor+';font-weight:600">'+sign+dispVal+(item.suffix||'')+'</span>';
       html += '</div>';
     });
     html += '</div>';
