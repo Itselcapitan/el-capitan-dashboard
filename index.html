@@ -2615,9 +2615,11 @@ function renderScrapedAlerts(){
 
   var html = '';
 
-  // ── Computed live-state alerts (was growth-alerts-area) ──
-  var computed = computeAlerts();
+  // ── Computed live-state alerts — red first, cap at 3 ──
+  var computed = computeAlerts().sort(function(a,b){ return (a.level==='red'?0:1)-(b.level==='red'?0:1); });
+  var cShown = 0;
   computed.forEach(function(a){
+    if(cShown >= 3) return;
     var key = a.msg.slice(0,30);
     if(dismissed.indexOf(key) > -1) return;
     var icon = a.level==='red' ? '🔴' : '🟡';
@@ -2625,6 +2627,7 @@ function renderScrapedAlerts(){
     html += '<span style="flex:1">'+icon+' '+a.msg+'</span>';
     html += '<button onclick="dismissAlert(\''+key.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px" title="Dismiss">\u2715</button>';
     html += '</div>';
+    cShown++;
   });
 
   if(!alerts.length && !deltas && !computed.length){
@@ -2654,64 +2657,28 @@ function renderScrapedAlerts(){
     });
     html += '</div>';
   }
-  // Group alerts by category
-  var groups = {performance:[], risk:[], opportunity:[]};
-  alerts.forEach(function(a){
-    var cat = a.category || 'performance';
-    if(!groups[cat]) groups[cat] = [];
-    groups[cat].push(a);
-  });
-  var sections = [
-    {key:'performance', label:'Performance', icon:'&#x1F7E2;', bg:'rgba(0,230,118,.08)'},
-    {key:'risk', label:'Risk', icon:'&#x1F534;', bg:'rgba(255,61,87,.08)'},
-    {key:'opportunity', label:'Opportunity', icon:'&#x1F7E1;', bg:'rgba(255,171,0,.08)'}
-  ];
+  // Merge all scraped alerts into a single flat list, sort red→amber→green, cap at 5
   var scrapedDismissed = [];
   try { scrapedDismissed = JSON.parse(localStorage.getItem('elcap_dismissed_scraped') || '[]'); } catch(e){}
 
-  sections.forEach(function(sec){
-    var items = groups[sec.key];
-    if(!items || !items.length) return;
-    html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">'+sec.icon+' '+sec.label+'</div>';
-    items.forEach(function(a){
-      var key = (a.msg||'').slice(0,40);
-      if(scrapedDismissed.indexOf(key) > -1) return;
-      var levelIcon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:'+sec.bg+';display:flex;align-items:center;gap:6px">';
-      html += '<span style="flex:1">'+levelIcon+' '+a.msg+'</span>';
-      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
-      html += '</div>';
-    });
-    html += '</div>';
+  var levelOrder = {red:0, amber:1, green:2};
+  var flatAlerts = alerts.slice().sort(function(a,b){
+    return (levelOrder[a.level]||1) - (levelOrder[b.level]||1);
   });
-  // AI-generated alerts from weekly strategy
-  var strat = window._strategyData;
-  if(strat && strat.performanceAlerts && strat.performanceAlerts.length){
-    html += '<div style="margin-top:10px;margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#129302; AI PERFORMANCE INSIGHTS</div>';
-    strat.performanceAlerts.forEach(function(a){
-      var key = (a.message||'').slice(0,40);
-      if(scrapedDismissed.indexOf(key) > -1) return;
-      var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.04);display:flex;align-items:center;gap:6px">';
-      html += '<span style="flex:1">'+icon+' '+a.message+'</span>';
-      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
-      html += '</div>';
-    });
+  var shown = 0;
+  flatAlerts.forEach(function(a){
+    if(shown >= 5) return;
+    var key = (a.msg||'').slice(0,40);
+    if(scrapedDismissed.indexOf(key) > -1) return;
+    var bg = a.level==='red'?'rgba(255,61,87,.08)':a.level==='amber'?'rgba(255,171,0,.08)':'rgba(0,230,118,.08)';
+    var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
+    html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:'+bg+';display:flex;align-items:center;gap:6px">';
+    html += '<span style="flex:1">'+icon+' '+a.msg+'</span>';
+    html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
     html += '</div>';
-  }
-  if(strat && strat.opportunityAlerts && strat.opportunityAlerts.length){
-    html += '<div style="margin-bottom:8px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px;text-transform:uppercase">&#128161; AI OPPORTUNITIES</div>';
-    strat.opportunityAlerts.forEach(function(a){
-      var key = (a.message||'').slice(0,40);
-      if(scrapedDismissed.indexOf(key) > -1) return;
-      var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-      html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(255,171,0,.04);display:flex;align-items:center;gap:6px">';
-      html += '<span style="flex:1">'+icon+' '+a.message+'</span>';
-      html += '<button onclick="dismissScrapedAlert(\''+key.replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0" title="Dismiss">\u2715</button>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+    shown++;
+  });
+
   area.innerHTML = html || '<div class="ds">No new alerts.</div>';
 }
 
