@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
   firebase.initializeApp({
@@ -25,6 +26,10 @@
     appId: "1:53148407042:web:a1afd9442be57328649e1b"
   });
   var db = firebase.database();
+  // Sign in anonymously so Firebase security rules (auth != null) allow access
+  firebase.auth().signInAnonymously().catch(function(err) {
+    console.error('Firebase anonymous auth failed:', err.message);
+  });
 </script>
 <style>
 :root{--bg:#0a0a0f;--s:#12121a;--s2:#1a1a28;--bd:#2a2a3a;--ac:#00e5ff;--a2:#7b2ff7;--tx:#e8e8f0;--dm:#8888aa;--gn:#00e676;--am:#ffab00;--rd:#ff5252;--cy:#00bcd4}
@@ -646,6 +651,10 @@ function loadState(){
         STATE = data;
         // Firebase converts arrays to objects — normalize back
         if(STATE.tracks && !Array.isArray(STATE.tracks)) STATE.tracks = Object.values(STATE.tracks);
+        // Normalize nested timeline arrays inside each track (Firebase converts arrays to objects)
+        if(Array.isArray(STATE.tracks)) STATE.tracks.forEach(function(tr){
+          if(tr.timeline && !Array.isArray(tr.timeline)) tr.timeline = Object.values(tr.timeline);
+        });
         if(STATE.tasks && !Array.isArray(STATE.tasks)) STATE.tasks = Object.values(STATE.tasks);
         if(STATE.feedback && !Array.isArray(STATE.feedback)) STATE.feedback = Object.values(STATE.feedback);
         if(STATE.ads && !Array.isArray(STATE.ads)) STATE.ads = Object.values(STATE.ads);
@@ -4252,11 +4261,9 @@ function init(){
 <div class="sec">
   <div class="sh"><span class="sn">&#9881;</span><span class="st">Accounts</span></div>
   <div class="g">
-    <div class="c ig"><div class="cl">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs">Auto-scraped via Apify</div></div>
-    <div class="c sc"><div class="cl">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:var(--ac)">soundcloud.com/itselcapitan</a></div></div>
-    <div class="c" style="border-left:3px solid #E1306C"><div class="cl" style="color:#E1306C">INSTAGRAM</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://www.instagram.com/itselcapitan" target="_blank" style="color:#E1306C">instagram.com/itselcapitan</a></div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TIKTOK</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://www.tiktok.com/@itselcapitan" target="_blank" style="color:#00f2ea">tiktok.com/@itselcapitan</a></div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs">Created Mar 20, 2026 &middot; 3 posts live</div></div>
+    <div class="c ig"><div class="cl" style="color:#E1306C">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs"><a href="https://www.instagram.com/itselcapitan_" target="_blank" style="color:#E1306C">instagram.com/itselcapitan_</a></div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs"><a href="https://www.tiktok.com/@itselcapitan" target="_blank" style="color:#00f2ea">tiktok.com/@itselcapitan</a></div></div>
+    <div class="c sc"><div class="cl" style="color:#ff5500">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:#ff5500">soundcloud.com/itselcapitan</a></div></div>
   </div>
 </div>
 <div class="sec">

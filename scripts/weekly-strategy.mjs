@@ -180,22 +180,62 @@ function buildDataSummary(latest, history, competitors, state) {
   const allTrackNames = (state?.tracks || []).map(t => t.name);
 
   // DJ/producer industry best practices (static context for Gemini)
+  // Sources: Indepenjend Free Content Guide, Wall Pro Academy (marketing, brand, collaboration, online presence)
   const industryBestPractices = [
+    // GROWTH & ALGORITHM
     'TikTok > Instagram for artist discovery — prioritize it early career',
     'Engagement rate matters more than follower count for algorithm reach',
     '5 consistent posts/week outperforms 1 viral post/month long-term',
+    'Algorithm = people: if content does not go viral, the product needs work, not the strategy',
+    'Word of mouth is the most powerful promotion — create music worth sharing',
+    'Test snippets with 10-20 people before releasing final products; follow the feedback',
+    'If a track gets no reaction after 3 promotion attempts, move on and make the next one',
+    // CONTENT FORMATS & AD CREATIVES
+    'Use recognizable hook vocals or melodies in first 2 seconds to stop the scroll',
+    'Crowd reaction clips trigger dopamine — highest share rate of all formats',
     'Co-authored content gets 2-3x organic reach vs solo posts',
-    'Use recognizable hook vocals or melodies in reel first 2 seconds',
-    'Crowd reaction clips trigger dopamine — highest share rate',
-    'Bio CTA + link-in-bio landing page are the conversion funnel',
-    'Niche audience targeting (tech house fans) outperforms broad for small ad budgets',
+    'Six proven ad creative angles: Performing/Creating (studio or event), Mood-Related (work/study/party background), Reaction-Generating (surprising drop or transition), Story-Telling (narrative about the music), Pop/Meme-Culture (trend overlaid with your track), B-Roll (visuals matching your track energy)',
+    'AIDA ad structure: Attention (hook in first 2s) → Interest (keep watching) → Desire (make them want it) → Action (CTA: follow, stream, share)',
+    'Re-upload viral videos with your own music as background — amplifies reach without needing original content',
+    'Show the creative process: studio sessions, mixing, writing — audiences connect with behind-the-scenes authenticity',
+    // RELEASE STRATEGY
+    'Release checklist: D-14 teaser clips → D-7 behind-scenes content → D-0 OUT NOW reel + start $5/day ad sets → 48h post duplicate the winning ad sets',
+    'Build Spotify playlist to 80-110 songs for 3+ months before applying to curators',
+    'Save final master for label/DSP submission — use only snippets for pre-release buzz',
+    'Dancefloor crowd reactions are real-time market research — tracks that move people are release-worthy',
+    // PAID ADS
+    'Start ad spend at $5/day per ad set — duplicate winning sets rather than scaling budget on one',
+    'Niche audience targeting (tech house fans, festival-goers) outperforms broad targeting for small budgets',
+    'Bio CTA + link-in-bio landing page are the conversion funnel — optimize both before running ads',
+    // BRAND & IDENTITY
+    'You ARE the brand — your personality, opinions, and daily life are your marketing content',
+    'Show your real life: studio, grocery shopping, food, everyday moments — people affiliate with authenticity',
+    'Never chase a genre trend at the expense of your true identity — inauthenticity is detectable and kills long-term loyalty',
+    'Loyal fans come from genuine identity; hype-chasing fans are temporary',
+    'Be honest about loving multiple genres — congruence between what you say and what you post builds trust',
+    'Being yourself naturally makes you unique — do not try to manufacture uniqueness',
+    // ONLINE PRESENCE & COMMUNITY
+    'Be present in production communities, DJ forums, event groups, and learning Discord servers',
+    'Two-way communication is essential: comment on others work as much as you post your own',
+    'Comment on favorite DJs posts, fans comments, and related artists sections — be everywhere',
+    'Start on your personal account so friends organically discover your music before creating a standalone artist account',
+    'Build a genuine active following BEFORE approaching labels — even 100 engaged followers signals more potential than 0',
+    'React authentically in your own comment section — engage every comment, joke with friends, welcome new listeners',
+    // COLLABORATION
+    'Collaborate at your level or one tier above — approach artists already getting played by bigger DJs, not the top names',
+    'Every collaborator\'s 100 followers is 100 potential new fans for you',
+    'Learn from collaborators: production tricks, chord progressions, song structure, creative workflow',
+    'Approaching for collaboration is simple: DM or comment "I love your music, want to collab?" is enough',
     'B2B sets instantly introduce you to a partner\'s entire fanbase',
+    // NETWORKING & BOOKINGS
     'Tag venues and collaborators generously — they reshare to their audience',
-    'Follow up within 24h of any booking conversation — cadence > initial impression',
-    'Study the top 3 tracks in your genre technically to understand what makes them work',
-    'Know target venue bookers by name and track outreach history',
+    'Follow up within 24h of any booking conversation — follow-up cadence matters more than the initial impression',
+    'Know target venue bookers by name and track outreach history in the dashboard',
     'Post about gigs you attend (not just your own) — builds scene credibility',
+    'Study the top 3 tracks in your genre technically to understand what makes them connect with audiences',
+    // CONSISTENCY
     'Release consistently: algorithm rewards regular output over sporadic drops',
+    'Consistency of online presence — daily posting, commenting, showing up — matters more than any single viral moment',
   ];
 
   return {
