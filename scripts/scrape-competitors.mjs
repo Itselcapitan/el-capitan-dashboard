@@ -36,7 +36,8 @@ const COMPETITORS = [
 // ─── Firebase helpers ───────────────────────────────────────────
 
 async function readFirebase(path) {
-  const url = `${FIREBASE_DB_URL}/${path}.json`;
+  const auth = FIREBASE_DB_SECRET ? `?auth=${FIREBASE_DB_SECRET}` : '';
+  const url = `${FIREBASE_DB_URL}/${path}.json${auth}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   return res.json();
