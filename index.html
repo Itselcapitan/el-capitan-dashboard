@@ -30,13 +30,15 @@
   var _authReady = false;
   var _domReady = false;
   function _tryInit() {
-    if (_authReady && _domReady && typeof init === 'function') init();
+    console.log('[INIT] _tryInit called — auth='+_authReady+' dom='+_domReady+' init='+(typeof init));
+    if (_authReady && _domReady && typeof init === 'function') { console.log('[INIT] ✓ calling init()'); init(); }
   }
   firebase.auth().onAuthStateChanged(function(user) {
+    console.log('[AUTH] onAuthStateChanged, user='+(user?user.uid:'null'));
     if (user && !_authReady) { _authReady = true; _tryInit(); }
   });
   firebase.auth().signInAnonymously().catch(function(err) {
-    console.error('Firebase anonymous auth failed:', err.message);
+    console.error('[AUTH] anonymous auth failed:', err.message);
     if (!_authReady) { _authReady = true; _tryInit(); }
   });
 </script>
@@ -2298,7 +2300,9 @@ function deleteAd(adId){
 // ANALYTICS AUTOMATION (Firebase live data)
 // =====================================================
 function loadAnalytics(){
+  console.log('[DATA] loadAnalytics called');
   db.ref('analytics/latest').once('value', function(snap){
+    console.log('[DATA] analytics/latest loaded, has data:', !!snap.val());
     var data = snap.val();
     if(!data) return;
 
@@ -2336,7 +2340,7 @@ function loadAnalytics(){
     }
     // Always render content stats when data arrives (badges etc.)
     renderContentStats();
-  });
+  }, function(err){ console.error('[DATA] analytics/latest FAILED:', err.message); });
 }
 
 function loadCompetitors(){
@@ -2991,7 +2995,9 @@ function renderSmartSchedule(schedule){
 }
 
 function loadWeeklyStrategy(){
+  console.log('[DATA] loadWeeklyStrategy called');
   db.ref('strategy/latest').once('value', function(snap){
+    console.log('[DATA] strategy/latest loaded, has data:', !!snap.val(), snap.val() ? Object.keys(snap.val()).join(',') : 'null');
     var s = snap.val();
     window._strategyData = s;
     var area = document.getElementById('weekly-strategy-area');
@@ -3093,7 +3099,7 @@ function loadWeeklyStrategy(){
     if(s.smartSchedule) renderSmartSchedule(s.smartSchedule);
     if(s.keyInsights) renderKeyInsights();
     if(s.trackPostMatches) renderTrackPerformance();
-  });
+  }, function(err){ console.error('[DATA] strategy/latest FAILED:', err.message); });
 }
 
 function renderKeyInsights(){
@@ -3420,6 +3426,7 @@ function renderContentCharts(){
 // INIT
 // =====================================================
 function init(){
+  console.log('[INIT] ✓ init() running');
   loadState();
   loadPromotedPosts();
   loadAnalytics();
