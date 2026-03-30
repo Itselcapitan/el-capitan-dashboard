@@ -426,7 +426,7 @@ var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Produc
 var _uid = 1000;
 function uid(){ return 't'+(++_uid); }
 
-var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[], pipeline:[] };
+var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[], pipeline:[], hooks:[], captionTemplatesUser:[], scenes:[] };
 var OUTREACH_STATUSES = ['Not Started','Researching','Contacted','Follow-Up Sent','Responded','Booked/Accepted','Rejected','On Hold'];
 var openVenueDetail = null;
 var openLabelDetail = null;
@@ -543,6 +543,38 @@ function addPipelineFromInput(){
   document.getElementById('pipeline-idea-input').value = '';
 }
 
+function defaultHooks(){
+  return [
+    {id:'h1',hook:'Recognizable melody/vocal from original',source:'Wally (8/10)',status:'PROVEN'},
+    {id:'h2',hook:'Bass drop hits frame 1',source:'SideQuest, Dom Dolla',status:'PROVEN'},
+    {id:'h3',hook:'Crowd reaction shot',source:'Bolo 139K, Dom Dolla 102K',status:'PROVEN'},
+    {id:'h4',hook:"Friend's face as drop hits",source:'Your @twindiplomacy (37 eng)',status:'PROVEN'},
+    {id:'h5',hook:'DAW screen: empty to full',source:'Dom Dolla plane (196K)',status:'PROVEN'},
+    {id:'h6',hook:'Talking head: compelling first sentence',source:'Luke Alexander (3,920)',status:'PROVEN'}
+  ];
+}
+function defaultCaptionTemplatesUser(){
+  return [
+    {id:'ct1',template:'"[song lyric fragment]"',source:'Wally',when:'Remix teasers'},
+    {id:'ct2',template:'[2-4 word cryptic reaction]',source:'Teeb',when:'Gig clips, BTS'},
+    {id:'ct3',template:'ALL CAPS + "OUT NOW"',source:'Zachh, SQ',when:'Release day only'},
+    {id:'ct4',template:'"should I drop this?"',source:'NIIKO, Bolo',when:'Unreleased teasers'},
+    {id:'ct5',template:'"COMMENT [keyword] for download"',source:'Zachh, Luke',when:'Release day CTA'},
+    {id:'ct6',template:'"three heaters to kick off the week"',source:'Chalant',when:'Monday roundup'}
+  ];
+}
+function defaultScenes(){
+  return [
+    {id:'sc1',scene:'DJ booth / behind decks',why:'Universal top performer. Crowd visible.',freq:'~60/200',fit:'HIGH'},
+    {id:'sc2',scene:'Crowd reaction moment',why:'Bolo 139K, Dom Dolla 102K. Energy = shares.',freq:'~40/200',fit:'HIGH'},
+    {id:'sc3',scene:'Studio / DAW screen',why:'Dom Dolla 196K. Producer credibility.',freq:'~30/200',fit:'HIGH'},
+    {id:'sc4',scene:'Unexpected location',why:'Dom Dolla plane 196K. Surprise = retention.',freq:'~10/200',fit:'TEST'},
+    {id:'sc5',scene:'Talking head',why:'Luke 3,920 (10x avg). DANSYN 670.',freq:'~15/200',fit:'TEST'},
+    {id:'sc6',scene:'Event recap montage',why:'Your Hunter Mtn (51 eng, above avg).',freq:'~25/200',fit:'HIGH'},
+    {id:'sc7',scene:'Friend/crew reaction',why:'Your @twindiplomacy (37). Authentic proof.',freq:'~10/200',fit:'HIGH'}
+  ];
+}
+
 function defaultVenues(){
   return [
     {id:'v1',name:'lowercase',market:'Capital Region',contact:'DM @lowercase518',status:'Not Started',demoLink:'',notes:'Need 60-min mix first. Shane connection.',lastContacted:null,nextFollowUp:null,priority:'red'},
@@ -592,6 +624,12 @@ function loadState(){
       if(!Array.isArray(STATE.scores)) STATE.scores = Object.values(STATE.scores);
       if(!STATE.campaigns) STATE.campaigns = [];
       if(!Array.isArray(STATE.campaigns)) STATE.campaigns = Object.values(STATE.campaigns);
+      if(!STATE.hooks || !STATE.hooks.length) STATE.hooks = defaultHooks();
+      if(!Array.isArray(STATE.hooks)) STATE.hooks = Object.values(STATE.hooks);
+      if(!STATE.captionTemplatesUser || !STATE.captionTemplatesUser.length) STATE.captionTemplatesUser = defaultCaptionTemplatesUser();
+      if(!Array.isArray(STATE.captionTemplatesUser)) STATE.captionTemplatesUser = Object.values(STATE.captionTemplatesUser);
+      if(!STATE.scenes || !STATE.scenes.length) STATE.scenes = defaultScenes();
+      if(!Array.isArray(STATE.scenes)) STATE.scenes = Object.values(STATE.scenes);
       _uid = STATE._uid || 1000;
     }
     else { STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], _uid: _uid }; }
@@ -728,6 +766,9 @@ function toggleTask(taskId){
   saveState();
   renderMasterTasks();
   renderAgenda();
+  // Also refresh score and alerts since they depend on task counts
+  renderArtistScore();
+  renderScrapedAlerts();
 }
 
 function toggleTaskCollapse(taskId){
@@ -1388,6 +1429,103 @@ function outreachStatusColor(s){
   return m[s]||'var(--dm)';
 }
 
+// ── CREATE TAB LIBRARIES ──────────────────────────────────────
+function renderLibraries(){ renderHookLibrary(); renderCaptionTemplatesUser(); renderSceneLibrary(); }
+
+function renderHookLibrary(){
+  var tbody = document.getElementById('hook-library-body');
+  if(!tbody) return;
+  if(!STATE.hooks||!STATE.hooks.length) STATE.hooks = defaultHooks();
+  var html = '';
+  STATE.hooks.forEach(function(h,i){
+    var fitClass = h.status==='PROVEN'?'tg-g':'tg-a';
+    html += '<tr><td>'+(i+1)+'</td><td>'+h.hook+'</td><td>'+h.source+'</td>';
+    html += '<td><span class="tg '+fitClass+'">'+h.status+'</span></td>';
+    html += '<td><button onclick="deleteLibraryItem(\'hooks\',\''+h.id+'\')" style="background:none;border:1px solid rgba(255,61,87,.3);color:var(--rd);border-radius:3px;font-size:9px;padding:2px 7px;cursor:pointer">×</button></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+function addHook(){
+  var inp = document.getElementById('new-hook-input');
+  if(!inp||!inp.value.trim()) return;
+  if(!STATE.hooks) STATE.hooks=[];
+  STATE.hooks.push({id:'h_'+uid(),hook:inp.value.trim(),source:'Custom',status:'TESTING'});
+  inp.value=''; saveState(); renderHookLibrary();
+}
+
+function renderCaptionTemplatesUser(){
+  var tbody = document.getElementById('caption-templates-user-body');
+  if(!tbody) return;
+  if(!STATE.captionTemplatesUser||!STATE.captionTemplatesUser.length) STATE.captionTemplatesUser = defaultCaptionTemplatesUser();
+  var html = '';
+  STATE.captionTemplatesUser.forEach(function(c){
+    html += '<tr><td>'+c.template+'</td><td>'+c.source+'</td><td>'+c.when+'</td>';
+    html += '<td><button onclick="deleteLibraryItem(\'captionTemplatesUser\',\''+c.id+'\')" style="background:none;border:1px solid rgba(255,61,87,.3);color:var(--rd);border-radius:3px;font-size:9px;padding:2px 7px;cursor:pointer">×</button></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+function addCaptionTemplateUser(){
+  var inp = document.getElementById('new-caption-template-input');
+  var src = document.getElementById('new-caption-template-source');
+  var when = document.getElementById('new-caption-template-when');
+  if(!inp||!inp.value.trim()) return;
+  if(!STATE.captionTemplatesUser) STATE.captionTemplatesUser=[];
+  STATE.captionTemplatesUser.push({id:'ct_'+uid(),template:inp.value.trim(),source:(src?src.value:'Custom'),when:(when?when.value:'')});
+  inp.value=''; if(src) src.value=''; if(when) when.value='';
+  saveState(); renderCaptionTemplatesUser();
+}
+
+function renderSceneLibrary(){
+  var tbody = document.getElementById('scene-library-body');
+  if(!tbody) return;
+  if(!STATE.scenes||!STATE.scenes.length) STATE.scenes = defaultScenes();
+  var html = '';
+  STATE.scenes.forEach(function(s){
+    var fitClass = s.fit==='HIGH'?'tg-g':'tg-a';
+    html += '<tr><td style="font-weight:700">'+s.scene+'</td><td>'+s.why+'</td><td>'+s.freq+'</td>';
+    html += '<td><span class="tg '+fitClass+'">'+s.fit+'</span></td>';
+    html += '<td><button onclick="deleteLibraryItem(\'scenes\',\''+s.id+'\')" style="background:none;border:1px solid rgba(255,61,87,.3);color:var(--rd);border-radius:3px;font-size:9px;padding:2px 7px;cursor:pointer">×</button></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+function addScene(){
+  var inp = document.getElementById('new-scene-input');
+  if(!inp||!inp.value.trim()) return;
+  if(!STATE.scenes) STATE.scenes=[];
+  STATE.scenes.push({id:'sc_'+uid(),scene:inp.value.trim(),why:'',freq:'—',fit:'TEST'});
+  inp.value=''; saveState(); renderSceneLibrary();
+}
+
+function deleteLibraryItem(type, id){
+  STATE[type] = STATE[type].filter(function(x){ return x.id !== id; });
+  saveState(); renderLibraries();
+}
+
+// Accept AI caption → push to manual caption templates table
+function acceptCaptionIdea(idx){
+  var s = window._strategyData;
+  if(!s || !s.captionTemplates) return;
+  var arr = Array.isArray(s.captionTemplates) ? s.captionTemplates : Object.values(s.captionTemplates);
+  var t = arr[idx];
+  if(!t) return;
+  if(!STATE.captionTemplatesUser) STATE.captionTemplatesUser=[];
+  STATE.captionTemplatesUser.push({id:'ct_'+uid(),template:t.caption,source:'AI ('+t.platform+' '+t.format+')',when:t.format});
+  saveState();
+  renderCaptionTemplatesUser();
+  // Dismiss the AI idea
+  dismissCaptionIdea(idx);
+}
+function dismissCaptionIdea(idx){
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_captions') || '[]'); } catch(e){}
+  if(dismissed.indexOf(idx) === -1) dismissed.push(idx);
+  localStorage.setItem('elcap_dismissed_captions', JSON.stringify(dismissed));
+  // Re-render caption templates section
+  if(window._strategyData && window._strategyData.captionTemplates)
+    renderCaptionTemplates(window._strategyData.captionTemplates);
+}
+// ─────────────────────────────────────────────────────────────
+
 function renderVenues(){
   var c=document.getElementById('venue-table-body'); if(!c) return;
   if(!STATE.venues) STATE.venues=defaultVenues();
@@ -1404,6 +1542,7 @@ function renderVenues(){
     html+='<td><span style="color:'+sc+';font:700 9px/1 \'Space Mono\',monospace">'+v.status+'</span></td>';
     html+='<td style="font-size:10px">'+(v.lastContacted||'—')+'</td>';
     html+='<td style="font-size:10px">'+(v.nextFollowUp||'—')+'</td>';
+    html+='<td><button onclick="event.stopPropagation();deleteOutreach(\'venues\',\''+v.id+'\')" style="background:none;border:1px solid rgba(255,61,87,.3);color:var(--rd);border-radius:3px;font-size:9px;padding:2px 7px;cursor:pointer">Delete</button></td>';
     html+='</tr>';
     // Detail row
     html+='<tr><td colspan="6" style="padding:0;border:none"><div class="track-detail'+(openVenueDetail===v.id?' open':'')+'" style="'+(openVenueDetail===v.id?'display:block;':'display:none;')+'padding:14px">';
@@ -1442,9 +1581,10 @@ function renderLabels(){
     html+='<td style="font-size:10px">'+(l.trackSent||'—')+'</td>';
     html+='<td style="font-size:10px">'+(l.lastContacted||'—')+'</td>';
     html+='<td style="font-size:10px">'+(l.nextFollowUp||'—')+'</td>';
+    html+='<td><button onclick="event.stopPropagation();deleteOutreach(\'labels\',\''+l.id+'\')" style="background:none;border:1px solid rgba(255,61,87,.3);color:var(--rd);border-radius:3px;font-size:9px;padding:2px 7px;cursor:pointer">Delete</button></td>';
     html+='</tr>';
     // Detail row
-    html+='<tr><td colspan="7" style="padding:0;border:none"><div class="track-detail" style="'+(openLabelDetail===l.id?'display:block;':'display:none;')+'padding:14px">';
+    html+='<tr><td colspan="8" style="padding:0;border:none"><div class="track-detail" style="'+(openLabelDetail===l.id?'display:block;':'display:none;')+'padding:14px">';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
     html+='<div class="track-field"><div class="track-field-label">STATUS</div><select onclick="event.stopPropagation()" onchange="event.stopPropagation();updateOutreach(\'labels\',\''+l.id+'\',\'status\',this.value);renderLabels()">';
     OUTREACH_STATUSES.forEach(function(s){ html+='<option'+(l.status===s?' selected':'')+'>'+s+'</option>'; });
@@ -1469,6 +1609,14 @@ function updateOutreach(type,id,field,value){
   var arr=STATE[type]; if(!arr) return;
   var item=arr.find(function(x){return x.id===id;}); if(!item) return;
   item[field]=value; saveState();
+}
+
+function deleteOutreach(type,id){
+  if(!confirm('Delete this entry?')) return;
+  STATE[type]=STATE[type].filter(function(x){return x.id!==id;});
+  saveState();
+  if(type==='venues') renderVenues();
+  else renderLabels();
 }
 
 function addVenue(){
@@ -1663,15 +1811,20 @@ function getTrackScoreBadge(track){
 function renderTrackScores(){
   var area = document.getElementById('track-scores-area');
   if(!area) return;
+  if(!STATE.hiddenTracks) STATE.hiddenTracks = [];
   var tracks = (STATE.tracks || []).filter(function(t){ return t.status !== 'KILL'; });
   if(!tracks.length){ area.innerHTML = '<div class="ds">No active tracks</div>'; return; }
+  var hiddenCount = tracks.filter(function(t){ return STATE.hiddenTracks.indexOf(t.id) > -1; }).length;
   var html = '<div class="g">';
   tracks.forEach(function(t){
+    var hidden = STATE.hiddenTracks.indexOf(t.id) > -1;
+    if(hidden) return;
     var statusColor = t.status==='PUSH'?'var(--gn)':t.status==='FINISH'?'var(--am)':t.status==='HOLD'?'var(--dm)':'var(--rd)';
     var mColor = (t.momentumScore||0)>=70?'var(--gn)':(t.momentumScore||0)>=40?'var(--am)':'var(--rd)';
     var rColor = (t.readinessScore||0)>=70?'var(--gn)':(t.readinessScore||0)>=40?'var(--am)':'var(--rd)';
-    html += '<div class="c" style="padding:10px;min-width:160px">';
-    html += '<div class="cl" style="margin-bottom:6px">'+t.name+'</div>';
+    html += '<div class="c" style="padding:10px;min-width:160px;position:relative">';
+    html += '<button onclick="event.stopPropagation();hideTrackScore(\''+t.id+'\')" title="Hide from HQ" style="position:absolute;top:6px;right:6px;background:none;border:none;color:var(--dm);cursor:pointer;font-size:11px;padding:0">&#128065;</button>';
+    html += '<div class="cl" style="margin-bottom:6px;padding-right:16px">'+t.name+'</div>';
     html += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
     html += '<span class="tg" style="background:rgba(0,229,255,.08);color:'+statusColor+'">'+t.status+'</span>';
     html += '<span class="tg" style="background:rgba(0,229,255,.08);color:'+mColor+'">M: '+(t.momentumScore||0)+'</span>';
@@ -1681,7 +1834,23 @@ function renderTrackScores(){
     html += '</div>';
   });
   html += '</div>';
+  if(hiddenCount > 0){
+    html += '<div style="margin-top:6px"><button onclick="showAllTrackScores()" style="font-size:10px;background:none;border:1px solid var(--bd);color:var(--dm);border-radius:4px;padding:3px 8px;cursor:pointer">Show '+hiddenCount+' hidden</button></div>';
+  }
   area.innerHTML = html;
+}
+
+function hideTrackScore(trackId){
+  if(!STATE.hiddenTracks) STATE.hiddenTracks = [];
+  if(STATE.hiddenTracks.indexOf(trackId) === -1) STATE.hiddenTracks.push(trackId);
+  saveState();
+  renderTrackScores();
+}
+
+function showAllTrackScores(){
+  STATE.hiddenTracks = [];
+  saveState();
+  renderTrackScores();
 }
 
 // =====================================================
@@ -1719,23 +1888,8 @@ function computeAlerts(){
 }
 
 function renderAlerts(){
-  var el = document.getElementById('growth-alerts-area');
-  if(!el) return;
-  var alerts = computeAlerts();
-  var dismissed = [];
-  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
-
-  var html = '';
-  alerts.forEach(function(a, i){
-    var key = a.msg.slice(0,30);
-    if(dismissed.indexOf(key) > -1) return;
-    html += '<div class="alert-banner alert-'+a.level+'">';
-    html += '<span class="alert-icon">'+(a.level==='red'?'\u{1F534}':'\u{1F7E1}')+'</span>';
-    html += '<span class="alert-text">'+a.msg+'</span>';
-    html += '<button class="alert-dismiss" onclick="dismissAlert(\''+key.replace(/'/g,"\\'")+'\')" title="Dismiss">\u2715</button>';
-    html += '</div>';
-  });
-  el.innerHTML = html;
+  // Computed alerts are now merged into renderScrapedAlerts() — just call that
+  renderScrapedAlerts();
 }
 
 function dismissAlert(key){
@@ -1743,7 +1897,7 @@ function dismissAlert(key){
   try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
   dismissed.push(key);
   localStorage.setItem('elcap_dismissed_alerts', JSON.stringify(dismissed));
-  renderAlerts();
+  renderScrapedAlerts();
 }
 
 // =====================================================
@@ -2177,6 +2331,8 @@ function loadPromotedPosts(cb){
   db.ref('analytics/promoted').once('value', function(snap){
     window._promotedPosts = snap.val() || {};
     if(cb) cb();
+    // Re-render posts tables so checkboxes reflect saved promoted state
+    if(window._latestData) renderContentStats();
   });
 }
 
@@ -2371,7 +2527,7 @@ function renderCompetitorData(){
   if(reelsTable && cdata.patterns && cdata.patterns.top10 && cdata.patterns.top10.length){
     var rows = '';
     var top10 = Array.isArray(cdata.patterns.top10) ? cdata.patterns.top10 : Object.values(cdata.patterns.top10);
-    top10.forEach(function(r){
+    top10.forEach(function(r, i){
       var likes = r.likesCount ? (r.likesCount >= 1000 ? (r.likesCount/1000).toFixed(1)+'K' : r.likesCount.toLocaleString()) : '\u2014';
       var views = r.videoViewCount ? (r.videoViewCount >= 1000000 ? (r.videoViewCount/1000000).toFixed(1)+'M' : r.videoViewCount >= 1000 ? (r.videoViewCount/1000).toFixed(0)+'K' : r.videoViewCount.toLocaleString()) : '\u2014';
       var eng = (r.likesCount && r.videoViewCount) ? ((r.likesCount/r.videoViewCount)*100).toFixed(1) + '%' : '\u2014';
@@ -2379,11 +2535,23 @@ function renderCompetitorData(){
       var user = r.ownerUsername||'unknown';
       var userLink = '<a href="https://www.instagram.com/' + user + '/" target="_blank" style="color:var(--ac);text-decoration:none">@' + user + '</a>';
       var reelLink = r.shortCode ? '<a href="https://www.instagram.com/reel/' + r.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + caption + '</a>' : caption;
+      var insightKey = user.toLowerCase().replace(/^@/,'');
+      var insight = window._competitorInsightsMap && window._competitorInsightsMap[insightKey];
+      var aiBtn = insight
+        ? '<button onclick="toggleReelInsight(\'reel-insight-'+i+'\')" style="font-size:8px;padding:2px 7px;border-radius:3px;border:1px solid rgba(225,48,108,.4);background:rgba(225,48,108,.06);color:#E1306C;cursor:pointer">AI ▼</button>'
+        : '<span style="color:var(--dm);font-size:9px">—</span>';
       rows += '<tr><td>' + userLink + '</td><td>' + reelLink + '</td>' +
         '<td style="color:var(--ac);font-weight:700">' + likes + '</td>' +
         '<td>' + views + '</td>' +
         '<td style="color:var(--gn);font-weight:700">' + eng + '</td>' +
-        '<td>' + (r.keyPattern||'') + '</td></tr>';
+        '<td>' + (r.keyPattern||'') + '</td><td>' + aiBtn + '</td></tr>';
+      // Hidden AI breakdown row
+      if(insight){
+        rows += '<tr id="reel-insight-'+i+'" style="display:none"><td colspan="7" style="padding:8px 12px;background:rgba(225,48,108,.04);border-bottom:1px solid rgba(225,48,108,.1)">';
+        rows += '<div style="font-size:11px;color:var(--fg);margin-bottom:4px"><strong>Why it worked:</strong> '+insight.whyItWorked+'</div>';
+        rows += '<div style="font-size:10px;color:var(--ac);padding:3px 8px;background:rgba(0,229,255,.06);border-radius:4px;display:inline-block">&#128161; '+insight.takeaway+'</div>';
+        rows += '</td></tr>';
+      }
     });
     reelsTable.innerHTML = rows;
   }
@@ -2416,11 +2584,29 @@ function renderScrapedAlerts(){
   var deltas = window._scrapedDeltas || {};
   var area = document.getElementById('scraped-alerts-area');
   if(!area) return;
-  if(!alerts.length && !deltas){
+
+  // Load dismissed keys (both alert types share one localStorage key)
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
+
+  var html = '';
+
+  // ── Computed live-state alerts (was growth-alerts-area) ──
+  var computed = computeAlerts();
+  computed.forEach(function(a){
+    var key = a.msg.slice(0,30);
+    if(dismissed.indexOf(key) > -1) return;
+    var icon = a.level==='red' ? '🔴' : '🟡';
+    html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:6px;background:'+(a.level==='red'?'rgba(255,61,87,.08)':'rgba(255,171,0,.08)')+';display:flex;align-items:center;gap:6px">';
+    html += '<span style="flex:1">'+icon+' '+a.msg+'</span>';
+    html += '<button onclick="dismissAlert(\''+key.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:12px;padding:0 2px" title="Dismiss">\u2715</button>';
+    html += '</div>';
+  });
+
+  if(!alerts.length && !deltas && !computed.length){
     area.innerHTML = '<div class="ds">Smart alerts will appear after the first daily scrape runs.</div>';
     return;
   }
-  var html = '';
   // Show deltas summary
   if(deltas && deltas.ig){
     html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">';
@@ -2538,8 +2724,11 @@ function renderPostingCadence(data){
   if(!area || !data) return;
   var html = '<div class="c x"><div class="cl">YOU</div><div class="cv">'+data.you.rate+'</div><div class="cs">'+data.you.commentary+'</div></div>';
   if(data.competitors){
-    data.competitors.forEach(function(c){
-      html += '<div class="c w"><div class="cl">'+c.name.toUpperCase()+'</div><div class="cv">'+c.rate+'</div><div class="cs">'+c.commentary+'</div></div>';
+    // Firebase converts arrays to objects — normalize either way
+    var comps = Array.isArray(data.competitors) ? data.competitors : Object.values(data.competitors);
+    comps.forEach(function(c){
+      if(!c || typeof c !== 'object') return;
+      html += '<div class="c w"><div class="cl">'+String(c.name||'').toUpperCase()+'</div><div class="cv">'+c.rate+'</div><div class="cs">'+c.commentary+'</div></div>';
     });
   }
   area.innerHTML = html;
@@ -2549,19 +2738,25 @@ function renderPostingCadence(data){
 // AI FEATURES: Actionable Alerts, Weekly Review, Competitor Insights, Captions, Smart Schedule
 // =====================================================
 
+// Global registry so onclick can reference alerts by index (avoids JSON-in-HTML issues)
+window._aiAlertRegistry = [];
+
 function renderActionableAlerts(alerts){
   var section = document.getElementById('ai-actions-section');
   var area = document.getElementById('ai-actions-area');
   if(!area || !alerts || !alerts.length){ if(section) section.style.display='none'; return; }
 
-  // Load dismissed alerts
+  // Normalize Firebase array/object
+  var alertArr = Array.isArray(alerts) ? alerts : Object.values(alerts);
+
   db.ref('analytics/dismissedActions').once('value', function(snap){
     var dismissed = snap.val() || {};
-    var visible = alerts.filter(function(a){ return !dismissed[a.id]; });
+    var visible = alertArr.filter(function(a){ return a && !dismissed[a.id]; });
     if(!visible.length){ section.style.display='none'; return; }
     section.style.display='';
+    window._aiAlertRegistry = visible;
     var html = '';
-    visible.forEach(function(a){
+    visible.forEach(function(a, i){
       var typeColor = a.type==='add_pipeline' ? 'var(--ac)' : a.type==='add_task' ? 'var(--gn)' : 'var(--am)';
       var typeLabel = a.type==='add_pipeline' ? 'PIPELINE' : a.type==='add_task' ? 'TASK' : 'TIP';
       html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.1)">';
@@ -2571,7 +2766,7 @@ function renderActionableAlerts(alerts){
       html += '<div style="font-size:10px;color:var(--dm);margin-top:3px">'+a.detail+'</div></div>';
       html += '<div style="display:flex;gap:4px;flex-shrink:0">';
       if(a.type !== 'suggestion'){
-        html += '<button onclick="acceptAIAction('+JSON.stringify(a).replace(/"/g,'&quot;')+')" style="font-size:9px;padding:4px 10px;border-radius:4px;border:none;background:var(--gn);color:#000;cursor:pointer;font-weight:600">Accept</button>';
+        html += '<button onclick="acceptAIAction('+i+')" style="font-size:9px;padding:4px 10px;border-radius:4px;border:none;background:var(--gn);color:#000;cursor:pointer;font-weight:600">Accept</button>';
       }
       html += '<button onclick="dismissAIAction(\''+a.id+'\')" style="font-size:9px;padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:none;color:var(--dm);cursor:pointer">Dismiss</button>';
       html += '</div></div></div>';
@@ -2580,7 +2775,9 @@ function renderActionableAlerts(alerts){
   });
 }
 
-function acceptAIAction(alert){
+function acceptAIAction(idx){
+  var alert = window._aiAlertRegistry[idx];
+  if(!alert) return;
   if(alert.type === 'add_pipeline' && alert.action){
     addPipelineItem(
       alert.action.idea || alert.title,
@@ -2668,22 +2865,24 @@ function renderWeeklyReview(){
   area.innerHTML = html;
 }
 
+// Store AI insights keyed by lowercase account name for per-reel lookup
+window._competitorInsightsMap = {};
+
 function renderCompetitorInsights(insights){
-  var area = document.getElementById('competitor-insights-area');
-  if(!area || !insights || !insights.length) return;
-  var html = '';
-  insights.forEach(function(c){
-    html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(225,48,108,.04);border:1px solid rgba(225,48,108,.1)">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
-    html += '<span style="font-weight:700;color:var(--fg)">'+c.account+'</span>';
-    html += '<span style="font-size:9px;color:var(--dm)">'+fmtK(c.likes)+' likes</span>';
-    html += '</div>';
-    html += '<div style="font-size:10px;color:var(--dm);margin-bottom:4px;font-style:italic">"'+(c.topReel||'').slice(0,80)+'"</div>';
-    html += '<div style="font-size:11px;color:var(--fg);margin-bottom:4px">'+c.whyItWorked+'</div>';
-    html += '<div style="font-size:10px;color:var(--ac);padding:4px 8px;background:rgba(0,229,255,.06);border-radius:4px;display:inline-block">&#128161; '+c.takeaway+'</div>';
-    html += '</div>';
+  if(!insights || !insights.length) return;
+  var arr = Array.isArray(insights) ? insights : Object.values(insights);
+  window._competitorInsightsMap = {};
+  arr.forEach(function(c){
+    if(c && c.account) window._competitorInsightsMap[c.account.toLowerCase().replace(/^@/,'')] = c;
   });
-  area.innerHTML = html;
+  // Re-render top reels table to attach AI buttons now that insights are loaded
+  renderCompetitorData();
+}
+
+function toggleReelInsight(rowId){
+  var row = document.getElementById(rowId);
+  if(!row) return;
+  row.style.display = row.style.display === 'none' ? '' : 'none';
 }
 
 function renderCaptionTemplates(templates){
@@ -2691,15 +2890,22 @@ function renderCaptionTemplates(templates){
   if(!area || !templates || !templates.length) return;
   var section = document.getElementById('caption-templates-section');
   if(section) section.style.display = '';
+  var arr = Array.isArray(templates) ? templates : Object.values(templates);
+  var dismissed = [];
+  try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_captions') || '[]'); } catch(e){}
   var html = '';
-  templates.forEach(function(t, i){
+  arr.forEach(function(t, i){
+    if(dismissed.indexOf(i) > -1) return;
     var platColor = t.platform==='IG' ? '#E1306C' : '#00f2ea';
     html += '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--bd)">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px">';
     html += '<div><span style="font-size:8px;color:'+platColor+';background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;font-weight:600">'+t.platform+'</span> ';
     html += '<span style="font-size:8px;color:var(--dm);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:3px">'+t.format+'</span></div>';
+    html += '<div style="display:flex;gap:4px;flex-shrink:0">';
+    html += '<button onclick="acceptCaptionIdea('+i+')" style="font-size:9px;padding:3px 8px;border-radius:4px;border:none;background:var(--gn);color:#000;cursor:pointer;font-weight:600">Accept</button>';
     html += '<button onclick="copyCaption('+i+')" style="font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:none;color:var(--dm);cursor:pointer">Copy</button>';
-    html += '</div>';
+    html += '<button onclick="dismissCaptionIdea('+i+')" style="font-size:9px;padding:3px 8px;border-radius:4px;border:none;background:none;color:var(--dm);cursor:pointer" title="Delete">\u2715</button>';
+    html += '</div></div>';
     html += '<div style="font-size:12px;color:var(--fg);margin-bottom:4px" id="caption-text-'+i+'">'+t.caption+'</div>';
     if(t.hashtags && t.hashtags.length){
       html += '<div style="font-size:10px;color:var(--ac)">'+t.hashtags.map(function(h){ return h.startsWith('#') ? h : '#'+h; }).join(' ')+'</div>';
@@ -2709,7 +2915,7 @@ function renderCaptionTemplates(templates){
     }
     html += '</div>';
   });
-  area.innerHTML = html;
+  area.innerHTML = html || '<div class="ds">All caption ideas dismissed.</div>';
 }
 
 function copyCaption(idx){
@@ -3151,6 +3357,7 @@ function init(){
   renderArtistScore();
   renderAlerts();
   renderTrackScores();
+  renderLibraries();
   // Render charts after a tick to ensure DOM is ready
   setTimeout(function(){
     renderHQCharts();
@@ -3194,10 +3401,8 @@ function init(){
   </div>
 </div>
 
-<!-- Growth Alerts -->
-<div class="sec" id="growth-alerts-section">
-  <div id="growth-alerts-area"></div>
-</div>
+<!-- growth-alerts-area merged into scraped-alerts-area below -->
+<div id="growth-alerts-area" style="display:none"></div>
 
 <!-- Track Scores Summary -->
 <div class="sec">
@@ -3525,20 +3730,15 @@ function init(){
   </div>
 </div>
 
-<!-- Competitor Breakdown (AI-powered) -->
-<div class="sec">
-  <div class="sh"><span class="sn">&#129302;</span><span class="st">Competitor Breakdown (AI-powered)</span></div>
-  <div id="competitor-insights-area">
-    <div class="ds">Competitor insights will appear after the weekly strategy runs.</div>
-  </div>
-</div>
+<!-- competitor-insights-area removed — AI breakdowns now inline in top-reels-table -->
+<div id="competitor-insights-area" style="display:none"></div>
 </div>
 
 <!-- REELS INTEL -->
 <div id="c-reels">
 <div class="sec">
   <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (scraped from competitors)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th></tr></thead><tbody id="top-reels-table">
+  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th><th>AI</th></tr></thead><tbody id="top-reels-table">
     <tr><td colspan="6" style="color:var(--dm)">Loading competitor data...</td></tr>
   </tbody></table></div>
 </div>
@@ -3615,25 +3815,27 @@ function init(){
 <div id="c-hooks">
 <div class="sec">
   <div class="sh"><span class="sn">&#127907;</span><span class="st">Hook Library</span></div>
-  <div class="tw"><table><thead><tr><th>#</th><th>First 2 Seconds</th><th>Source</th><th>Status</th></tr></thead><tbody>
-    <tr><td>1</td><td>Recognizable melody/vocal from original</td><td>Wally (8/10)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
-    <tr><td>2</td><td>Bass drop hits frame 1</td><td>SideQuest, Dom Dolla</td><td><span class="tg tg-g">PROVEN</span></td></tr>
-    <tr><td>3</td><td>Crowd reaction shot</td><td>Bolo 139K, Dom Dolla 102K</td><td><span class="tg tg-g">PROVEN</span></td></tr>
-    <tr><td>4</td><td>Friend's face as drop hits</td><td>Your @twindiplomacy (37 eng)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
-    <tr><td>5</td><td>DAW screen: empty to full</td><td>Dom Dolla plane (196K)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
-    <tr><td>6</td><td>Talking head: compelling first sentence</td><td>Luke Alexander (3,920)</td><td><span class="tg tg-g">PROVEN</span></td></tr>
+  <div class="tw"><table><thead><tr><th>#</th><th>First 2 Seconds</th><th>Source</th><th>Status</th><th></th></tr></thead><tbody id="hook-library-body">
   </tbody></table></div>
+  <div class="mini-add-task" style="margin-top:8px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <input class="add-task-input" id="new-hook-input" placeholder="New hook idea..." style="font-size:11px;padding:6px 10px;flex:1" onkeydown="if(event.key==='Enter')addHook()">
+      <button class="add-task-btn" onclick="addHook()" style="font-size:9px;padding:5px 10px">+ ADD</button>
+    </div>
+  </div>
 </div>
 <div class="sec">
   <div class="sh"><span class="sn">&#128172;</span><span class="st">Caption Templates</span></div>
-  <div class="tw"><table><thead><tr><th>Template</th><th>Source</th><th>When to Use</th></tr></thead><tbody>
-    <tr><td>"[song lyric fragment]"</td><td>Wally</td><td>Remix teasers</td></tr>
-    <tr><td>[2-4 word cryptic reaction]</td><td>Teeb</td><td>Gig clips, BTS</td></tr>
-    <tr><td>ALL CAPS + "OUT NOW"</td><td>Zachh, SQ</td><td>Release day only</td></tr>
-    <tr><td>"should I drop this?"</td><td>NIIKO, Bolo</td><td>Unreleased teasers</td></tr>
-    <tr><td>"COMMENT [keyword] for download"</td><td>Zachh, Luke</td><td>Release day CTA</td></tr>
-    <tr><td>"three heaters to kick off the week"</td><td>Chalant</td><td>Monday roundup</td></tr>
+  <div class="tw"><table><thead><tr><th>Template</th><th>Source</th><th>When to Use</th><th></th></tr></thead><tbody id="caption-templates-user-body">
   </tbody></table></div>
+  <div class="mini-add-task" style="margin-top:8px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input class="add-task-input" id="new-caption-template-input" placeholder="New caption template..." style="font-size:11px;padding:6px 10px;flex:2;min-width:150px" onkeydown="if(event.key==='Enter')addCaptionTemplateUser()">
+      <input class="add-task-input" id="new-caption-template-source" placeholder="Source" style="font-size:11px;padding:6px 10px;flex:1;min-width:80px">
+      <input class="add-task-input" id="new-caption-template-when" placeholder="When to use" style="font-size:11px;padding:6px 10px;flex:1;min-width:80px" onkeydown="if(event.key==='Enter')addCaptionTemplateUser()">
+      <button class="add-task-btn" onclick="addCaptionTemplateUser()" style="font-size:9px;padding:5px 10px">+ ADD</button>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -3641,15 +3843,14 @@ function init(){
 <div id="c-scenes">
 <div class="sec">
   <div class="sh"><span class="sn">&#127916;</span><span class="st">Scene Library</span></div>
-  <div class="tw"><table><thead><tr><th>Scene</th><th>Why It Works</th><th>Frequency</th><th>Fit</th></tr></thead><tbody>
-    <tr><td style="font-weight:700">DJ booth / behind decks</td><td>Universal top performer. Crowd visible.</td><td>~60/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">Crowd reaction moment</td><td>Bolo 139K, Dom Dolla 102K. Energy = shares.</td><td>~40/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">Studio / DAW screen</td><td>Dom Dolla 196K. Producer credibility.</td><td>~30/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">Unexpected location</td><td>Dom Dolla plane 196K. Surprise = retention.</td><td>~10/200</td><td><span class="tg tg-a">TEST</span></td></tr>
-    <tr><td style="font-weight:700">Talking head</td><td>Luke 3,920 (10x avg). DANSYN 670.</td><td>~15/200</td><td><span class="tg tg-a">TEST</span></td></tr>
-    <tr><td style="font-weight:700">Event recap montage</td><td>Your Hunter Mtn (51 eng, above avg).</td><td>~25/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
-    <tr><td style="font-weight:700">Friend/crew reaction</td><td>Your @twindiplomacy (37). Authentic proof.</td><td>~10/200</td><td><span class="tg tg-g">HIGH</span></td></tr>
+  <div class="tw"><table><thead><tr><th>Scene</th><th>Why It Works</th><th>Frequency</th><th>Fit</th><th></th></tr></thead><tbody id="scene-library-body">
   </tbody></table></div>
+  <div class="mini-add-task" style="margin-top:8px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <input class="add-task-input" id="new-scene-input" placeholder="New scene idea..." style="font-size:11px;padding:6px 10px;flex:1" onkeydown="if(event.key==='Enter')addScene()">
+      <button class="add-task-btn" onclick="addScene()" style="font-size:9px;padding:5px 10px">+ ADD</button>
+    </div>
+  </div>
 </div>
 </div>
 </div><!-- end cs-create -->
@@ -4019,6 +4220,8 @@ function init(){
   <div class="g">
     <div class="c ig"><div class="cl">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs">Auto-scraped via Apify</div></div>
     <div class="c sc"><div class="cl">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:var(--ac)">soundcloud.com/itselcapitan</a></div></div>
+    <div class="c" style="border-left:3px solid #E1306C"><div class="cl" style="color:#E1306C">INSTAGRAM</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://www.instagram.com/itselcapitan" target="_blank" style="color:#E1306C">instagram.com/itselcapitan</a></div></div>
+    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TIKTOK</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://www.tiktok.com/@itselcapitan" target="_blank" style="color:#00f2ea">tiktok.com/@itselcapitan</a></div></div>
     <div class="c" style="border-left:3px solid #00f2ea"><div class="cl">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs">Created Mar 20, 2026 &middot; 3 posts live</div></div>
   </div>
 </div>
