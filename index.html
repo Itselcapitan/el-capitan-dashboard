@@ -351,29 +351,29 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 // MASTER STRATEGY ENGINE — SINGLE SOURCE OF TRUTH
 // =====================================================
 var MSE = {
-  lastUpdated: "2026-03-27",
-  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (Dec 27–Mar 26) + 200 competitor reels (14 accounts, 6 datasets)",
+  lastUpdated: "2026-04-01",
+  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (last 30 days) + TikTok Studio (last 7 days) + 200 competitor reels (14 accounts, 6 datasets)",
   ig: {
-    followers: 312, posts: 30, engRate: 7.3, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo",
-    views: 21980, interactions: 1500, accountsReached: 11003, impressions: 45344,
-    profileVisits: 2564, externalLinkTaps: 26, profileActivity: 2590,
-    followersNonFollowers: "2.7% / 97.3%", interactionFollowersNonFollowers: "66.9% / 33.1%",
-    reelsViewShare: 65.1, postsViewShare: 15.0, storiesViewShare: 19.9,
-    reelsInteractionShare: 75.5, postsInteractionShare: 19.1, storiesInteractionShare: 5.5,
-    peakHour: "12pm-3pm", peakDay: "Tue-Wed",
-    // 90-day deep report (Dec 27 – Mar 26)
-    followerGrowth: 65, netFollowers: 123, unfollowRate: 13,
-    reachGrowth: 1056, impressionGrowth: 1625, interactionGrowth: 831,
-    nonFollowerReach: 97.3,
-    profileVisitRate: 23, linkClickRate: 1,
+    followers: 344, posts: 30, engRate: 4.6, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo",
+    views: 31397, interactions: 1431, accountsReached: 7141, impressions: 31397,
+    profileVisits: 1686, externalLinkTaps: 15, profileActivity: 1701,
+    followersNonFollowers: "34.4% / 65.6%", interactionFollowersNonFollowers: "68.1% / 31.9%",
+    reelsViewShare: 70.2, postsViewShare: 9.5, storiesViewShare: 20.4,
+    reelsInteractionShare: 88.1, postsInteractionShare: 8.1, storiesInteractionShare: 3.8,
+    peakHour: "12pm-3pm", peakDay: "Mon",
+    // 30-day report (Mar 3 – Apr 1)
+    followerGrowth: 32, netFollowers: 344, unfollowRate: 13,
+    reachGrowth: 0, impressionGrowth: 0, interactionGrowth: 0,
+    nonFollowerReach: 65.6,
+    profileVisitRate: 24, linkClickRate: 0.9,
     totalLikes: 333, totalComments: 23, totalShares: 256, totalSaves: 7,
     reelLikes: 241, reelComments: 23, reelShares: 109,
     postInteractions: 887, reelInteractions: 492, storyInteractions: 45,
     demo18_24: 58.3, demo25_34: 29.8, demo35_44: 8.3, demoMale: 70.5, demoFemale: 29.5,
     geoSchenectady: 41.3, geoNYC: 3.2, geoBoston: 2.8, geoAlbany: 2.4
   },
-  sc: { followers: 41, plays: 603, tracks: 9, plays7d: 29, plays7dGrowth: "+107%", plays30d: 118, plays30dGrowth: "-47%", growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Every 1s A Winner (11 plays)", topTrack30d: "Every 1s A Winner (74 plays)", topListeners: ["Union Athletics (6 plays)", "DiAZ(PR) (5 plays, 21 followers)", "Jesse Jones (3 plays, 30 followers)", "Binky (8 plays, 16 followers)", "Shaps (6 plays, 39 followers)"], topLocations: ["Schenectady (7 plays)", "Ashburn (3 plays)", "Bayamon (3 plays)"] },
-  tiktok: { active: true, handle: "@itselcapitan", followers: 28, likes: 205, posts: 5, firstPosts: ["Hunter Mountain reel", "Pack Up Ya Bags teaser", "Money teaser", "Money drop clip", "PUYB Release"], joined: "2026-03-20", totalPlays: 2177, bestPost: "Pack Up Ya Bags teaser (1,141 plays)", avgPlaysPerPost: 435 },
+  sc: { followers: 35, plays: 1507, tracks: 9, plays7d: 438, plays7dGrowth: "+491%", plays30d: 1507, plays30dGrowth: "+491%", likes30d: 31, comments30d: 19, reposts30d: 10, listeners30d: 50, growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Pack Up Ya Bags (438 plays)", topTrack30d: "Pack Up Ya Bags (1,100+ plays)", topListeners: ["Joao Avila 3 (21 plays, 59 followers)", "User 127061784 (11 plays)", "Vt (10 plays)", "Binky (8 plays, 16 followers)", "DG (6 plays)", "가영 (6 plays)", "Union Athletics (6 plays)", "Khánh Đào (5 plays)"], topLocations: ["Schenectady", "Boston", "NYC"], note: "PUYB release Mar 27 drove spike. SC Artist Pro 7-day free boost active. HypedIt ad campaign running." },
+  tiktok: { active: true, handle: "@itselcapitan", followers: 35, likes: 549, posts: 7, joined: "2026-03-20", videoViews7d: 3400, videoViewsGrowth: "+105.2%", profileViews7d: 65, profileViewsGrowth: "+209.5%", likes7d: 386, likesGrowth: "+128.4%", comments7d: 4, shares7d: 17, bestPost: "ChatGPT DJ plug-in reel (603 plays, 16 likes)", avgPlaysPerPost: 486, recentPosts: [{caption:"leaving for school in a few hours, still shot this in the rain", plays:307, likes:10, comments:1, date:"2026-03-31"},{caption:"Used ChatGPT to ask a DJ in Punta Cana if I could plug in my USB", plays:603, likes:16, comments:1, date:"2026-03-29"}] },
   primaryFocus: "Reels-first content engine. Every post should be a Reel with your own audio. Volume is the bottleneck, not quality.",
   contentMix: {
     format: "60% Reels, 25% Carousels (event recaps), 15% Images (release art only)",
