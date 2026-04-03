@@ -1,7 +1,7 @@
-name: Weekly Strategy Generator
+name: Daily Strategy Generator
 on:
   schedule:
-    - cron: '3 12 * * 1' # 8:03 AM ET every Monday
+    - cron: '15 10 * * *' # 6:15 AM ET daily (after scrapes finish)
   workflow_dispatch: {} # Manual trigger
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 24
       - run: npm install
-      - run: node scripts/weekly-strategy.mjs
+      - run: node scripts/daily-strategy.mjs
         env:
           FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}

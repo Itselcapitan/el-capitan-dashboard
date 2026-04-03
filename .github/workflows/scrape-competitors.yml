@@ -1,7 +1,7 @@
 name: Competitor Scrape (2x/week)
 on:
   schedule:
-    - cron: '12 14 * * 2,5' # ~10:12 AM ET on Tue + Fri
+    - cron: '10 10 * * 2,5' # 6:10 AM ET on Tue + Fri
   workflow_dispatch: {} # Manual trigger
 
 jobs:

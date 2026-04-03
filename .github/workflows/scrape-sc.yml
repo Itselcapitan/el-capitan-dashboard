@@ -1,7 +1,7 @@
 name: SoundCloud Scrape (daily)
 on:
   schedule:
-    - cron: '42 13 * * *' # ~9:42 AM ET daily (5 min after main scrape)
+    - cron: '5 10 * * *' # 6:05 AM ET daily (5 min after main scrape)
   workflow_dispatch: {} # Manual trigger
 
 jobs:

@@ -75,6 +75,7 @@ body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;line-
 .c.p{border-left:3px solid var(--am)}
 .c.i{border-left:3px solid var(--a2)}
 .c.ig{border-left:3px solid #E1306C}
+.c.tt{border-left:3px solid #00f2ea}
 .c.sc{border-left:3px solid #ff5500}
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:9px;background:var(--s)}
 table{width:100%;border-collapse:collapse;font-size:11px}
@@ -2711,6 +2712,12 @@ function renderScrapedAlerts(){
   var area = document.getElementById('scraped-alerts-area');
   if(!area) return;
 
+  // Update scrape timestamp in header
+  var stsEl = document.getElementById('scrape-alerts-timestamp');
+  if(stsEl && window._latestData && window._latestData.scrapedAt){
+    stsEl.textContent = 'Scraped ' + new Date(window._latestData.scrapedAt).toLocaleString();
+  }
+
   // Load dismissed keys (both alert types share one localStorage key)
   var dismissed = [];
   try { dismissed = JSON.parse(localStorage.getItem('elcap_dismissed_alerts') || '[]'); } catch(e){}
@@ -3074,20 +3081,97 @@ function renderSmartSchedule(schedule){
   area.innerHTML = html;
 }
 
+function renderDailyInsight(s){
+  var area = document.getElementById('daily-insight-area');
+  var tsEl = document.getElementById('daily-insight-timestamp');
+  if(!area) return;
+  var di = s ? s.dailyInsight : null;
+  if(!di){
+    area.innerHTML = '<div class="ds">Daily insight will appear after the first morning run.</div>';
+    if(tsEl) tsEl.textContent = '';
+    return;
+  }
+  if(tsEl && di.generatedAt) tsEl.textContent = 'Updated ' + new Date(di.generatedAt).toLocaleString();
+
+  var moodColors = { fire: '#ff5722', steady: '#00e676', grind: '#ffab00', alert: '#ff1744' };
+  var moodEmojis = { fire: '&#x1F525;', steady: '&#x2705;', grind: '&#x1F4AA;', alert: '&#x1F6A8;' };
+  var mood = di.mood || 'steady';
+  var moodColor = moodColors[mood] || 'var(--ac)';
+  var moodEmoji = moodEmojis[mood] || '';
+
+  var html = '<div style="padding:10px 14px;border-radius:8px;background:rgba('+
+    (mood==='fire'?'255,87,34':mood==='alert'?'255,23,68':mood==='grind'?'255,171,0':'0,230,118')+',.08);border-left:3px solid '+moodColor+';margin-bottom:10px">';
+  html += '<div style="font-size:13px;font-weight:700;color:'+moodColor+';margin-bottom:4px">'+moodEmoji+' '+di.headline+'</div>';
+  html += '</div>';
+
+  // Yesterday changes
+  if(di.yesterdayChanges){
+    html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">WHAT CHANGED</div>';
+    html += '<div style="font-size:11px;color:var(--tx);line-height:1.6;margin-bottom:6px">'+di.yesterdayChanges.summary+'</div>';
+    if(di.yesterdayChanges.highlights && di.yesterdayChanges.highlights.length){
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      di.yesterdayChanges.highlights.forEach(function(h){
+        var sentColor = h.sentiment==='up'?'var(--gn)':h.sentiment==='down'?'var(--rd)':'var(--dm)';
+        var arrow = h.sentiment==='up'?'&#9650;':h.sentiment==='down'?'&#9660;':'&#9679;';
+        html += '<div style="padding:4px 8px;border-radius:5px;background:rgba(255,255,255,.04);font-size:10px">';
+        html += '<span style="color:var(--dm)">'+h.metric+'</span> <strong style="color:var(--fg)">'+h.value+'</strong> ';
+        html += '<span style="color:'+sentColor+'">'+arrow+' '+h.change+'</span></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Week progress
+  if(di.weekProgress){
+    html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">WEEK PROGRESS</div>';
+    html += '<div style="font-size:11px;color:var(--tx);line-height:1.6;margin-bottom:6px">'+di.weekProgress.summary+'</div>';
+    var pct = Math.min(100, Math.round((di.weekProgress.postsThisWeek / Math.max(di.weekProgress.postsTarget,1)) * 100));
+    var barColor = pct >= 80 ? 'var(--gn)' : pct >= 50 ? 'var(--am)' : 'var(--rd)';
+    html += '<div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--dm)">';
+    html += '<span>Posts: '+di.weekProgress.postsThisWeek+'/'+di.weekProgress.postsTarget+'</span>';
+    html += '<div style="flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:2px"></div></div>';
+    html += '<span style="color:'+(di.weekProgress.onTrack?'var(--gn)':'var(--am)')+'">'+(di.weekProgress.onTrack?'On track':'Behind')+'</span></div>';
+    html += '</div>';
+  }
+
+  // Today action
+  if(di.todayAction){
+    html += '<div style="padding:8px 12px;border-radius:6px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.15)">';
+    html += '<div style="font-size:9px;color:var(--ac);font-weight:600;margin-bottom:3px">TODAY\'S #1 ACTION</div>';
+    html += '<div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:2px">'+di.todayAction.primary+'</div>';
+    html += '<div style="font-size:10px;color:var(--dm);line-height:1.5">'+di.todayAction.reason+'</div>';
+    if(di.todayAction.secondary){
+      html += '<div style="font-size:10px;color:var(--dm);margin-top:4px;opacity:.7">Also: '+di.todayAction.secondary+'</div>';
+    }
+    html += '</div>';
+  }
+
+  area.innerHTML = html;
+}
+
 function loadWeeklyStrategy(){
   console.log('[DATA] loadWeeklyStrategy called');
   db.ref('strategy/latest').once('value', function(snap){
     console.log('[DATA] strategy/latest loaded, has data:', !!snap.val(), snap.val() ? Object.keys(snap.val()).join(',') : 'null');
     var s = snap.val();
     window._strategyData = s;
+
+    // Render daily insight (always, even if weekly is stale)
+    renderDailyInsight(s);
+
     var area = document.getElementById('weekly-strategy-area');
     if(!area) return;
     if(!s){
       area.innerHTML = '<div class="ds">Weekly strategy will appear after the first Monday run.</div>';
       return;
     }
+    // Update weekly strategy timestamp in header
+    var wtsEl = document.getElementById('weekly-strategy-timestamp');
+    if(wtsEl && s.generatedAt) wtsEl.textContent = 'Generated ' + new Date(s.generatedAt).toLocaleString();
+
     var aiTag = s.aiGenerated ? ' <span style="color:var(--ac);font-size:8px;background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;margin-left:4px">&#129302; AI</span>' : '';
-    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+' &middot; Generated '+(s.generatedAt ? new Date(s.generatedAt).toLocaleString() : 'unknown')+aiTag+'</div>';
+    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+aiTag+'</div>';
 
     // Priorities
     if(s.priorities && s.priorities.length){
@@ -3564,6 +3648,14 @@ function init(){
   </div>
 </div>
 
+<!-- Daily AI Insight (morning briefing) -->
+<div class="sec" id="daily-insight-section">
+  <div class="sh"><span class="sn">&#9728;&#65039;</span><span class="st">Today's Briefing</span><span id="daily-insight-timestamp" style="font-size:9px;color:var(--dm);margin-left:auto"></span></div>
+  <div id="daily-insight-area">
+    <div class="ds">Daily insight will appear after the first morning run.</div>
+  </div>
+</div>
+
 <!-- growth-alerts-area merged into scraped-alerts-area below -->
 <div id="growth-alerts-area" style="display:none"></div>
 
@@ -3575,15 +3667,15 @@ function init(){
 
 <!-- Smart Alerts (from daily scrape) -->
 <div class="sec">
-  <div class="sh"><span class="sn">AI</span><span class="st">Smart Alerts</span></div>
+  <div class="sh"><span class="sn">AI</span><span class="st">Smart Alerts</span><span id="scrape-alerts-timestamp" style="font-size:9px;color:var(--dm);margin-left:auto"></span></div>
   <div id="scraped-alerts-area">
     <div class="ds">Smart alerts will appear after the first daily scrape runs.</div>
   </div>
 </div>
 
-<!-- Weekly Strategy (from Monday strategy generator) -->
+<!-- Weekly Strategy (refreshes every 7+ days) -->
 <div class="sec">
-  <div class="sh"><span class="sn">STRATEGY</span><span class="st">This Week</span></div>
+  <div class="sh"><span class="sn">STRATEGY</span><span class="st">This Week</span><span id="weekly-strategy-timestamp" style="font-size:9px;color:var(--dm);margin-left:auto"></span></div>
   <div id="weekly-strategy-area">
     <div class="ds">Weekly strategy will appear after the first Monday run.</div>
   </div>
@@ -4358,21 +4450,21 @@ function init(){
   <div class="sh"><span class="sn">&#9881;</span><span class="st">Accounts</span></div>
   <div class="g">
     <div class="c ig"><div class="cl" style="color:#E1306C">INSTAGRAM</div><div class="cv" style="font-size:13px">@itselcapitan_</div><div class="cs"><a href="https://www.instagram.com/itselcapitan_" target="_blank" style="color:#E1306C">instagram.com/itselcapitan_</a></div></div>
-    <div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs"><a href="https://www.tiktok.com/@itselcapitan" target="_blank" style="color:#00f2ea">tiktok.com/@itselcapitan</a></div></div>
+    <div class="c tt"><div class="cl" style="color:#00f2ea">TIKTOK</div><div class="cv" style="font-size:13px">@itselcapitan</div><div class="cs"><a href="https://www.tiktok.com/@itselcapitan" target="_blank" style="color:#00f2ea">tiktok.com/@itselcapitan</a></div></div>
     <div class="c sc"><div class="cl" style="color:#ff5500">SOUNDCLOUD</div><div class="cv" style="font-size:13px">itselcapitan</div><div class="cs"><a href="https://soundcloud.com/itselcapitan" target="_blank" style="color:#ff5500">soundcloud.com/itselcapitan</a></div></div>
   </div>
 </div>
 <div class="sec">
   <div class="sh"><span class="sn">&#128260;</span><span class="st">Automation</span></div>
   <div class="nb">
-    <strong style="color:var(--ac)">Daily Scrape</strong> (9:37 AM ET)<br>
+    <strong style="color:var(--ac)">Daily Scrape</strong> (6:00 AM ET)<br>
     IG profile + 12 posts, TikTok profile + 12 posts, SoundCloud profile<br>
     Auto-calculates deltas, generates smart alerts, writes time-series history<br><br>
-    <strong style="color:var(--ac)">Competitor Scrape</strong> (Tue + Fri, 10:12 AM ET)<br>
+    <strong style="color:var(--ac)">Competitor Scrape</strong> (Tue + Fri, 6:10 AM ET)<br>
     8 competitor accounts &times; 5 latest reels = ~40 reels analyzed<br>
     Reels-first filtering, diff-based processing, pattern analysis<br><br>
-    <strong style="color:var(--ac)">Weekly Strategy</strong> (Monday, 8:03 AM ET)<br>
-    Top 3 priorities, post ideas, track to push, campaign action<br>
+    <strong style="color:var(--ac)">Daily AI Strategy</strong> (6:15 AM ET)<br>
+    Daily morning briefing + weekly deep strategy (refreshes every 7+ days)<br>
     Reads Firebase only &mdash; no Apify cost<br><br>
     <strong>Last scrape:</strong> <span id="last-scrape-time" style="color:var(--ac)">Loading...</span><br>
     <strong>Data path:</strong> Firebase <code>/analytics/</code> + <code>/competitors/</code><br>
