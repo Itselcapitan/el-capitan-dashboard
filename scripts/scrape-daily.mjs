@@ -414,11 +414,12 @@ async function main() {
   });
 
   // History snapshot (lighter — no posts array)
+  // Use scResolved (not raw scData.sc) so history has valid follower counts even when Apify returns 0
   const historySnapshot = {
     scrapedAt: now,
     ig: igData.ig,
     tiktok: ttData.tiktok,
-    sc: scData.sc,
+    sc: scResolved,
     deltas,
     alertCount: alerts.length,
   };

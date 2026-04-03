@@ -352,8 +352,8 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 // MASTER STRATEGY ENGINE — SINGLE SOURCE OF TRUTH
 // =====================================================
 var MSE = {
-  lastUpdated: "2026-04-01",
-  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (last 30 days) + TikTok Studio (last 7 days) + 200 competitor reels (14 accounts, 6 datasets)",
+  lastUpdated: "2026-04-03",
+  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (last 30 days) + TikTok Studio (last 7 days) + HypeDit + 200 competitor reels (14 accounts, 6 datasets)",
   ig: {
     followers: 344, posts: 30, engRate: 4.6, avgEng: 22.6, topPost: 117, topFormat: "Co-authored event promo",
     views: 31397, interactions: 1431, accountsReached: 7141, impressions: 31397,
@@ -372,6 +372,17 @@ var MSE = {
     postInteractions: 887, reelInteractions: 492, storyInteractions: 45,
     demo18_24: 58.3, demo25_34: 29.8, demo35_44: 8.3, demoMale: 70.5, demoFemale: 29.5,
     geoSchenectady: 41.3, geoNYC: 3.2, geoBoston: 2.8, geoAlbany: 2.4
+  },
+  hypedit: {
+    lastUpdated: "2026-04-03",
+    fanVisits: 154, fanVisits7d: 21,
+    fansAdded: 38, fansAdded7d: 12,
+    gates: [
+      { track: "Pack Up Ya Bags", visits: 21, downloads: 12, emailsCaptured: 12, status: "live", progress: 55, fanReach: 4000 },
+      { track: "Every 1's A Winner", visits: 37, downloads: 20, emailsCaptured: 20, status: "completed" },
+      { track: "DANCE.", visits: 96, downloads: 6, emailsCaptured: 0, status: "completed" }
+    ],
+    note: "Download gates capture fan emails for list building. PUYB gate live at 55% capacity (up to 4,000 fans). Total 38 fans added across all gates."
   },
   sc: { followers: 35, plays: 1507, tracks: 9, plays7d: 438, plays7dGrowth: "+491%", plays30d: 1507, plays30dGrowth: "+491%", likes30d: 31, comments30d: 19, reposts30d: 10, listeners30d: 50, growth12m: "+742%", url: "soundcloud.com/itselcapitan", topTrack7d: "Pack Up Ya Bags (438 plays)", topTrack30d: "Pack Up Ya Bags (1,100+ plays)", topListeners: ["Joao Avila 3 (21 plays, 59 followers)", "User 127061784 (11 plays)", "Vt (10 plays)", "Binky (8 plays, 16 followers)", "DG (6 plays)", "가영 (6 plays)", "Union Athletics (6 plays)", "Khánh Đào (5 plays)"], topLocations: ["Schenectady", "Boston", "NYC"], note: "PUYB release Mar 27 drove spike. SC Artist Pro 7-day free boost active. HypedIt ad campaign running." },
   tiktok: { active: true, handle: "@itselcapitan", followers: 35, likes: 549, posts: 7, joined: "2026-03-20", videoViews7d: 3400, videoViewsGrowth: "+105.2%", profileViews7d: 65, profileViewsGrowth: "+209.5%", likes7d: 386, likesGrowth: "+128.4%", comments7d: 4, shares7d: 17, bestPost: "ChatGPT DJ plug-in reel (603 plays, 16 likes)", avgPlaysPerPost: 486, recentPosts: [{caption:"leaving for school in a few hours, still shot this in the rain", plays:307, likes:10, comments:1, date:"2026-03-31"},{caption:"Used ChatGPT to ask a DJ in Punta Cana if I could plug in my USB", plays:603, likes:16, comments:1, date:"2026-03-29"}] },
