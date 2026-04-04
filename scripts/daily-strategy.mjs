@@ -256,11 +256,15 @@ function buildDataSummary(latest, history, competitors, state) {
     // CONSISTENCY
     'Release consistently: algorithm rewards regular output over sporadic drops',
     'Consistency of online presence — daily posting, commenting, showing up — matters more than any single viral moment',
+    // TIKTOK-SPECIFIC (El Capitán context)
+    'El Capitán has only cross-posted IG Reels to TikTok so far — no TikTok-native content exists yet. Cross-posts typically get 30-50% fewer views than native TikTok video due to the watermark penalty and format mismatch.',
+    'TikTok-native content opportunities: trending sound overlays on your music, duet/stitch with bigger DJs, vertical-first framing with TikTok text overlays, TikTok-specific hooks ("POV:", "Things DJs know", "Tell me you make tech house without..."), comment reply videos.',
+    'Vertical-first filming is critical — content shot horizontally and cropped for TikTok underperforms native vertical by up to 40%.',
   ];
 
   return {
     ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, posts: ig.posts || 0 },
-    tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0 },
+    tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0, contentNote: 'ALL TikTok posts to date have been direct cross-posts of Instagram Reels — no TikTok-native content yet. Strong metrics despite this handicap. Opportunity: TikTok-native content would significantly outperform current cross-posts.' },
     sc: { followers: sc.followers || 0, tracks: sc.tracks || 0 },
     trends7d: {
       igFollowers: computeTrend(history, 'ig', 'followers', 7),
