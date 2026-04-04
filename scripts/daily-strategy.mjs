@@ -127,7 +127,7 @@ function buildDataSummary(latest, history, competitors, state) {
 
   const tracks = (state?.tracks || [])
     .filter(t => t.status === 'PUSH' || t.status === 'FINISH')
-    .map(t => ({ name: t.name, status: t.status, momentum: t.momentumScore || 0, readiness: t.readinessScore || 0, nextAction: t.nextAction || '' }));
+    .map(t => ({ name: t.name, status: t.status, stage: t.stage || '', momentum: t.momentumScore || 0, readiness: t.readinessScore || 0, nextAction: t.nextAction || '', releasedAt: t.releasedAt || null }));
 
   const campaigns = (state?.campaigns || [])
     .map(c => ({ name: c.name, status: c.status, spent: c.spent || 0, budget: c.budget || 0 }));
@@ -419,7 +419,7 @@ RULES:
 - postingCadenceAnalysis.competitors: include up to 4 from the competitor data
 - priorityFormats: exactly 5-8 items ranked by impact, based on what works for competitors at this follower level
 - priorities: exactly 3 items
-- postIdeas: exactly 3 items, use actual track names from the data if available
+- postIdeas: exactly 3 items, use actual track names from the data if available. CRITICAL: check each track's stage field — tracks with stage "Released", "Rollout Active", or a releasedAt date are ALREADY OUT. Never suggest "Should I drop this?", pre-release teasers, or release countdown content for already-released tracks. Instead suggest promotion, milestone, or follow-up content.
 - actionableAlerts: 3-5 items. Types: add_pipeline (suggest content idea), add_task (suggest a task), suggestion (info only). Use real track names and metrics.
 - weeklyReview: 2-4 wins, 2-3 misses. Reference actual numbers from the data. Be honest about misses.
 - competitorInsights: 3-5 items, one per top competitor reel from the data. Explain WHY it worked.
@@ -611,15 +611,26 @@ function computePostIdeas(latest, competitors, state) {
   const ideas = [];
   const tracks = state?.tracks || [];
 
+  const RELEASED_STAGES = ['Released', 'Rollout Active', 'Archived / Hold'];
   const hotTrack = tracks
     .filter(t => (t.status === 'PUSH' || t.status === 'FINISH') && (t.momentumScore || 0) > 40)
     .sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0))[0];
   if (hotTrack) {
-    ideas.push({
-      idea: `"Should I drop this?" reel for ${hotTrack.name}`,
-      reason: `Momentum: ${hotTrack.momentumScore} | Status: ${hotTrack.status}`,
-      format: 'Reel',
-    });
+    const isReleased = RELEASED_STAGES.includes(hotTrack.stage) || !!hotTrack.releasedAt;
+    if (isReleased) {
+      // Track is already out — suggest promotion content instead
+      ideas.push({
+        idea: `Promotion reel for ${hotTrack.name} — "X plays already" milestone or crowd/reaction clip`,
+        reason: `Already released | Momentum: ${hotTrack.momentumScore} | Keep pushing while it has traction`,
+        format: 'Reel',
+      });
+    } else {
+      ideas.push({
+        idea: `"Should I drop this?" reel for ${hotTrack.name}`,
+        reason: `Momentum: ${hotTrack.momentumScore} | Status: ${hotTrack.status}`,
+        format: 'Reel',
+      });
+    }
   }
 
   const topCompReel = (competitors?.patterns?.top10 || [])[0];
