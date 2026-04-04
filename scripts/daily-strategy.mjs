@@ -126,7 +126,7 @@ function buildDataSummary(latest, history, competitors, state) {
   }).length;
 
   const tracks = (state?.tracks || [])
-    .filter(t => t.status === 'PUSH' || t.status === 'FINISH')
+    .filter(t => t.status === 'PUSH' || t.status === 'FINISH') // HOLD/DONE/KILL excluded from AI attention
     .map(t => ({ name: t.name, status: t.status, stage: t.stage || '', momentum: t.momentumScore || 0, readiness: t.readinessScore || 0, nextAction: t.nextAction || '', releasedAt: t.releasedAt || null }));
 
   const campaigns = (state?.campaigns || [])
@@ -667,7 +667,7 @@ function pickTrackToPush(tracks) {
   if (!tracks || !tracks.length) return null;
 
   const candidates = tracks
-    .filter(t => t.status === 'PUSH' || t.status === 'FINISH')
+    .filter(t => t.status === 'PUSH' || t.status === 'FINISH') // HOLD/DONE/KILL excluded from AI attention
     .filter(t => t.status !== 'KILL')
     .sort((a, b) => {
       const scoreA = (a.momentumScore || 0) * 0.6 + (a.readinessScore || 0) * 0.4;

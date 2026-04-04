@@ -444,7 +444,7 @@ var TRACK_TYPES = ['Remix','Original','Mashup'];
 var GENRES = ['Tech House','Progressive House','Bass House','Minimal','Other'];
 var EMOTIONAL_JOBS = ['More clubby','Darker','More euphoric','More minimal','More emotional','More energetic','Other'];
 var HARDEST_HITS = ['Drop Groove','Breakdown Emotion','Vocal Payoff','Hook Synth','Call-and-Response'];
-var STATUSES = ['PUSH','FINISH','HOLD','KILL'];
+var STATUSES = ['PUSH','FINISH','HOLD','DONE','KILL'];
 var BOTTLENECKS = ['none','arrangement','groove','mix','vocal','marketing'];
 var MARKETING_ANGLES = ['Club weapon','Emotional remix','Nostalgia flip','Producer flex','Crowd reaction','Viral audio angle','Social-proof angle'];
 
@@ -1153,7 +1153,7 @@ function renderTracks(){
     if(col==='stage') return dir*(a.stage-b.stage);
     if(col==='name') return dir*a.name.localeCompare(b.name);
     if(col==='status'){
-      var order = {PUSH:0,FINISH:1,HOLD:2,KILL:3};
+      var order = {PUSH:0,FINISH:1,HOLD:2,DONE:3,KILL:4};
       return dir*((order[a.status]||0)-(order[b.status]||0));
     }
     if(col==='momentum') return dir*(b.momentumScore-a.momentumScore);
@@ -1858,7 +1858,7 @@ function renderTrackScores(){
   tracks.forEach(function(t){
     var hidden = STATE.hiddenTracks.indexOf(t.id) > -1;
     if(hidden) return;
-    var statusColor = t.status==='PUSH'?'var(--gn)':t.status==='FINISH'?'var(--am)':t.status==='HOLD'?'var(--dm)':'var(--rd)';
+    var statusColor = t.status==='PUSH'?'var(--gn)':t.status==='FINISH'?'var(--am)':t.status==='DONE'?'#7b2ff7':t.status==='HOLD'?'var(--dm)':'var(--rd)';
     var mColor = (t.momentumScore||0)>=70?'var(--gn)':(t.momentumScore||0)>=40?'var(--am)':'var(--rd)';
     var rColor = (t.readinessScore||0)>=70?'var(--gn)':(t.readinessScore||0)>=40?'var(--am)':'var(--rd)';
     html += '<div class="c" style="padding:10px;min-width:160px;position:relative">';
