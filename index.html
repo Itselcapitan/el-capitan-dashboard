@@ -4921,9 +4921,14 @@ async function sendChatMessage(){
     // Remove typing indicator
     typing.remove();
 
-    // Render reply
+    // Render reply — escape HTML first, then apply markdown
     var htmlReply = displayReply
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*(?!\*)([\s\S]*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code style="background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:10.5px">$1</code>')
       .replace(/\n/g, '<br>');
     appendChatMessage('ai', htmlReply);
 
