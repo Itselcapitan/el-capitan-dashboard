@@ -200,9 +200,38 @@ function buildDataSummary(latest, history, competitors, state) {
   const allTrackNames = (state?.tracks || []).map(t => t.name);
 
   // DJ/producer industry best practices (static context for Gemini)
-  // Sources: Indepenjend Free Content Guide, Wall Pro Academy (marketing, brand, collaboration, online presence)
+  // Sources: Indepenjend Free Content Guide, Wall Pro Academy, Buffer IG Algorithm Guide 2026, Buffer/Sprout Social TikTok Algorithm Guide 2026
   const industryBestPractices = [
-    // GROWTH & ALGORITHM
+    // ═══ CRITICAL: ALGORITHM INTELLIGENCE (2026) — HIGH PRIORITY IN ALL RECOMMENDATIONS ═══
+    // These are the actual ranking signals that determine reach. Every content suggestion MUST be optimized for these.
+
+    // TIKTOK ALGORITHM 2026 (Sources: Buffer, Sprout Social, TikTok Transparency Center)
+    'TIKTOK ALGO: Watch time + completion rate is the #1 ranking signal. Need 70%+ completion rate to go viral (up from 50% in 2024). Every video hook, length, and structure must be optimized for this.',
+    'TIKTOK ALGO: Saves and shares outweigh likes by a significant margin. A share or rewatch signals stronger interest than a like. Optimize content to be save-worthy (tutorials, tips, curated lists) or share-worthy (funny, relatable, jaw-dropping).',
+    'TIKTOK ALGO: FYP distribution works in waves — video shows to a small test audience of your followers first. If they engage (watch, share, save), it goes to a larger audience. If followers dont engage, the video dies. Posting when followers are active is critical.',
+    'TIKTOK ALGO: Videos 1-10 minutes are receiving significantly more distribution in 2026. Short clips under 30s are losing FYP favor. Aim for 60s-3min for maximum algorithmic reach.',
+    'TIKTOK ALGO: Content filmed natively in-app or CapCut (ByteDance-owned) gets preferential treatment. Cross-posted IG Reels with watermarks are actively suppressed.',
+    'TIKTOK ALGO: Posting frequency impact (from 11M+ TikToks analyzed): 2-5x/week = +17% views/post, 6-10x/week = +29%, 11+/week = +34%. Consistency > virality.',
+    'TIKTOK ALGO: 3-5 hashtags per post. Use 2-3 keywords in caption + on-screen text for TikTok SEO/search discovery.',
+    'TIKTOK ALGO: Stitches, Duets, and trending audio from TikTok library boost discoverability. Original audio also ranks well if it drives engagement.',
+    'TIKTOK ALGO: Hook viewers in first 3 seconds or they scroll. Front-load the payoff — dont build up to it.',
+
+    // INSTAGRAM ALGORITHM 2026 (Sources: Buffer, Instagram Creator Portal)
+    'INSTAGRAM ALGO: For Reels, DM shares are the most heavily weighted signal — especially shares from non-followers. Content that makes people want to send it to a friend gets maximum reach.',
+    'INSTAGRAM ALGO: Reels ranking signals in order: (1) DM shares, (2) saves, (3) watch time, (4) comments, (5) likes. Optimize for shareability and save-worthiness first, likes last.',
+    'INSTAGRAM ALGO: Optimal Reel length is 30-90 seconds. Can go to 3 min but shorter performs better on Explore.',
+    'INSTAGRAM ALGO: 50% of videos are watched without sound. Always add text overlays and captions. Strong visual hook on first frame is essential.',
+    'INSTAGRAM ALGO: Feed algorithm prioritizes: user engagement history > post performance speed > creator interaction history > relationship closeness.',
+    'INSTAGRAM ALGO: Carousels (up to 20 slides) get highest engagement of all post types, followed by Reels, then single images. From analysis of 4M+ posts.',
+    'INSTAGRAM ALGO: Stories primarily reach existing followers, not new audiences. Use interactive elements (polls, questions, "add yours" stickers) to boost story ranking.',
+    'INSTAGRAM ALGO: Hashtags no longer support follows (changed Dec 2024). Use 3-5 relevant hashtags max. Focus on keywords in captions/profiles for SEO instead.',
+    'INSTAGRAM ALGO: Consistent posters receive ~5x more engagement per post than sporadic posters. Post consistency is the single biggest controllable growth lever.',
+    'INSTAGRAM ALGO: Remove third-party watermarks (TikTok logos, editing app marks) — Instagram actively suppresses watermarked content.',
+    'INSTAGRAM ALGO: Best posting times (from 2M+ posts analyzed): Thursday 9am, Wednesday 12pm, Wednesday 6pm. But personal analytics override general data.',
+    'INSTAGRAM ALGO: Instagram is now recommendation-first (interest graph) not social-graph. Content competes on interest signals, not just follower relationships.',
+    'INSTAGRAM ALGO: Build momentum by posting follow-ups within 1-2 days of viral content — the algorithm gives a halo effect to creators with recent hits.',
+
+    // ═══ GENERAL GROWTH & STRATEGY ═══
     'TikTok > Instagram for artist discovery — prioritize it early career',
     'Engagement rate matters more than follower count for algorithm reach',
     '5 consistent posts/week outperforms 1 viral post/month long-term',
@@ -434,6 +463,7 @@ Return a JSON object with EXACTLY these fields:
 }
 
 RULES:
+- CRITICAL: The industryBestPractices array contains 2026 algorithm intelligence for both TikTok and Instagram (entries starting with "TIKTOK ALGO:" and "INSTAGRAM ALGO:"). EVERY content, posting, and strategy recommendation MUST be grounded in these algorithm signals. When suggesting post ideas, specify why the format optimizes for the relevant algorithm (e.g., "Reel under 90s with text overlay + strong hook = optimized for IG shares + muted viewing"). When suggesting posting times or frequency, reference the algorithm data.
 - Use industryBestPractices context to inform all recommendations.
 - performanceAlerts: exactly 2-3 items
 - opportunityAlerts: exactly 2-3 items
@@ -795,7 +825,7 @@ RULES:
 - Be specific with numbers — no generic advice
 - todayAction should align with the active weekly priorities but be day-specific
 - If this is the first daily run (no previous insight), focus yesterdayChanges on current state vs 7-day trends instead
-- Use industryBestPractices context to inform the todayAction recommendation
+- Use industryBestPractices context to inform the todayAction recommendation. CRITICAL: The industryBestPractices array contains 2026 algorithm intelligence (entries starting with "TIKTOK ALGO:" and "INSTAGRAM ALGO:"). The todayAction MUST be grounded in algorithm-optimal behavior (e.g., if suggesting a post, explain which algorithm signal it targets like completion rate, DM shares, saves, etc.)
 - Tone: direct, motivating, like a coach's morning briefing
 - Return valid JSON only.`;
 }
