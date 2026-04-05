@@ -260,6 +260,24 @@ function buildDataSummary(latest, history, competitors, state) {
     'El Capitán has only cross-posted IG Reels to TikTok so far — no TikTok-native content exists yet. Cross-posts typically get 30-50% fewer views than native TikTok video due to the watermark penalty and format mismatch.',
     'TikTok-native content opportunities: trending sound overlays on your music, duet/stitch with bigger DJs, vertical-first framing with TikTok text overlays, TikTok-specific hooks ("POV:", "Things DJs know", "Tell me you make tech house without..."), comment reply videos.',
     'Vertical-first filming is critical — content shot horizontally and cropped for TikTok underperforms native vertical by up to 40%.',
+    // PROVEN CONTENT FORMATS (from analyzed DJ/producer viral videos)
+    'HOOK: Visual Interrupt — strobe text cuts timed to kick drum. Use for remix drops. Stops scroll in <1s.',
+    'HOOK: Situational Irony — DJ in unexpected location (farm, subway, dorm room). High shareability; humanizes artist. Easy to execute: bring DDJ-400 somewhere weird.',
+    'HOOK: Audio Hook — muffled phone audio cutting to full master mix. Creates FOMO. One camera, two audio clips.',
+    'HOOK: Curiosity/FOMO — "How is no one talking about this?" format with screen record + green screen. High comment bait.',
+    'HOOK: Engagement bait — "Banger or not?" with fisheye lens. Forces comments. Fisheye lens adapter is cheap.',
+    'HOOK: Location — Golden Hour or landmark outdoor set (park, rooftop, fire escape). High aesthetic, highly shareable.',
+    'HOOK: Educational — DJ lifehack POV close-up (Rekordbox tip, Logic trick, cue point setup). Gets saves, which boosts algorithm.',
+    'HOOK: Nostalgia — tech house flip of a well-known pop/rap track with split-screen A/B. Proves production skill instantly.',
+    'TECHNIQUE: Kinetic typography — flash release text on every vocal hit. Works for OUT NOW posts.',
+    'TECHNIQUE: Frame-in-frame mask — project a festival set onto a dorm TV or phone screen. Low cost, high humor.',
+    'TECHNIQUE: VHS/grain overlay — dark, urgent teaser aesthetic. Easy in CapCut.',
+    'TECHNIQUE: Stutter/stop-motion edit — walking or moving with stutter effect. Works for lifestyle b-roll.',
+    'TECHNIQUE: Cloning multi-frame — makes solo artist look like a crew. Advanced but very high engagement.',
+    'PERSONALIZED: Film a secret set at a Union College or Boston landmark (rooftop, fire escape, campus at night).',
+    'PERSONALIZED: Studio session b-roll from an Uber or car — "produce anywhere" angle.',
+    'PERSONALIZED: Show Spotify/Logic Pro analytics on screen with facecam reaction — transparency builds trust.',
+    'PERSONALIZED: Tech house flip of a frat-house classic song — extremely relevant to college audience.',
   ];
 
   return {
