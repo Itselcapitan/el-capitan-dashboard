@@ -4809,7 +4809,7 @@ async function sendChatMessage(){
   var typing = appendTypingIndicator();
 
   try {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=' + key;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
     var body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: _chatHistory.slice(-10),
