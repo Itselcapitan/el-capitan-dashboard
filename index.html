@@ -4665,6 +4665,8 @@ function init(){
 var _chatOpen = false;
 var _chatHistory = [];
 var _geminiKeyCache = null;
+var _contextCacheId = null;
+var _contextCacheExpiry = null;
 
 function toggleChat(){
   _chatOpen = !_chatOpen;
@@ -4707,46 +4709,115 @@ function getGeminiKey(){
   });
 }
 
-function buildChatContext(){
-  var ctx = {};
-  // Current analytics
+// STATIC: cached with Gemini context caching (~$0.03/1M vs $0.30/1M)
+// Only rebuilt when cache expires (1 hour TTL)
+function buildStaticSystemPrompt(){
+  var playbook = (MSE.contentPlaybook||[]).map(function(p){
+    return '#'+p.id+' '+p.ref+' | Hook: '+p.hook+' | Tech: '+p.technique+' | Your version: '+p.myUse;
+  }).join('\n');
+
+  return 'You are El Capitán\'s personal music marketing AI assistant embedded in their artist dashboard.\n\n'
+    +'ARTIST: El Capitán — DJ/producer, tech house. @itselcapitan_ (IG), @itselcapitan (TT), soundcloud.com/itselcapitan. College senior at Union College, Schenectady NY.\n'
+    +'IMPORTANT: All TikTok posts so far are cross-posted IG Reels — no TikTok-native content yet. Cross-posts get 30-50% fewer views due to watermark penalty.\n\n'
+    +'CAPABILITIES:\n'
+    +'- Answer questions about analytics, performance, trends\n'
+    +'- Strategic advice grounded in actual numbers\n'
+    +'- Suggest content ideas using the 28-format content playbook below\n'
+    +'- Write captions, plan posts, brainstorm\n'
+    +'- Take actions by outputting a JSON block:\n'
+    +'```action\n{"type":"updateTrack","trackName":"Pack Up Ya Bags","field":"status","value":"DONE"}\n```\n'
+    +'```action\n{"type":"addTask","text":"Fix bio CTA","category":"Marketing","priority":"red"}\n```\n'
+    +'```action\n{"type":"addPipelineIdea","idea":"Secret set at Union rooftop","format":"Reel","track":""}\n```\n'
+    +'Supported action types: updateTrack (fields: status, stage, nextAction), addTask, addPipelineIdea\n\n'
+    +'TRACK STATUSES: PUSH=actively promoting, FINISH=production done/not released, DONE=released+promotion complete (AI ignores), HOLD=paused, KILL=abandoned\n\n'
+    +'TIKTOK ALGORITHM 2026:\n'
+    +'- Watch time/completion rate = #1 signal. Need 70%+ completion to go viral.\n'
+    +'- Saves + shares >> likes. A share/rewatch signals more than a like.\n'
+    +'- FYP works in waves: small follower test first → if they engage → wider audience. Dead with followers = dead.\n'
+    +'- 1-10 min videos get more distribution. Hook in first 3 seconds.\n'
+    +'- Native filming > cross-posted content (watermarks actively suppressed).\n'
+    +'- Frequency: 2-5x/wk = +17% views, 6-10x = +29%, 11+/wk = +34%.\n'
+    +'- 3-5 hashtags + keywords in caption + on-screen text for SEO.\n\n'
+    +'INSTAGRAM ALGORITHM 2026:\n'
+    +'- Reels: DM shares = #1 signal (especially non-followers). Then saves > comments > likes.\n'
+    +'- Optimal Reel: 30-90s. 50% watched muted — always add text overlays.\n'
+    +'- Consistent posters get 5x more engagement per post.\n'
+    +'- Carousels > Reels > single images (4M+ post analysis).\n'
+    +'- 3-5 hashtags max. Keywords in captions > hashtags (hashtag follows removed Dec 2024).\n'
+    +'- Post follow-up within 1-2 days of a viral post for halo effect.\n'
+    +'- Interest graph now > social graph — content competes on engagement signals.\n\n'
+    +'CONTENT PLAYBOOK (28 analyzed DJ/producer viral formats):\n'+playbook+'\n\n'
+    +'TONE: Direct, confident, slightly informal. Like a strategist texting their artist. Keep responses concise. Use simple HTML (bold, br). No essays.';
+}
+
+// DYNAMIC: sent fresh every message (~1-3K tokens of live data only)
+function buildDynamicContext(){
+  var ctx = {
+    today: new Date().toISOString().slice(0,10),
+    dayOfWeek: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]
+  };
   if(window._latestData) ctx.analytics = {
-    ig: window._latestData.ig, tiktok: window._latestData.tiktok, sc: window._latestData.sc,
-    deltas: window._latestData.deltas, alerts: (window._latestData.alerts||[]).slice(0,10),
+    ig: window._latestData.ig,
+    tiktok: window._latestData.tiktok,
+    sc: window._latestData.sc,
+    deltas: window._latestData.deltas,
     scrapedAt: window._latestData.scrapedAt
   };
-  // Strategy + daily insight
   if(window._strategyData) ctx.strategy = {
-    dailyInsight: window._strategyData.dailyInsight,
+    dailyInsight: window._strategyData.dailyInsight ? {
+      headline: window._strategyData.dailyInsight.headline,
+      todayAction: window._strategyData.dailyInsight.todayAction,
+      mood: window._strategyData.dailyInsight.mood
+    } : null,
     priorities: window._strategyData.priorities,
-    postIdeas: window._strategyData.postIdeas,
     trackToPush: window._strategyData.trackToPush,
-    campaignAction: window._strategyData.campaignAction,
-    keyInsights: window._strategyData.keyInsights,
-    weekOf: window._strategyData.weekOf,
-    generatedAt: window._strategyData.generatedAt
+    weekOf: window._strategyData.weekOf
   };
-  // Tracks
-  var tracks = (window.STATE && STATE.tracks) ? STATE.tracks.map(function(t){
-    return { name:t.name, status:t.status, stage:t.stage, momentum:t.momentumScore, readiness:t.readinessScore, nextAction:t.nextAction, genre:t.genre, type:t.type };
-  }) : [];
-  ctx.tracks = tracks;
-  // Tasks
-  var tasks = (window.STATE && STATE.tasks) ? STATE.tasks.filter(function(t){ return !t.done; }).slice(0,20).map(function(t){
-    return { text:t.text, category:t.category, priority:t.priority, done:t.done };
-  }) : [];
-  ctx.openTasks = tasks;
-  // Campaigns
-  ctx.campaigns = (window.STATE && STATE.campaigns) ? STATE.campaigns : [];
-  // MSE baseline
-  ctx.mseBaseline = { ig: MSE.ig, sc: MSE.sc, tiktok: MSE.tiktok, hypedit: MSE.hypedit };
-  // Content playbook summary
-  ctx.contentPlaybookCount = (MSE.contentPlaybook||[]).length;
-  ctx.contentPlaybookCategories = [...new Set((MSE.contentPlaybook||[]).map(function(p){ return p.category; }))];
-  // Date
-  ctx.today = new Date().toISOString().slice(0,10);
-  ctx.dayOfWeek = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
-  return ctx;
+  if(window.STATE){
+    ctx.tracks = (STATE.tracks||[]).map(function(t){
+      return {name:t.name, status:t.status, stage:t.stage, momentum:t.momentumScore, readiness:t.readinessScore, nextAction:t.nextAction};
+    });
+    ctx.openTasks = (STATE.tasks||[]).filter(function(t){return !t.done;}).slice(0,15).map(function(t){
+      return {text:t.text, category:t.category, priority:t.priority};
+    });
+    ctx.campaigns = (STATE.campaigns||[]).map(function(c){
+      return {name:c.name, status:c.status, platform:c.platform, spent:c.spent, budget:c.budget};
+    });
+  }
+  return JSON.stringify(ctx);
+}
+
+// Try to create a Gemini context cache for the static prompt
+// Falls back to full inline system prompt if cache fails
+async function getOrCreateCache(apiKey){
+  var now = Date.now();
+  if(_contextCacheId && _contextCacheExpiry && now < _contextCacheExpiry){
+    return _contextCacheId;
+  }
+  try {
+    var res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/cachedContents?key='+apiKey,
+      {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'models/gemini-2.5-flash-latest',
+          systemInstruction: { parts: [{ text: buildStaticSystemPrompt() }] },
+          contents: [],
+          ttl: '3600s'
+        })
+      }
+    );
+    if(!res.ok){ console.warn('[Chat] Cache create failed:', res.status); return null; }
+    var data = await res.json();
+    _contextCacheId = data.name;
+    _contextCacheExpiry = now + 55 * 60 * 1000; // refresh 5min before TTL
+    console.log('[Chat] Context cache created:', _contextCacheId);
+    return _contextCacheId;
+  } catch(e){
+    console.warn('[Chat] Cache error:', e.message);
+    return null;
+  }
 }
 
 function appendChatMessage(role, html){
@@ -4781,40 +4852,34 @@ async function sendChatMessage(){
     return;
   }
 
-  // Build context
-  var context = buildChatContext();
+  // Try to use context cache (static prompt cached, only dynamic data sent fresh)
+  var cacheId = await getOrCreateCache(key);
+  var dynamicCtx = buildDynamicContext();
 
-  // Build conversation
-  _chatHistory.push({ role: 'user', parts: [{ text: msg }] });
-
-  var systemPrompt = 'You are El Capitán\'s personal music marketing AI assistant embedded in their artist dashboard. You have full access to their real-time analytics, strategy, tracks, campaigns, and content data.\n\n'
-    + 'DASHBOARD CONTEXT (live data):\n' + JSON.stringify(context, null, 0) + '\n\n'
-    + 'CAPABILITIES:\n'
-    + '- Answer questions about their analytics, performance, trends\n'
-    + '- Give strategic advice grounded in their actual numbers\n'
-    + '- Suggest content ideas using their content playbook (28 formats)\n'
-    + '- Write captions, plan posts, brainstorm\n'
-    + '- When the user asks you to TAKE AN ACTION (change track status, add task, update something), respond with the action wrapped in a special JSON block like this:\n'
-    + '```action\n{"type":"updateTrack","trackName":"Pack Up Ya Bags","field":"status","value":"DONE"}\n```\n'
-    + 'or\n```action\n{"type":"addTask","text":"Fix bio CTA","category":"Marketing","priority":"red"}\n```\n'
-    + 'Supported action types: updateTrack (fields: status, stage, nextAction), addTask, addPipelineIdea\n'
-    + '- Always explain what you did and why\n\n'
-    + 'ALGORITHM KNOWLEDGE:\n'
-    + '- TikTok: Watch time/completion rate is #1 signal (70%+ to go viral). Saves/shares >> likes. 1-10 min videos favored. Native filming > cross-posts. 3-5x/week = +17% views.\n'
-    + '- Instagram Reels: DM shares are #1 signal. 30-90s optimal. 50% watched muted (need text overlays). Consistent posters get 5x engagement. Carousels > Reels > Images.\n'
-    + '- El Capitán has ONLY cross-posted IG Reels to TikTok so far. No TikTok-native content yet.\n\n'
-    + 'TONE: Direct, confident, slightly informal. Like a strategist texting their artist. Keep responses concise — this is a chat, not an essay. Use line breaks for readability.\n'
-    + 'Format: Use simple HTML for formatting (bold, line breaks, etc). Keep it short.';
+  // User message includes live data prefix
+  var userMsgWithCtx = 'LIVE DASHBOARD DATA (as of now):\n' + dynamicCtx + '\n\nUSER: ' + msg;
+  _chatHistory.push({ role: 'user', parts: [{ text: userMsgWithCtx }] });
 
   var typing = appendTypingIndicator();
 
   try {
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
-    var body = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: _chatHistory.slice(-10),
-      generationConfig: { temperature: 0.8, maxOutputTokens: 1024 }
-    };
+    var body;
+    if(cacheId){
+      // Cached path: static prompt in cache, only dynamic context + message sent
+      body = {
+        cachedContent: cacheId,
+        contents: _chatHistory.slice(-10),
+        generationConfig: { temperature: 0.8, maxOutputTokens: 1024 }
+      };
+    } else {
+      // Fallback: full inline system prompt (no cache)
+      body = {
+        systemInstruction: { parts: [{ text: buildStaticSystemPrompt() }] },
+        contents: _chatHistory.slice(-10),
+        generationConfig: { temperature: 0.8, maxOutputTokens: 1024 }
+      };
+    }
     var res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4828,8 +4893,15 @@ async function sendChatMessage(){
     var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
     if(!reply) throw new Error('Empty response from Gemini');
 
-    // Add to history
+    // Add model reply to history (subsequent turns don't need live data prefix)
     _chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+    // Replace last user entry with clean message (no live data prefix) for subsequent turns
+    if(_chatHistory.length >= 2){
+      var lastUser = _chatHistory[_chatHistory.length - 2];
+      if(lastUser.role === 'user' && lastUser.parts[0].text.startsWith('LIVE DASHBOARD DATA')){
+        lastUser.parts[0].text = msg;
+      }
+    }
 
     // Parse out any action blocks
     var actions = [];
