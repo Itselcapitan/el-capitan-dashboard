@@ -4878,14 +4878,14 @@ async function sendChatMessage(){
       body = {
         cachedContent: cacheId,
         contents: _chatHistory.slice(-10),
-        generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
+        generationConfig: { temperature: 0.8, maxOutputTokens: 8192 }
       };
     } else {
       // Fallback: full inline system prompt (no cache)
       body = {
         systemInstruction: { parts: [{ text: buildStaticSystemPrompt() }] },
         contents: _chatHistory.slice(-10),
-        generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
+        generationConfig: { temperature: 0.8, maxOutputTokens: 8192 }
       };
     }
     var res = await fetch(url, {
