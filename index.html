@@ -4677,9 +4677,6 @@ function toggleChat(){
   panel.style.display = _chatOpen ? 'flex' : 'none';
   if(_chatOpen){
     document.getElementById('chat-input').focus();
-    // Invalidate any old cache (model name may have changed)
-    _contextCacheId = null;
-    _contextCacheExpiry = null;
   }
 }
 
@@ -4844,19 +4841,30 @@ function appendTypingIndicator(){
   return appendChatMessage('ai', '<span style="color:#00e5ff;opacity:.7">● ● ●</span>');
 }
 
+var _chatSending = false;
+
 async function sendChatMessage(){
+  if(_chatSending) return; // prevent double-send
   var input = document.getElementById('chat-input');
+  var sendBtn = input.parentElement.querySelector('button');
   var msg = input.value.trim();
   if(!msg) return;
   input.value = '';
 
+  // Lock UI
+  _chatSending = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = '...';
+  input.disabled = true;
+
   // Show user message
-  appendChatMessage('user', msg.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  appendChatMessage('user', msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
 
   // Get API key
   var key = await getGeminiKey();
   if(!key){
     appendChatMessage('ai', '<span style="color:var(--rd)">No Gemini API key found.</span> Go to <strong>Settings &rarr; AI Assistant</strong> to add one.');
+    _chatSending = false; sendBtn.disabled = false; sendBtn.textContent = 'SEND'; input.disabled = false;
     return;
   }
 
@@ -4868,20 +4876,21 @@ async function sendChatMessage(){
   var userMsgWithCtx = 'LIVE DASHBOARD DATA (as of now):\n' + dynamicCtx + '\n\nUSER: ' + msg;
   _chatHistory.push({ role: 'user', parts: [{ text: userMsgWithCtx }] });
 
+  // Trim history to last 20 entries max (memory management)
+  if(_chatHistory.length > 20) _chatHistory = _chatHistory.slice(-20);
+
   var typing = appendTypingIndicator();
 
   try {
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key;
     var body;
     if(cacheId){
-      // Cached path: static prompt in cache, only dynamic context + message sent
       body = {
         cachedContent: cacheId,
         contents: _chatHistory.slice(-10),
         generationConfig: { temperature: 0.8, maxOutputTokens: 8192 }
       };
     } else {
-      // Fallback: full inline system prompt (no cache)
       body = {
         systemInstruction: { parts: [{ text: buildStaticSystemPrompt() }] },
         contents: _chatHistory.slice(-10),
@@ -4898,10 +4907,20 @@ async function sendChatMessage(){
       throw new Error(res.status + ': ' + errText.slice(0,200));
     }
     var data = await res.json();
-    var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+
+    // Concatenate ALL parts (Gemini can split long responses across multiple parts)
+    var candidate = data.candidates && data.candidates[0];
+    var reply = '';
+    if(candidate && candidate.content && candidate.content.parts){
+      reply = candidate.content.parts.map(function(p){ return p.text || ''; }).join('');
+    }
     if(!reply) throw new Error('Empty response from Gemini');
 
-    // Add model reply to history (subsequent turns don't need live data prefix)
+    // Check if response was truncated
+    var finishReason = candidate.finishReason || '';
+    var wasTruncated = finishReason === 'MAX_TOKENS' || finishReason === 'RECITATION';
+
+    // Add model reply to history
     _chatHistory.push({ role: 'model', parts: [{ text: reply }] });
     // Replace last user entry with clean message (no live data prefix) for subsequent turns
     if(_chatHistory.length >= 2){
@@ -4921,31 +4940,29 @@ async function sendChatMessage(){
     // Remove typing indicator
     typing.remove();
 
-    // Render reply — escape HTML first, then apply markdown
-    var htmlReply = displayReply
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/(?<!\*)\*(?!\*)([\s\S]*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code style="background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:10.5px">$1</code>')
-      .replace(/\n/g, '<br>');
+    // Render reply — escape HTML, then apply markdown formatting
+    var htmlReply = formatGeminiMarkdown(displayReply);
     appendChatMessage('ai', htmlReply);
+
+    // Show truncation warning if needed
+    if(wasTruncated){
+      appendChatMessage('ai', '<span style="color:var(--am);font-size:10px">⚠️ Response was truncated (hit token limit). Ask me to continue or be more specific.</span>');
+    }
 
     // Render action buttons
     actions.forEach(function(action){
       var desc = '';
-      if(action.type === 'updateTrack') desc = 'Update <strong>'+action.trackName+'</strong> → '+action.field+' = '+action.value;
+      if(action.type === 'updateTrack') desc = 'Update <strong>'+action.trackName+'</strong> &rarr; '+action.field+' = '+action.value;
       else if(action.type === 'addTask') desc = 'Add task: <strong>'+action.text+'</strong>';
       else if(action.type === 'addPipelineIdea') desc = 'Add to pipeline: <strong>'+action.idea+'</strong>';
       else desc = JSON.stringify(action);
 
       var actionB64 = btoa(unescape(encodeURIComponent(JSON.stringify(action))));
-      var btnDiv = appendChatMessage('ai',
-        '<div style="padding:8px;border:1px solid rgba(0,229,255,.2);border-radius:6px;background:rgba(0,229,255,.04)">'
-        + '<div style="font-size:10px;color:var(--dm);margin-bottom:6px">SUGGESTED ACTION</div>'
-        + '<div style="font-size:11px;margin-bottom:8px">'+desc+'</div>'
-        + '<button onclick="applyChatAction(this,\'' + actionB64 + '\')" class="chat-apply-btn" style="font-size:9px;padding:4px 12px;background:var(--ac);color:#111;border:none;border-radius:4px;cursor:pointer;font-weight:700">APPLY</button>'
+      appendChatMessage('ai',
+        '<div style="padding:10px;border:1px solid rgba(0,229,255,.25);border-radius:8px;background:rgba(0,229,255,.06)">'
+        + '<div style="font-size:9px;color:var(--dm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Suggested Action</div>'
+        + '<div style="font-size:11px;margin-bottom:8px;color:#e8e8f0">'+desc+'</div>'
+        + '<button onclick="applyChatAction(this,\'' + actionB64 + '\')" class="chat-apply-btn" style="font-size:9px;padding:5px 14px;background:var(--ac);color:#111;border:none;border-radius:5px;cursor:pointer;font-weight:700">APPLY</button>'
         + '<span class="chat-action-status" style="font-size:9px;color:var(--dm);margin-left:8px"></span>'
         + '</div>'
       );
@@ -4954,7 +4971,55 @@ async function sendChatMessage(){
   } catch(err){
     typing.remove();
     appendChatMessage('ai', '<span style="color:var(--rd)">Error: '+err.message+'</span>');
+  } finally {
+    // Unlock UI
+    _chatSending = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'SEND';
+    input.disabled = false;
+    input.focus();
   }
+}
+
+// Convert Gemini markdown to safe HTML
+function formatGeminiMarkdown(text){
+  // 1. Escape HTML entities
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // 2. Bold: **text**
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // 3. Inline code: `text`
+  text = text.replace(/`([^`]+)`/g, '<code style="background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:10.5px">$1</code>');
+
+  // 4. Process line by line for lists + italics
+  var lines = text.split('\n');
+  var inList = false;
+  var result = [];
+  for(var i = 0; i < lines.length; i++){
+    var line = lines[i];
+    // Bullet list: "* item" or "- item" at start of line
+    var bulletMatch = line.match(/^(\s*)[*\-]\s+(.+)/);
+    if(bulletMatch){
+      if(!inList){ result.push('<div style="margin:4px 0 4px 4px">'); inList = true; }
+      result.push('<div style="padding:2px 0 2px 10px;border-left:2px solid rgba(0,229,255,.25)">'+bulletMatch[2]+'</div>');
+      continue;
+    }
+    // Numbered list: "1. item"
+    var numMatch = line.match(/^(\s*)\d+\.\s+(.+)/);
+    if(numMatch){
+      if(!inList){ result.push('<div style="margin:4px 0 4px 4px">'); inList = true; }
+      result.push('<div style="padding:2px 0 2px 10px;border-left:2px solid rgba(123,47,247,.3)">'+numMatch[2]+'</div>');
+      continue;
+    }
+    // Close list if open
+    if(inList){ result.push('</div>'); inList = false; }
+    // Italic: *text* (only on non-list lines, single * not at line start)
+    line = line.replace(/(?<!\w)\*([^\*\n]+)\*(?!\w)/g, '<em>$1</em>');
+    result.push(line === '' ? '<br>' : line + '<br>');
+  }
+  if(inList) result.push('</div>');
+  return result.join('');
 }
 
 function applyChatAction(btn, b64){
