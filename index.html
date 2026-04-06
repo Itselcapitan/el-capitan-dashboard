@@ -1202,10 +1202,11 @@ function renderTracks(){
     if(!tr.liveTests) tr.liveTests=[]; if(!Array.isArray(tr.liveTests)) tr.liveTests=Object.values(tr.liveTests);
     if(!tr.versions) tr.versions=[]; if(!Array.isArray(tr.versions)) tr.versions=Object.values(tr.versions);
 
-    // Calculate completion percentage
-    var trackTasks = STATE.tasks.filter(function(t){ return t.trackId===tr.id && t.parentId; });
-    var doneTasks = trackTasks.filter(function(t){ return t.status==='completed'; });
-    var pct = trackTasks.length>0 ? Math.round((doneTasks.length/trackTasks.length)*100) : 0;
+    // Calculate completion percentage from production stage (1-16)
+    // Stage is the source of truth — not dependent on subtask data
+    var maxStage = PRODUCTION_STAGES.length; // 16
+    var curStage = Math.max(1, Math.min(maxStage, tr.stage || 1));
+    var pct = tr.status === 'DONE' || tr.status === 'KILL' ? 100 : Math.round(((curStage - 1) / (maxStage - 1)) * 100);
     var pctColor = pct>=80?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';
 
     var stageIdx = (tr.stage||1)-1; if(stageIdx<0) stageIdx=0; if(stageIdx>=PRODUCTION_STAGES.length) stageIdx=PRODUCTION_STAGES.length-1;
@@ -1769,6 +1770,17 @@ function renderArtistScore(){
   if(!el) return;
   var s = computeArtistScore();
 
+  // Smooth score using EMA (exponential moving average) against yesterday's score
+  // This prevents wild day-to-day swings — score moves max ~30% toward new value each day
+  var EMA_ALPHA = 0.3; // 0.3 = 30% new, 70% old — smooth but responsive
+  if(STATE.scores && STATE.scores.length > 0){
+    var lastScore = STATE.scores[STATE.scores.length - 1];
+    if(lastScore.date !== s.date && typeof lastScore.total === 'number'){
+      // New day: blend with previous score
+      s.total = Math.round(EMA_ALPHA * s.total + (1 - EMA_ALPHA) * lastScore.total);
+    }
+  }
+
   // Store score snapshot (max 1 per day)
   var today = s.date;
   var existing = STATE.scores.find(function(x){ return x.date === today; });
@@ -1928,10 +1940,14 @@ function showAllTrackScores(){
 function computeAlerts(){
   var alerts = [];
 
-  // Posting cadence
+  // Posting cadence (Monday-Sunday week)
   var now = new Date();
-  var weekAgo = new Date(now - 7*24*60*60*1000);
-  var postsThisWeek = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt) >= weekAgo; }).length;
+  var dow = now.getDay(); // 0=Sun
+  var daysSinceMon = dow === 0 ? 6 : dow - 1;
+  var mondayStart = new Date(now);
+  mondayStart.setDate(mondayStart.getDate() - daysSinceMon);
+  mondayStart.setHours(0,0,0,0);
+  var postsThisWeek = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt) >= mondayStart; }).length;
   if(postsThisWeek < 4) alerts.push({level:'amber', msg:'Only '+postsThisWeek+'/5 posts this week \u2014 cadence below target'});
 
   // Overdue tasks

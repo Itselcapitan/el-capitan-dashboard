@@ -7,12 +7,25 @@
  * 1. DAILY INSIGHT (every day) — lightweight Gemini call generating
  *    a morning briefing: what changed yesterday, how the week is going,
  *    and what to do today.
- * 2. WEEKLY STRATEGY (every 7+ days) — full Gemini call generating
+ * 2. WEEKLY STRATEGY (Mondays only) — full Gemini call generating
  *    priorities, post ideas, track to push, campaign action, etc.
- *    Only regenerates if last weekly run was 7+ days ago.
+ *    Runs on Monday mornings to start each week fresh.
+ *
+ * All "this week" metrics use Monday-Sunday boundaries.
  *
  * Env vars: FIREBASE_DB_URL, FIREBASE_DB_SECRET, GEMINI_API_KEY
  */
+
+// Get the start of the current Monday-Sunday week (Monday 00:00 UTC)
+function getMondayStartMs() {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() - daysSinceMonday);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday.getTime();
+}
 
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
@@ -115,14 +128,15 @@ function buildDataSummary(latest, history, competitors, state) {
   const tt = latest?.tiktok || {};
   const sc = latest?.sc || {};
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  // Count posts since Monday (Mon-Sun week)
+  const mondayMs = getMondayStartMs();
   const recentIG = (latest?.igPosts || []).filter(p => {
     const ts = p.timestamp ? new Date(p.timestamp).getTime() : 0;
-    return ts > weekAgo;
+    return ts > mondayMs;
   }).length;
   const recentTT = (latest?.ttPosts || []).filter(p => {
     const ts = p.createTimeISO ? new Date(p.createTimeISO).getTime() : 0;
-    return ts > weekAgo;
+    return ts > mondayMs;
   }).length;
 
   const tracks = (state?.tracks || [])
@@ -584,14 +598,15 @@ function computeTrend(history, platform, metric, days) {
 function computePriorities(latest, state, history) {
   const candidates = [];
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  // Count posts since Monday (Mon-Sun week)
+  const mondayMs = getMondayStartMs();
   const recentIG = (latest?.igPosts || []).filter(p => {
     const ts = p.timestamp ? new Date(p.timestamp).getTime() : 0;
-    return ts > weekAgo;
+    return ts > mondayMs;
   }).length;
   const recentTT = (latest?.ttPosts || []).filter(p => {
     const ts = p.createTimeISO ? new Date(p.createTimeISO).getTime() : 0;
-    return ts > weekAgo;
+    return ts > mondayMs;
   }).length;
   const weekPosts = recentIG + recentTT;
 
@@ -874,16 +889,19 @@ async function main() {
 
   console.log('  Data loaded from Firebase');
 
-  // Determine if weekly strategy needs regeneration (7+ days since last)
+  // Determine if weekly strategy needs regeneration
+  // Weekly runs on Mondays (or first run if no strategy exists)
+  const todayDate = new Date();
+  const isMonday = todayDate.getUTCDay() === 1; // GitHub Actions runs in UTC; 10:15 UTC = 6:15am ET
   const lastWeeklyAt = existingStrategy?.generatedAt;
-  let daysSinceWeekly = 999;
-  if (lastWeeklyAt) {
-    daysSinceWeekly = (Date.now() - new Date(lastWeeklyAt).getTime()) / (24 * 60 * 60 * 1000);
-  }
-  const needsWeekly = daysSinceWeekly >= 7 || !existingStrategy?.priorities;
+  const lastWeeklyDate = lastWeeklyAt ? new Date(lastWeeklyAt).toISOString().slice(0, 10) : null;
+  const todayStr = todayDate.toISOString().slice(0, 10);
+  const alreadyRanToday = lastWeeklyDate === todayStr;
+  const needsWeekly = (!existingStrategy?.priorities) || (isMonday && !alreadyRanToday);
 
-  console.log(`  Last weekly strategy: ${lastWeeklyAt ? lastWeeklyAt.slice(0, 10) : 'never'} (${daysSinceWeekly.toFixed(1)} days ago)`);
-  console.log(`  Mode: ${needsWeekly ? 'WEEKLY + DAILY' : 'DAILY ONLY'}\n`);
+  console.log(`  Last weekly strategy: ${lastWeeklyDate || 'never'}`);
+  console.log(`  Today: ${todayStr} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][todayDate.getUTCDay()]})`);
+  console.log(`  Mode: ${needsWeekly ? 'WEEKLY + DAILY (Monday refresh)' : 'DAILY ONLY'}\n`);
 
   const dataSummary = buildDataSummary(latest, history, competitors, state);
 
