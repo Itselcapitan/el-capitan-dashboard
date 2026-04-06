@@ -897,7 +897,8 @@ async function main() {
   const lastWeeklyDate = lastWeeklyAt ? new Date(lastWeeklyAt).toISOString().slice(0, 10) : null;
   const todayStr = todayDate.toISOString().slice(0, 10);
   const alreadyRanToday = lastWeeklyDate === todayStr;
-  const needsWeekly = (!existingStrategy?.priorities) || (isMonday && !alreadyRanToday);
+  const forceWeekly = process.env.FORCE_WEEKLY === 'true';
+  const needsWeekly = forceWeekly || (!existingStrategy?.priorities) || (isMonday && !alreadyRanToday);
 
   console.log(`  Last weekly strategy: ${lastWeeklyDate || 'never'}`);
   console.log(`  Today: ${todayStr} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][todayDate.getUTCDay()]})`);
