@@ -803,6 +803,9 @@ ${JSON.stringify(dataSummary)}
 PREVIOUS DAILY INSIGHT (yesterday):
 ${prevInsight ? JSON.stringify(prevInsight) : 'None (first daily run)'}
 
+TODAY: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })} (Day ${(() => { const d = new Date(); const dow = d.getUTCDay(); return dow === 0 ? 7 : dow; })()}/7 of the Mon-Sun week)
+Posts so far this week: ${dataSummary.postsThisWeek?.total || 0} / ${dataSummary.postsThisWeek?.target || 5} target
+
 ACTIVE WEEKLY STRATEGY (generated ${weeklyGeneratedAt}):
 - Priorities: ${JSON.stringify(weeklyPriorities)}
 - Track to push: ${weeklyTrackToPush ? weeklyTrackToPush.name : 'None'}
@@ -839,6 +842,8 @@ RULES:
 - yesterdayChanges.highlights: 3-5 items covering followers, engagement, plays, views across platforms
 - Be specific with numbers — no generic advice
 - todayAction should align with the active weekly priorities but be day-specific
+- CRITICAL: The week runs Monday to Sunday. Evaluate posting cadence relative to the day of the week. On Monday, 0 posts is expected (the week just started) — don't alarm about being behind. On Wednesday, 1-2 posts is on pace. By Friday, 3+ posts means on track. Only flag cadence as a concern if the artist is genuinely behind the pace for the current day, not just because the absolute count is low early in the week.
+- weekProgress.onTrack should account for the day of week: on Monday, 0 posts = on track. The expected pace is roughly (dayOfWeek / 7) * target.
 - If this is the first daily run (no previous insight), focus yesterdayChanges on current state vs 7-day trends instead
 - Use industryBestPractices context to inform the todayAction recommendation. CRITICAL: The industryBestPractices array contains 2026 algorithm intelligence (entries starting with "TIKTOK ALGO:" and "INSTAGRAM ALGO:"). The todayAction MUST be grounded in algorithm-optimal behavior (e.g., if suggesting a post, explain which algorithm signal it targets like completion rate, DM shares, saves, etc.)
 - Tone: direct, motivating, like a coach's morning briefing
