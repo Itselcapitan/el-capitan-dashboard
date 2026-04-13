@@ -352,25 +352,39 @@ body.view-only .track-field select{pointer-events:none;opacity:.7;display:block!
 // MASTER STRATEGY ENGINE — SINGLE SOURCE OF TRUTH
 // =====================================================
 var MSE = {
-  lastUpdated: "2026-04-03",
-  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (last 30 days) + TikTok Studio (last 7 days) + Hypeddit + 200 competitor reels (14 accounts, 6 datasets)",
+  lastUpdated: "2026-04-13",
+  dataSource: "Apify live scrape + SoundCloud Artist Pro + IG Professional Dashboard (last 30d + last 7d) + TikTok Studio (last 7 days) + Hypeddit + accumulated competitor reels (8 accounts, growing pool)",
   ig: {
-    lastUpdated: "2026-04-06",
+    lastUpdated: "2026-04-13",
     followers: 360, posts: 30, engRate: 4.8, avgEng: 24.0, topPost: 117, topFormat: "Co-authored event promo",
-    views: 37124, interactions: 1796, accountsReached: 8657, impressions: 37124,
+    // 30-day window (Mar 15 – Apr 13)
+    views: 34730, interactions: 1678, accountsReached: 9026, impressions: 34730,
     profileVisits: 2047, externalLinkTaps: 17, profileActivity: 2064,
-    followersNonFollowers: "34.8% / 65.2%", interactionFollowersNonFollowers: "68.2% / 31.8%",
-    reelsViewShare: 68.8, postsViewShare: 11.5, storiesViewShare: 19.7,
-    reelsInteractionShare: 84.4, postsInteractionShare: 12.0, storiesInteractionShare: 3.6,
+    followersNonFollowers: "33% / 67%", interactionFollowersNonFollowers: "66.3% / 33.7%",
+    reelsViewShare: 66.9, postsViewShare: 11.3, storiesViewShare: 21.8,
+    reelsInteractionShare: 88.3, postsInteractionShare: 7.8, storiesInteractionShare: 3.9,
     peakHour: "12pm-3pm", peakDay: "Fri-Sat",
-    // 30-day report (Mar 7 – Apr 6)
+    // 30-day report (Mar 15 – Apr 13)
     followerGrowth: 16, netFollowers: 360, unfollowRate: 13,
-    nonFollowerReach: 65.2,
+    nonFollowerReach: 67.0,
     profileVisitRate: 23.6, linkClickRate: 0.8,
     totalLikes: 333, totalComments: 23, totalShares: 256, totalSaves: 7,
     reelLikes: 241, reelComments: 23, reelShares: 109,
     demo18_24: 58.3, demo25_34: 29.8, demo35_44: 8.3, demoMale: 70.5, demoFemale: 29.5,
     geoSchenectady: 41.3, geoNYC: 3.2, geoBoston: 2.8, geoAlbany: 2.4,
+    // 7-day window (Apr 6 – Apr 13)
+    views7d: 3434, accountsReached7d: 1376, interactions7d: 88,
+    followersNonFollowers7d: "24.1% / 75.9%", interactionFollowersNonFollowers7d: "38.6% / 61.4%",
+    reelsViewShare7d: 64.1, storiesViewShare7d: 32.5, postsViewShare7d: 3.3,
+    reelsInteractionShare7d: 97.4, postsInteractionShare7d: 1.3, storiesInteractionShare7d: 1.3,
+    topContent7d: [
+      { date: "Apr 12", views: 633 },
+      { date: "Apr 8", views: 424 },
+      { date: "Apr 8", views: 288 },
+      { date: "Apr 9", views: 153 },
+      { date: "Apr 10", views: 133 }
+    ],
+    note: "30d window shifted to Mar 15–Apr 13. Accounts reached grew to 9,026 (+4.3% vs last read). Non-follower reach increased to 67% (was 65.2%) — discovery improving. 7d shows strong Apr 12 reel at 633 views.",
     audienceActiveTimes: {
       monday:   { "12a":36, "3a":84,  "6a":149, "9a":165, "12p":175, "3p":178, "6p":160, "9p":68  },
       friday:   { "12a":35, "3a":83,  "6a":158, "9a":178, "12p":178, "3p":180, "6p":162, "9p":92  },
@@ -390,36 +404,41 @@ var MSE = {
     note: "PUYB gate now at 84% capacity (up to 4,000 fans). Total 40 fans added, 34 emails captured across all gates. Lifetime Fans counter shows 0 — artist profile not yet created on Hypeddit."
   },
   sc: {
-    lastUpdated: "2026-04-06",
+    lastUpdated: "2026-04-13",
     followers: 36, tracks: 9, url: "soundcloud.com/itselcapitan",
-    plays30d: 1787, plays30dGrowth: "+720%",
-    likes30d: 38, comments30d: 23, reposts30d: 13, downloads30d: 0,
-    topTrack30d: "Pack Up Ya Bags (1,679 plays)",
+    // 30-day window (Mar 15 – Apr 13)
+    plays30d: 2120, plays30dGrowth: "+1,209%",
+    likes30d: 43, comments30d: 25, reposts30d: 15, downloads30d: 1,
+    topTrack30d: "Pack Up Ya Bags (1,993 plays)",
     topTracks30d: [
-      { name: "Pack Up Ya Bags (El Capitan Remix)", plays: 1679 },
-      { name: "Every 1's A Winner (El Capitan Remix)", plays: 54 },
-      { name: "DANCE.", plays: 21 }
+      { name: "Pack Up Ya Bags (El Capitan Remix)", plays: 1993 },
+      { name: "Every 1's A Winner (El Capitan Remix)", plays: 45 },
+      { name: "UNION WLAX MIX '26", plays: 20 }
     ],
-    topListeners: ["Joao Avila 3 (24 plays, 59 followers)", "User 127061784 (11 plays)", "Vt (10 plays)"],
+    topListeners: ["Joao Avila 3 (30 plays, 59 followers)", "User 148173996 (12 plays)", "User 127061784 (11 plays)"],
     topCountries: [
       { country: "Vietnam", plays: 757 },
       { country: "United States", plays: 228 },
       { country: "South Korea", plays: 80 }
     ],
-    note: "PUYB dominates at 94% of all plays (1,679/1,787). Vietnam is #1 listener country at 757 plays — significant international organic reach. Spike driven by PUYB release Mar 22-27."
+    downloads: { track: "Paradise (El Capitan Remix)", count: 1, downloader: "VO (348 followers, 8 tracks)" },
+    note: "PUYB has grown to 1,993 plays (from 1,679 last read) — still dominating at 94% of all plays. Total plays up +18.6% to 2,120 in 30 days vs 1,787 last read. Paradise got first download — VO has 348 followers. UNION WLAX MIX '26 entered top 3."
   },
   tiktok: {
-    lastUpdated: "2026-04-06",
-    active: true, handle: "@itselcapitan", followers: 36, likes: 569, posts: 7, joined: "2026-03-20",
+    lastUpdated: "2026-04-13",
+    active: true, handle: "@itselcapitan", followers: 37, likes: 578, posts: 9, joined: "2026-03-20",
     contentStrategy: "ALL posts to date have been direct cross-posts of Instagram Reels — no TikTok-native content yet. Metrics are strong given this handicap. Next step is TikTok-native vertical video (trending audio, TikTok-specific hooks, duets/stitches).",
-    videoViews7d: 1600, videoViewsGrowth: "-46.3%",
-    profileViews7d: 59, profileViewsGrowth: "+73.5%",
-    likes7d: 49, likesGrowth: "-87.1%",
-    comments7d: 3, shares7d: 11,
-    note: "Sharp drop in video views this week (-46.3%) with no new posts — expected decay from cross-posted content. Profile views up +73.5% suggesting curious new visitors. Engagement declining without fresh content.",
+    // 7-day window (Apr 6 – Apr 13)
+    videoViews7d: 561, videoViewsGrowth: "-64.2%",
+    profileViews7d: 10, profileViewsGrowth: "-83.1%",
+    likes7d: 11, likesGrowth: "-77.6%",
+    comments7d: 0, shares7d: 1,
+    note: "Significant metric decay this week — views down 64.2%, profile views down 83.1%. Two new posts (paradise Apr 11: 177 views, 6 likes; sunset remix Apr 9: 147 views, 2 likes). Follower count grew +1 to 37. Decay is expected without native TikTok content. These cross-posts are underperforming vs last week's level.",
     bestPost: "ChatGPT DJ plug-in reel (603 views, 16 likes)",
     avgPlaysPerPost: 243,
     recentPosts: [
+      { caption: "paradise #deephouse #sunsetvibes #newmusic #saderemix", plays: 177, likes: 6, comments: 0, date: "2026-04-11" },
+      { caption: "Made this remix for those sunset, intimate summer moments. Sade's voice was made for this.", plays: 147, likes: 2, comments: 0, date: "2026-04-09" },
       { caption: "leaving for school in a few hours, still shot this in the rain", plays: 307, likes: 10, comments: 1, date: "2026-03-31" },
       { caption: "Used ChatGPT to ask a DJ in Punta Cana if I could plug in my USB", plays: 603, likes: 16, comments: 1, date: "2026-03-29" }
     ]
@@ -2520,10 +2539,16 @@ function loadAnalytics(){
 }
 
 function loadCompetitors(){
-  db.ref('competitors/latest').once('value', function(snap){
-    var data = snap.val();
-    if(!data) return;
-    window._competitorData = data;
+  // Load both snapshot and accumulated reel pool concurrently
+  var latestRef = db.ref('competitors/latest').once('value');
+  var poolRef = db.ref('competitors/allReels').once('value');
+  Promise.all([latestRef, poolRef]).then(function(snaps){
+    var data = snaps[0].val();
+    var pool = snaps[1].val();
+    if(!data && !pool) return;
+    window._competitorData = data || {};
+    // Accumulated pool: object keyed by shortCode → convert to array
+    window._competitorPool = pool ? Object.values(pool) : [];
     renderCompetitorData();
   });
 }
@@ -2741,35 +2766,59 @@ function renderContentStats(){
 }
 
 function renderCompetitorData(){
-  var cdata = window._competitorData;
-  if(!cdata) return;
+  var cdata = window._competitorData || {};
+  // Use accumulated reel pool when available (richer data), fall back to snapshot
+  var pool = window._competitorPool || [];
+  var usePool = pool.length > 0;
+  var sourceReels = usePool
+    ? pool.slice().sort(function(a,b){ return ((b.likesCount||0)+(b.commentsCount||0))-((a.likesCount||0)+(a.commentsCount||0)); })
+    : (cdata.patterns && Array.isArray(cdata.patterns.top10) ? cdata.patterns.top10 : []);
 
-  // --- Top Reels table ---
+  // Update pool stats banner if element exists
+  var poolBanner = document.getElementById('competitor-pool-stats');
+  if(poolBanner){
+    var scrapedAt = cdata.scrapedAt ? new Date(cdata.scrapedAt).toLocaleDateString() : '—';
+    if(usePool){
+      poolBanner.innerHTML = '&#127909; <strong>' + pool.length + ' reels</strong> accumulated across all scrapes &nbsp;·&nbsp; last scraped ' + scrapedAt;
+      poolBanner.style.display = '';
+    } else {
+      poolBanner.innerHTML = 'Last scraped ' + scrapedAt + ' &nbsp;·&nbsp; Pool building...';
+      poolBanner.style.display = '';
+    }
+  }
+
+  // ── Top Reels table (from accumulated pool or snapshot) ──
   var reelsTable = document.getElementById('top-reels-table');
-  if(reelsTable && cdata.patterns && cdata.patterns.top10 && cdata.patterns.top10.length){
+  if(reelsTable && sourceReels.length){
     var rows = '';
-    var top10 = Array.isArray(cdata.patterns.top10) ? cdata.patterns.top10 : Object.values(cdata.patterns.top10);
-    top10.forEach(function(r, i){
+    var displayReels = sourceReels.slice(0, 15); // show up to 15 from pool
+    displayReels.forEach(function(r, i){
       var likes = r.likesCount ? (r.likesCount >= 1000 ? (r.likesCount/1000).toFixed(1)+'K' : r.likesCount.toLocaleString()) : '\u2014';
-      var views = r.videoViewCount ? (r.videoViewCount >= 1000000 ? (r.videoViewCount/1000000).toFixed(1)+'M' : r.videoViewCount >= 1000 ? (r.videoViewCount/1000).toFixed(0)+'K' : r.videoViewCount.toLocaleString()) : '\u2014';
-      var eng = (r.likesCount && r.videoViewCount) ? ((r.likesCount/r.videoViewCount)*100).toFixed(1) + '%' : '\u2014';
-      var caption = (r.caption||'').substring(0,40) || '(no caption)';
-      var user = r.ownerUsername||'unknown';
+      var comments = r.commentsCount ? (r.commentsCount >= 1000 ? (r.commentsCount/1000).toFixed(1)+'K' : r.commentsCount) : '\u2014';
+      var user = r.ownerUsername || 'unknown';
       var userLink = '<a href="https://www.instagram.com/' + user + '/" target="_blank" style="color:var(--ac);text-decoration:none">@' + user + '</a>';
-      var reelLink = r.shortCode ? '<a href="https://www.instagram.com/reel/' + r.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + caption + '</a>' : caption;
+      // Show hook if available, else first 45 chars of caption
+      var displayText = (r.hook && r.hook.length > 3)
+        ? ('<span title="' + (r.caption||'').replace(/"/g,'&quot;').slice(0,120) + '">' + r.hook + '…</span>')
+        : ((r.caption||'').substring(0,45) || '(no caption)');
+      var reelLink = r.shortCode
+        ? '<a href="https://www.instagram.com/reel/' + r.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + displayText + '</a>'
+        : displayText;
+      var firstSeen = r.firstSeenAt ? r.firstSeenAt.slice(0,10) : (r.timestamp ? r.timestamp.slice(0,10) : '');
       var insightKey = user.toLowerCase().replace(/^@/,'');
       var insight = window._competitorInsightsMap && window._competitorInsightsMap[insightKey];
       var aiBtn = insight
         ? '<button onclick="toggleReelInsight(\'reel-insight-'+i+'\')" style="font-size:8px;padding:2px 7px;border-radius:3px;border:1px solid rgba(225,48,108,.4);background:rgba(225,48,108,.06);color:#E1306C;cursor:pointer">AI ▼</button>'
         : '<span style="color:var(--dm);font-size:9px">—</span>';
-      rows += '<tr><td>' + userLink + '</td><td>' + reelLink + '</td>' +
+      rows += '<tr>' +
+        '<td>' + userLink + '</td>' +
+        '<td style="max-width:220px;font-size:10px">' + reelLink + '</td>' +
         '<td style="color:var(--ac);font-weight:700">' + likes + '</td>' +
-        '<td>' + views + '</td>' +
-        '<td style="color:var(--gn);font-weight:700">' + eng + '</td>' +
-        '<td>' + (r.keyPattern||'') + '</td><td>' + aiBtn + '</td></tr>';
-      // Hidden AI breakdown row
+        '<td>' + comments + '</td>' +
+        '<td style="color:var(--dm);font-size:10px">' + firstSeen + '</td>' +
+        '<td>' + aiBtn + '</td></tr>';
       if(insight){
-        rows += '<tr id="reel-insight-'+i+'" style="display:none"><td colspan="7" style="padding:8px 12px;background:rgba(225,48,108,.04);border-bottom:1px solid rgba(225,48,108,.1)">';
+        rows += '<tr id="reel-insight-'+i+'" style="display:none"><td colspan="6" style="padding:8px 12px;background:rgba(225,48,108,.04);border-bottom:1px solid rgba(225,48,108,.1)">';
         rows += '<div style="font-size:11px;color:var(--fg);margin-bottom:4px"><strong>Why it worked:</strong> '+insight.whyItWorked+'</div>';
         rows += '<div style="font-size:10px;color:var(--ac);padding:3px 8px;background:rgba(0,229,255,.06);border-radius:4px;display:inline-block">&#128161; '+insight.takeaway+'</div>';
         rows += '</td></tr>';
@@ -2778,26 +2827,59 @@ function renderCompetitorData(){
     reelsTable.innerHTML = rows;
   }
 
-  // --- Competitor Profiles table ---
+  // ── Competitor Profiles table (from pool stats or snapshot) ──
   var profTable = document.getElementById('competitor-profiles-table');
-  if(profTable && cdata.patterns && cdata.patterns.accountAvgs){
-    var accts = Array.isArray(cdata.patterns.accountAvgs) ? cdata.patterns.accountAvgs : Object.values(cdata.patterns.accountAvgs);
-    // Sort by avg engagement descending
-    accts.sort(function(a,b){ return (b.avgEng||0) - (a.avgEng||0); });
+  if(profTable){
+    // Build per-account stats from the pool
+    var byAcct = {};
+    sourceReels.forEach(function(r){
+      var acct = r.ownerUsername;
+      if(!acct) return;
+      if(!byAcct[acct]) byAcct[acct] = { reels: 0, totalLikes: 0, totalComments: 0, tier: r.tier || '' };
+      byAcct[acct].reels++;
+      byAcct[acct].totalLikes += (r.likesCount || 0);
+      byAcct[acct].totalComments += (r.commentsCount || 0);
+      if(r.tier) byAcct[acct].tier = r.tier;
+    });
+    var acctList = Object.entries(byAcct)
+      .map(function(e){
+        return { account: e[0], reels: e[1].reels, tier: e[1].tier,
+          avgLikes: Math.round(e[1].totalLikes / e[1].reels),
+          avgComments: Math.round(e[1].totalComments / e[1].reels) };
+      })
+      .sort(function(a,b){ return b.avgLikes - a.avgLikes; });
+
     var prows = '';
-    accts.forEach(function(a){
-      var username = a.account || 'unknown';
-      var profileLink = '<a href="https://www.instagram.com/' + username + '/" target="_blank" style="color:var(--ac);text-decoration:none;font-weight:700">@' + username + '</a>';
-      var avgLikes = a.avgEng ? Math.round(a.avgEng).toLocaleString() : '\u2014';
-      var reelPct = a.reelPct ? Math.round(a.reelPct) + '%' : '\u2014';
-      prows += '<tr><td>' + profileLink + '</td>' +
-        '<td>\u2014</td>' +
-        '<td>' + (a.reels||0) + '</td>' +
-        '<td>' + avgLikes + '</td>' +
-        '<td>' + (a.posts||0) + ' posts, ' + reelPct + ' reels</td>' +
+    acctList.forEach(function(a){
+      var tierColor = a.tier === 'HIGHEST' ? 'var(--ac)' : a.tier === 'HIGH' ? 'var(--gn)' : 'var(--dm)';
+      var profileLink = '<a href="https://www.instagram.com/' + a.account + '/" target="_blank" style="color:var(--ac);text-decoration:none;font-weight:700">@' + a.account + '</a>';
+      prows += '<tr>' +
+        '<td>' + profileLink + '</td>' +
+        '<td style="color:' + tierColor + ';font-weight:700;font-size:10px">' + (a.tier||'—') + '</td>' +
+        '<td>' + a.reels + ' reels</td>' +
+        '<td style="color:var(--ac)">' + (a.avgLikes >= 1000 ? (a.avgLikes/1000).toFixed(1)+'K' : a.avgLikes) + '</td>' +
+        '<td>' + a.avgComments + '</td>' +
         '<td><span class="tg tg-a">SCRAPED</span></td></tr>';
     });
-    profTable.innerHTML = prows;
+    profTable.innerHTML = prows || '<tr><td colspan="6" style="color:var(--dm)">Loading competitor reels...</td></tr>';
+  }
+
+  // ── Top Hooks section ──
+  var hooksEl = document.getElementById('competitor-top-hooks');
+  if(hooksEl){
+    var hooksPool = usePool ? pool.filter(function(r){ return r.isReel && r.hook && r.hook.length > 5; }) : [];
+    hooksPool.sort(function(a,b){ return ((b.likesCount||0)+(b.commentsCount||0)*3)-((a.likesCount||0)+(a.commentsCount||0)*3); });
+    if(hooksPool.length){
+      var hhtml = hooksPool.slice(0,12).map(function(r){
+        return '<div style="padding:6px 10px;margin-bottom:5px;border-radius:6px;background:rgba(0,229,255,.05);border-left:2px solid rgba(0,229,255,.3)">' +
+          '<div style="font-size:11px;color:var(--fg);font-style:italic">&ldquo;' + r.hook + '&hellip;&rdquo;</div>' +
+          '<div style="font-size:9px;color:var(--dm);margin-top:3px">@' + r.ownerUsername + ' &nbsp;·&nbsp; ' + (r.likesCount >= 1000 ? (r.likesCount/1000).toFixed(1)+'K' : r.likesCount||0) + ' likes</div>' +
+          '</div>';
+      }).join('');
+      hooksEl.innerHTML = hhtml;
+    } else {
+      hooksEl.innerHTML = '<div class="ds">Hooks will populate after the next competitor scrape.</div>';
+    }
   }
 }
 
@@ -4118,31 +4200,39 @@ function init(){
 <!-- REELS INTEL -->
 <div id="c-reels">
 <div class="sec">
-  <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Reels (scraped from competitors)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Reel</th><th>Likes</th><th>Views</th><th>Eng %</th><th>Key Pattern</th><th>AI</th></tr></thead><tbody id="top-reels-table">
-    <tr><td colspan="6" style="color:var(--dm)">Loading competitor data...</td></tr>
+  <div class="sh"><span class="sn">&#127909;</span><span class="st">Top Competitor Reels</span><span style="font-size:9px;color:var(--dm);margin-left:8px">REELS only · accumulates over time</span></div>
+  <!-- Pool stats banner -->
+  <div id="competitor-pool-stats" style="font-size:10px;color:var(--dm);padding:5px 12px 8px;display:none"></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Opening Hook</th><th>Likes</th><th>Comments</th><th>First Seen</th><th>AI</th></tr></thead><tbody id="top-reels-table">
+    <tr><td colspan="6" style="color:var(--dm)">Loading competitor reels...</td></tr>
   </tbody></table></div>
 </div>
 <div class="sec">
-  <div class="sh"><span class="sn">&#128269;</span><span class="st">Universal Patterns (3+ accounts)</span></div>
-  <div class="tw"><table><thead><tr><th>Pattern</th><th>Accounts</th><th>Frequency</th></tr></thead><tbody>
-    <tr><td style="font-weight:700">Original audio on every reel</td><td>ALL 14</td><td>190+/200</td></tr>
-    <tr><td style="font-weight:700">Hook in first 2 seconds</td><td>Wally, SQ, Dom Dolla, NIIKO</td><td>Universal</td></tr>
-    <tr><td style="font-weight:700">Same 3-4 hashtags every post</td><td>Wally, Teeb, Chalant, Zachh</td><td>~170/200</td></tr>
-    <tr><td style="font-weight:700">"Should I drop this?" CTA</td><td>NIIKO, Bolo, DANSYN</td><td>3 accounts</td></tr>
-    <tr><td style="font-weight:700">Multi-reel release rollout</td><td>Wally (3), Zachh (6), SQ (8+)</td><td>Every major release</td></tr>
-    <tr><td style="font-weight:700">Other DJs playing your track</td><td>Austin Ashtin, Chalant, Bolo</td><td>Top for emerging</td></tr>
-    <tr><td style="font-weight:700">Weekly recurring format</td><td>Chalant ("three heaters" 6/30)</td><td>Anchor content</td></tr>
-    <tr><td style="font-weight:700">Tag original artists on remix clips</td><td>ALL remix-focused</td><td>~30%</td></tr>
+  <div class="sh"><span class="sn">&#128161;</span><span class="st">Top Opening Hooks (from highest-performing reels)</span></div>
+  <div id="competitor-top-hooks" style="padding:4px 0">
+    <div class="ds">Hooks will populate after the next competitor reel scrape.</div>
+  </div>
+</div>
+<div class="sec">
+  <div class="sh"><span class="sn">&#128269;</span><span class="st">Universal Reel Patterns (observed across accounts)</span></div>
+  <div class="tw"><table><thead><tr><th>Pattern</th><th>Accounts</th><th>Notes</th></tr></thead><tbody>
+    <tr><td style="font-weight:700">Original audio on every reel</td><td>All accounts</td><td>No trending audio — their OWN tracks</td></tr>
+    <tr><td style="font-weight:700">Hook visual or text in first 2 seconds</td><td>Wally, SQ, NIIKO</td><td>Stops scroll before audio lands</td></tr>
+    <tr><td style="font-weight:700">3-4 focused hashtags</td><td>Wally, Teeb, Chalant, Zachh</td><td>Never hashtag spam</td></tr>
+    <tr><td style="font-weight:700">&ldquo;Should I drop this?&rdquo; CTA</td><td>NIIKO, Bolo, DANSYN</td><td>Comments flood in → boosts algorithm</td></tr>
+    <tr><td style="font-weight:700">Multi-reel release rollout (3+)</td><td>Wally, Zachh, SQ</td><td>Every major release — never a single post</td></tr>
+    <tr><td style="font-weight:700">Other DJs playing your track</td><td>Chalant, Bolo</td><td>Top discovery format for emerging artists</td></tr>
+    <tr><td style="font-weight:700">Weekly recurring anchor format</td><td>Chalant</td><td>&ldquo;three heaters&rdquo; series — 6 of 30 reels</td></tr>
+    <tr><td style="font-weight:700">Tag original artists on remix clips</td><td>All remix-focused</td><td>~30% of remix reels</td></tr>
   </tbody></table></div>
 </div>
 </div>
 
 <!-- COMPETITOR PROFILES (merged from Growth tab) -->
 <div class="sec">
-  <div class="sh"><span class="sn">&#128269;</span><span class="st">Competitor Profiles (scraped)</span></div>
-  <div class="tw"><table><thead><tr><th>Account</th><th>Followers</th><th>Reels</th><th>Avg Likes</th><th>Key Pattern</th><th>Relevance</th></tr></thead><tbody id="competitor-profiles-table">
-    <tr><td colspan="6" style="color:var(--dm)">Loading competitor data...</td></tr>
+  <div class="sh"><span class="sn">&#128270;</span><span class="st">Competitor Profiles (reel stats from accumulated data)</span></div>
+  <div class="tw"><table><thead><tr><th>Account</th><th>Tier</th><th>Reels Scraped</th><th>Avg Likes</th><th>Avg Comments</th><th>Status</th></tr></thead><tbody id="competitor-profiles-table">
+    <tr><td colspan="6" style="color:var(--dm)">Loading competitor reels...</td></tr>
   </tbody></table></div>
 </div>
 

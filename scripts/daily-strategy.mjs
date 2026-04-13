@@ -123,7 +123,7 @@ async function callGemini(prompt, retries = 2) {
   return null;
 }
 
-function buildDataSummary(latest, history, competitors, state) {
+function buildDataSummary(latest, history, competitors, state, allReelsPool) {
   const ig = latest?.ig || {};
   const tt = latest?.tiktok || {};
   const sc = latest?.sc || {};
@@ -146,14 +146,42 @@ function buildDataSummary(latest, history, competitors, state) {
   const campaigns = (state?.campaigns || [])
     .map(c => ({ name: c.name, status: c.status, spent: c.spent || 0, budget: c.budget || 0 }));
 
-  const acctAvgs = competitors?.patterns?.accountAvgs || {};
-  const compSummary = Object.entries(acctAvgs)
-    .sort(([,a], [,b]) => (b.avgEng || 0) - (a.avgEng || 0))
-    .slice(0, 8)
-    .map(([name, d]) => ({ name, avgLikes: Math.round(d.avgEng || 0), reels: d.reels || d.posts || 0, reelPct: d.reelPct || 0 }));
+  // ── Competitor data: prefer accumulated pool for richer patterns ──
+  // allReelsPool is the full historical pool (competitors/allReels); fall back to snapshot
+  const poolEntries = allReelsPool ? Object.values(allReelsPool) : (competitors?.reels || []);
+  const poolSize = poolEntries.length;
 
-  const topReels = (competitors?.patterns?.top10 || []).slice(0, 5)
-    .map(r => ({ account: r.ownerUsername, likes: r.likesCount || 0, caption: (r.caption || '').slice(0, 60) }));
+  // Account averages from pool (richer than snapshot-only)
+  const byAccount = {};
+  poolEntries.forEach(r => {
+    const acct = r.ownerUsername;
+    if (!byAccount[acct]) byAccount[acct] = { posts: 0, reels: 0, totalEng: 0 };
+    byAccount[acct].posts++;
+    if (r.isReel) byAccount[acct].reels++;
+    byAccount[acct].totalEng += ((r.likesCount || 0) + (r.commentsCount || 0));
+  });
+  const compSummary = Object.entries(byAccount)
+    .map(([acct, d]) => ({
+      name: acct,
+      avgLikes: Math.round(d.totalEng / d.posts),
+      reels: d.reels,
+      reelPct: d.posts > 0 ? Math.round(d.reels / d.posts * 100) : 0,
+      sampleSize: d.posts,
+    }))
+    .sort((a, b) => b.avgLikes - a.avgLikes)
+    .slice(0, 8);
+
+  // Top reels from accumulated pool (up to 8 for richer AI context)
+  const topReels = [...poolEntries]
+    .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0)) - ((a.likesCount || 0) + (a.commentsCount || 0)))
+    .slice(0, 8)
+    .map(r => ({
+      account: r.ownerUsername,
+      likes: r.likesCount || 0,
+      caption: (r.caption || '').slice(0, 80),
+      hook: r.hook || '',
+      firstSeen: r.firstSeenAt ? r.firstSeenAt.slice(0, 10) : '',
+    }));
 
   // Post timing patterns for smart scheduling
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -192,9 +220,23 @@ function buildDataSummary(latest, history, competitors, state) {
     .slice(0, 5)
     .map(p => ({ caption: (p.caption||'').slice(0, 120), engRate: +(((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100).toFixed(1) }));
 
-  // Top competitor captions
-  const topCompCaptions = (competitors?.patterns?.top10 || []).slice(0, 5)
-    .map(r => ({ account: r.ownerUsername, caption: (r.caption || '').slice(0, 120), likes: r.likesCount || 0 }));
+  // Top competitor captions + hooks from accumulated pool
+  const topCompCaptions = [...poolEntries]
+    .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0)) - ((a.likesCount || 0) + (a.commentsCount || 0)))
+    .slice(0, 8)
+    .map(r => ({
+      account: r.ownerUsername,
+      caption: (r.caption || '').slice(0, 120),
+      hook: r.hook || '',
+      likes: r.likesCount || 0,
+    }));
+
+  // Top hooks specifically (high-signal for caption writing)
+  const topHooks = [...poolEntries]
+    .filter(r => r.hook && r.isReel)
+    .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0) * 3) - ((a.likesCount || 0) + (a.commentsCount || 0) * 3))
+    .slice(0, 10)
+    .map(r => ({ hook: r.hook, account: r.ownerUsername, likes: r.likesCount || 0 }));
 
   // All posts for AI track-to-post matching (capped to keep prompt lean)
   const allIGPosts = (latest?.igPosts || []).slice(0, 25).map(p => ({
@@ -336,7 +378,16 @@ function buildDataSummary(latest, history, competitors, state) {
     postsThisWeek: { ig: recentIG, tt: recentTT, total: recentIG + recentTT, target: POSTS_PER_WEEK_TARGET },
     tracks,
     campaigns,
-    competitors: { summary: compSummary, topReels, topCompCaptions },
+    competitors: {
+      summary: compSummary,
+      topReels,         // top 8 reels from ACCUMULATED pool (NOT just this scrape)
+      topCompCaptions,  // captions + hooks from top pool reels
+      topHooks,         // opening hook phrases from top-performing reels
+      poolSize,         // how many accumulated reels are in the pool
+      note: poolSize > 0
+        ? `Competitor data is from ${poolSize} accumulated reels scraped over time. This is reel-only data (video content), not regular posts.`
+        : 'Competitor data is from the most recent scrape only — pool will grow over time.',
+    },
     currentAlerts: (latest?.alerts || []).map(a => ({ msg: a.msg, level: a.level, category: a.category })),
     postTiming: { ig: igPostTiming, tt: ttPostTiming },
     topOwnCaptions,
@@ -700,7 +751,8 @@ function computePostIdeas(latest, competitors, state) {
     }
   }
 
-  const topCompReel = (competitors?.patterns?.top10 || [])[0];
+  // Use top reel from accumulated pool if available, else fall back to snapshot
+  const topCompReel = (competitors?.poolPatterns?.top10 || competitors?.patterns?.top10 || [])[0];
   if (topCompReel) {
     const captionSnippet = (topCompReel.caption || '').slice(0, 60).replace(/\n/g, ' ');
     ideas.push({
@@ -879,13 +931,16 @@ async function main() {
   console.log(`\n📋 Daily Strategy Generator — ${dateKey}\n`);
 
   // Read all Firebase data + existing strategy
-  const [latest, history, competitors, state, existingStrategy] = await Promise.all([
+  const [latest, history, competitors, allReelsPool, state, existingStrategy] = await Promise.all([
     readFirebase('analytics/latest'),
     readFirebase('analytics/history'),
     readFirebase('competitors/latest'),
+    readFirebase('competitors/allReels'),  // accumulated reel pool
     readFirebase('state'),
     readFirebase('strategy/latest'),
   ]);
+  const poolSize = allReelsPool ? Object.keys(allReelsPool).length : 0;
+  console.log(`  Competitor pool: ${poolSize} accumulated reels`);
 
   if (!latest) {
     console.log('⚠️  No analytics data found — run daily scrape first');
@@ -909,7 +964,7 @@ async function main() {
   console.log(`  Today: ${todayStr} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][todayDate.getUTCDay()]})`);
   console.log(`  Mode: ${needsWeekly ? 'WEEKLY + DAILY (Monday refresh)' : 'DAILY ONLY'}\n`);
 
-  const dataSummary = buildDataSummary(latest, history, competitors, state);
+  const dataSummary = buildDataSummary(latest, history, competitors, state, allReelsPool);
 
   // ── WEEKLY STRATEGY (only if 7+ days since last) ──
   let weeklyStrategy = null;
