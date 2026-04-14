@@ -363,6 +363,9 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     'PERSONALIZED: Studio session b-roll from an Uber or car — "produce anywhere" angle.',
     'PERSONALIZED: Show Spotify/Logic Pro analytics on screen with facecam reaction — transparency builds trust.',
     'PERSONALIZED: Tech house flip of a frat-house classic song — extremely relevant to college audience.',
+    // BATCH CONTENT STRATEGY (from Twin Diplomacy, Apr 2026)
+    'BATCH CONTENT: Rent a warehouse/space with real lighting and filming equipment to simulate a concert. Record a full DJ set, then clip it into many individual reels for weeks of future content from one shoot day. High production value + batch efficiency.',
+    'BATCH CONTENT: One high-production shoot day can generate 10-20+ reels. Plan the set with clip-worthy transitions, drops, and visual moments. Each clip becomes standalone content.',
   ];
 
   return {
