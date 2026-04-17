@@ -76,13 +76,13 @@ async function patchFirebase(path, data) {
 
 // ─── Gemini AI helpers ──────────────────────────────────────────
 
-async function callGemini(prompt, retries = 2) {
+async function callGemini(prompt, retries = 4) {
   if (!GEMINI_API_KEY) return null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000);
-      if (attempt > 0) console.log(`  Retry ${attempt}/${retries} after rate limit...`);
+      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+      if (attempt > 0) console.log(`  Retry ${attempt}/${retries}...`);
       const res = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,9 +96,10 @@ async function callGemini(prompt, retries = 2) {
         }),
       });
       clearTimeout(timeout);
-      if (res.status === 429 && attempt < retries) {
-        const wait = (attempt + 1) * 30; // 30s, 60s
-        console.warn(`  Gemini 429 rate limited — waiting ${wait}s before retry...`);
+      // Retry on 429 (rate limit) AND 503 (service unavailable / high demand)
+      if ((res.status === 429 || res.status === 503) && attempt < retries) {
+        const wait = (attempt + 1) * 30; // 30s, 60s, 90s, 120s
+        console.warn(`  Gemini ${res.status} — waiting ${wait}s before retry...`);
         await new Promise(r => setTimeout(r, wait * 1000));
         continue;
       }
