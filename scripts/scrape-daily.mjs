@@ -378,11 +378,15 @@ async function main() {
 
   console.log(`\n📋 Diff: IG ${igDiff.newCount} new, ${igDiff.updatedCount} updated | TT ${ttDiff.newCount} new, ${ttDiff.updatedCount} updated`);
 
-  // Merge all platform data
-  // Preserve SC data from scrape-sc.mjs (which owns SC) when Apify returns zeros
-  const scResolved = scData.sc.followers > 0
-    ? scData.sc
-    : (previousData?.sc || scData.sc);
+  // Merge all platform data.
+  // scrape-daily only gets { followers, following, tracks } from Apify — no play/like totals.
+  // scrape-sc.mjs runs after this and PATCHes in totalPlays, totalLikes, etc.
+  // So: take the fresh follower count from today's scrape, but preserve all rich SC
+  // fields (totalPlays, totalLikes, avgPlays, etc.) from the previous write.
+  const scResolved = {
+    ...(previousData?.sc || {}),         // preserve totalPlays, totalLikes, etc. from sc scraper
+    ...(scData.sc.followers > 0 ? scData.sc : {}), // overlay fresh follower/track count if valid
+  };
   const allData = {
     scrapedAt: now,
     ig: igData.ig,
@@ -419,7 +423,7 @@ async function main() {
     scrapedAt: now,
     ig: igData.ig,
     tiktok: ttData.tiktok,
-    sc: scResolved,
+    sc: scResolved, // already has totalPlays preserved from previous sc scraper write
     deltas,
     alertCount: alerts.length,
   };
