@@ -406,6 +406,19 @@ var MSE = {
   sc: {
     lastUpdated: "2026-04-17",
     followers: 66, tracks: 9, url: "soundcloud.com/itselcapitan",
+    // All-time totals (SC Artist Pro — 2016 to present)
+    playsAllTime: 3530, likesAllTime: 87, commentsAllTime: 51, repostsAllTime: 36, downloadsAllTime: 1,
+    topTracksAllTime: [
+      { name: "Pack Up Ya Bags (El Capitan Remix)", plays: 2777 },
+      { name: "Every 1's A Winner (El Capitan Remix)", plays: 293 },
+      { name: "Sports Car (El Capitán remix)", plays: 191 }
+    ],
+    topListenersAllTime: ["Joao Avila 3 (31 plays, 59 followers)", "JACKAL (29 plays, 7 followers)", "User 558255277 (18 plays)"],
+    topCitiesAllTime: [
+      { city: "Hanoi", plays: 617 },
+      { city: "Ho Chi Minh City", plays: 318 },
+      { city: "Schenectady", plays: 133 }
+    ],
     // 30-day window (Mar 19 – Apr 17)
     plays30d: 2912, plays30dGrowth: "+1,922%",
     likes30d: 50, comments30d: 25, reposts30d: 14, downloads30d: 1,
@@ -415,14 +428,13 @@ var MSE = {
       { name: "Every 1's A Winner (El Capitan Remix)", plays: 45 },
       { name: "UNION WLAX MIX '26", plays: 21 }
     ],
-    topListeners: ["Joao Avila 3 (30 plays, 59 followers)", "User 148173996 (12 plays)", "Union Athletics (11 plays)"],
+    topListeners30d: ["Joao Avila 3 (30 plays, 59 followers)", "User 148173996 (12 plays)", "Union Athletics (11 plays)"],
     topCountries: [
-      { country: "Vietnam", plays: 757 },
-      { country: "United States", plays: 228 },
-      { country: "South Korea", plays: 80 }
+      { country: "Vietnam", plays: 935, note: "Hanoi 617 + HCMC 318 — dominant market" },
+      { country: "United States", plays: 133, note: "Schenectady-led" },
     ],
     downloads: { track: "Paradise (El Capitan Remix)", count: 1, downloader: "VO (348 followers, 8 tracks)" },
-    note: "PUYB at 2,777 plays (+39.4% from 1,993 last read) — 95.3% of all 30d plays. Total 30d plays up +37.4% to 2,912. Followers jumped to 66 (from 36 on Apr 13) — significant organic growth. Union Athletics appeared as new top listener."
+    note: "All-time: 3,530 plays. PUYB 2,777 all-time (78.7% of total). Every 1's Winner 293, Sports Car 191. Vietnam = #1 market (Hanoi 617 + HCMC 318 = 935 plays). 30d: 2,912 plays (+1,922%) — nearly all of all-time plays happened in 30 days showing explosive recent growth."
   },
   tiktok: {
     lastUpdated: "2026-04-13",
@@ -2718,7 +2730,7 @@ function renderContentStats(){
     scGrid.innerHTML =
       '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks · all-time</div></div>' +
       '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (30 DAYS)</div><div class="cv" style="color:#ff5500">' + plays30d.toLocaleString() + '</div><div class="cs">' + (plays30dGrowth ? plays30dGrowth + ' · ' : '') + 'SC Artist Pro · last 30 days</div></div>' +
-      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ALL-TIME PLAYS</div><div class="cv" style="color:#ff5500">' + (sc.totalPlays||0).toLocaleString() + '</div><div class="cs">' + (sc.totalLikes||0) + ' likes · ' + (sc.totalComments||0) + ' comments</div></div>';
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ALL-TIME PLAYS</div><div class="cv" style="color:#ff5500">' + (MSE.sc.playsAllTime||sc.totalPlays||0).toLocaleString() + '</div><div class="cs">' + (MSE.sc.likesAllTime||sc.totalLikes||0) + ' likes · ' + (MSE.sc.commentsAllTime||sc.totalComments||0) + ' comments</div></div>';
   }
   var scBadge = document.getElementById('sc-badge');
   if(scBadge) scBadge.textContent = (MSE.sc.plays30d||sc.totalPlays||0).toLocaleString() + ' plays (30d) · ' + (sc.followers||0).toLocaleString() + ' followers';
