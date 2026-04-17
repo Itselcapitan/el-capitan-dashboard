@@ -2711,13 +2711,17 @@ function renderContentStats(){
   // --- SoundCloud stats ---
   var scGrid = document.getElementById('sc-stats-grid');
   if(scGrid && sc.followers !== undefined){
+    // plays30d comes from MSE (manual SC Artist Pro read — 30-day window)
+    // totalPlays comes from scraper (all-time cumulative per track)
+    var plays30d = MSE.sc.plays30d || 0;
+    var plays30dGrowth = MSE.sc.plays30dGrowth || '';
     scGrid.innerHTML =
-      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks</div></div>' +
-      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">TOTAL PLAYS</div><div class="cv" style="color:#ff5500">' + (sc.totalPlays||0).toLocaleString() + '</div><div class="cs">All-time across all tracks</div></div>' +
-      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">TOTAL LIKES</div><div class="cv" style="color:#ff5500">' + (sc.totalLikes||0).toLocaleString() + '</div><div class="cs">' + (sc.totalComments||0) + ' comments · ' + (sc.totalReposts||0) + ' reposts</div></div>';
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">FOLLOWERS</div><div class="cv" style="color:#ff5500">' + (sc.followers||0).toLocaleString() + '</div><div class="cs">' + (sc.tracks||0) + ' tracks · all-time</div></div>' +
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">PLAYS (30 DAYS)</div><div class="cv" style="color:#ff5500">' + plays30d.toLocaleString() + '</div><div class="cs">' + (plays30dGrowth ? plays30dGrowth + ' · ' : '') + 'SC Artist Pro · last 30 days</div></div>' +
+      '<div class="c" style="border-left:3px solid #ff5500"><div class="cl" style="color:#ff5500">ALL-TIME PLAYS</div><div class="cv" style="color:#ff5500">' + (sc.totalPlays||0).toLocaleString() + '</div><div class="cs">' + (sc.totalLikes||0) + ' likes · ' + (sc.totalComments||0) + ' comments</div></div>';
   }
   var scBadge = document.getElementById('sc-badge');
-  if(scBadge) scBadge.textContent = (sc.totalPlays||0).toLocaleString() + ' plays · ' + (sc.followers||0).toLocaleString() + ' followers';
+  if(scBadge) scBadge.textContent = (MSE.sc.plays30d||sc.totalPlays||0).toLocaleString() + ' plays (30d) · ' + (sc.followers||0).toLocaleString() + ' followers';
 
   // --- SoundCloud Tracks Table ---
   var scTable = document.getElementById('sc-tracks-table');
