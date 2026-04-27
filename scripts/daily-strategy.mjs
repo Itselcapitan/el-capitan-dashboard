@@ -33,13 +33,16 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 // Model fallback chain — each entry has { model, base } to handle API version differences.
 // gemini-2.5-flash uses v1beta (preview). Stable models use v1.
+// All models use v1beta — the Google AI Studio key works with v1beta for all Gemini models.
+// v1 returns 404 for this key type. The 2.5-flash entry is duplicated for a retry after a pause.
+const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODELS = [
-  { model: 'gemini-2.5-flash',          base: 'https://generativelanguage.googleapis.com/v1beta/models' },
-  { model: 'gemini-2.5-flash',          base: 'https://generativelanguage.googleapis.com/v1beta/models' }, // retry same after pause
-  { model: 'gemini-2.0-flash',          base: 'https://generativelanguage.googleapis.com/v1/models' },
-  { model: 'gemini-2.0-flash-lite',     base: 'https://generativelanguage.googleapis.com/v1/models' },
-  { model: 'gemini-1.5-flash',          base: 'https://generativelanguage.googleapis.com/v1/models' },
-  { model: 'gemini-1.5-flash-8b',       base: 'https://generativelanguage.googleapis.com/v1/models' },
+  { model: 'gemini-2.5-flash',          base: BASE },
+  { model: 'gemini-2.5-flash',          base: BASE }, // retry after 60s pause
+  { model: 'gemini-2.0-flash',          base: BASE },
+  { model: 'gemini-2.0-flash-lite',     base: BASE },
+  { model: 'gemini-1.5-flash',          base: BASE },
+  { model: 'gemini-1.5-flash-8b',       base: BASE },
 ];
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_URL = `${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -115,7 +118,9 @@ async function tryModel({ model, base }, prompt) {
     });
     clearTimeout(timeout);
     if (!res.ok) {
-      console.warn(`  [${model}] HTTP ${res.status} — moving to next model`);
+      const errBody = await res.text().catch(() => '');
+      const errSnip = errBody.slice(0, 200).replace(/\n/g, ' ');
+      console.warn(`  [${model}] HTTP ${res.status} — ${errSnip}`);
       return null;
     }
     const data = await res.json();
