@@ -1775,30 +1775,103 @@ function addLabel(){
 // =====================================================
 function computeArtistScore(){
   var factors = {};
-  // Posting Cadence (15%) — posts this month vs target 20
-  var now = new Date();
-  var thisMonth = now.getMonth();
-  var postsThisMonth = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt).getMonth()===thisMonth; }).length;
-  factors.cadence = Math.min(100, Math.round((postsThisMonth / 20) * 100));
 
-  // Growth Velocity (15%) — based on follower counts vs targets
-  var igTarget = 500, tkTarget = 200, scTarget = 60;
-  var igPct = Math.min(100, Math.round((MSE.ig.followers / igTarget) * 100));
-  var tkPct = Math.min(100, Math.round((MSE.tiktok.followers / tkTarget) * 100));
-  var scPct = Math.min(100, Math.round((MSE.sc.followers / scTarget) * 100));
-  factors.growth = Math.round((igPct + tkPct + scPct) / 3);
+  // Pull LIVE values from latest scrape (fall back to MSE for first paint)
+  var live = window._latestData || {};
+  var igLive = live.ig || MSE.ig || {};
+  var ttLive = live.tiktok || MSE.tiktok || {};
+  var scLive = live.sc || MSE.sc || {};
+  var curIG  = igLive.followers || 0;
+  var curTT  = ttLive.followers || 0;
+  var curSC  = scLive.followers || 0;
+  var curEng = (igLive.engRate != null ? igLive.engRate : (MSE.ig||{}).engRate) || 0;
 
-  // Reel Performance (15%) — engagement rate vs 5% benchmark
-  factors.reelPerf = Math.min(100, Math.round((MSE.ig.engRate / 5) * 100));
+  // Posting Cadence (15%) — count ACTUAL posts in last 7 days, not tasks completed this month.
+  // The task-based version was always wrong because posting tasks aren't reliably logged.
+  var weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  var igPostsLast7 = (live.igPosts || []).filter(function(p){
+    var t = p.timestamp ? new Date(p.timestamp).getTime() : 0;
+    return t > weekAgoMs;
+  }).length;
+  var ttPostsLast7 = (live.ttPosts || []).filter(function(p){
+    var t = p.createTimeISO ? new Date(p.createTimeISO).getTime() : 0;
+    return t > weekAgoMs;
+  }).length;
+  var postsLast7 = igPostsLast7 + ttPostsLast7;
+  // Target = 5 posts/week (POSTS_PER_WEEK_TARGET in scraper).
+  factors.cadence = Math.min(100, Math.round((postsLast7 / 5) * 100));
+
+  // Growth Velocity (15%) — TRUE 7-day follower change as a percentage of baseline.
+  // Looks up a snapshot from analytics/history ~7 days back. Falls back to "current vs target"
+  // if history isn't loaded yet (first paint), so the score isn't 0 on cold load.
+  var hist = window._analyticsHistory || [];
+  var pastSnap = null;
+  if(hist.length){
+    // Sort oldest→newest by date string (YYYY-MM-DD)
+    var sorted = hist.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    // Find the snapshot closest to 7 days ago (and at least 5 days ago to count as "weekly")
+    var targetMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    var minMs = Date.now() - 14 * 24 * 60 * 60 * 1000; // accept up to 14d if 7d missing
+    var bestDiff = Infinity;
+    for(var i=0;i<sorted.length;i++){
+      var s = sorted[i];
+      var ms = s.scrapedAt ? new Date(s.scrapedAt).getTime() :
+               s.date ? new Date(s.date+'T00:00:00Z').getTime() : 0;
+      if(ms < minMs || ms > Date.now() - 4 * 24 * 60 * 60 * 1000) continue;
+      var diff = Math.abs(ms - targetMs);
+      if(diff < bestDiff){ bestDiff = diff; pastSnap = s; }
+    }
+  }
+  if(pastSnap && (pastSnap.ig || pastSnap.tiktok || pastSnap.sc)){
+    var pastIG = (pastSnap.ig||{}).followers || 0;
+    var pastTT = (pastSnap.tiktok||{}).followers || 0;
+    var pastSC = (pastSnap.sc||{}).followers || 0;
+    // Δ% per platform (guard against /0 — if past was 0 and now > 0, treat as +100%).
+    function deltaPct(now, then){
+      if(then > 0) return ((now - then) / then) * 100;
+      if(now > 0) return 100;
+      return 0;
+    }
+    var igGrowthPct = deltaPct(curIG, pastIG);
+    var ttGrowthPct = deltaPct(curTT, pastTT);
+    var scGrowthPct = deltaPct(curSC, pastSC);
+    // Benchmarks: % weekly growth that maps to 100 score
+    // IG/SC: 5%/wk = excellent, TT: 15%/wk = excellent. <0 = 0.
+    function scoreOf(pct, excellent){
+      if(pct <= 0) return 0;
+      return Math.min(100, Math.round((pct / excellent) * 100));
+    }
+    var igGrowthScore = scoreOf(igGrowthPct, 5);
+    var ttGrowthScore = scoreOf(ttGrowthPct, 15);
+    var scGrowthScore = scoreOf(scGrowthPct, 5);
+    factors.growth = Math.round((igGrowthScore + ttGrowthScore + scGrowthScore) / 3);
+    factors._growthDetail = {
+      igPct: igGrowthPct.toFixed(1),
+      ttPct: ttGrowthPct.toFixed(1),
+      scPct: scGrowthPct.toFixed(1),
+      windowDays: Math.round((Date.now() - new Date((pastSnap.scrapedAt||pastSnap.date)).getTime()) / 864e5),
+    };
+  } else {
+    // Fallback: current vs target (until history is loaded)
+    var igTarget = 500, tkTarget = 200, scTarget = 60;
+    var igPct = Math.min(100, Math.round((curIG / igTarget) * 100));
+    var tkPct = Math.min(100, Math.round((curTT / tkTarget) * 100));
+    var scPct = Math.min(100, Math.round((curSC / scTarget) * 100));
+    factors.growth = Math.round((igPct + tkPct + scPct) / 3);
+    factors._growthDetail = { fallback: true };
+  }
+
+  // Reel Performance (15%) — engagement rate vs 5% benchmark (LIVE)
+  factors.reelPerf = Math.min(100, Math.round((curEng / 5) * 100));
 
   // Discovery (10%) — non-follower view reach
   factors.discovery = Math.min(100, Math.round(65.1 * 1.47)); // 65.1% views from non-followers
 
-  // Cross-Platform (10%) — active on 3 platforms
+  // Cross-Platform (10%) — active on 3 platforms (LIVE)
   var platforms = 0;
-  if(MSE.ig.followers > 0) platforms++;
-  if(MSE.tiktok.active) platforms++;
-  if(MSE.sc.followers > 0) platforms++;
+  if(curIG > 0) platforms++;
+  if(curTT > 0) platforms++;
+  if(curSC > 0) platforms++;
   factors.crossPlatform = Math.round((platforms / 3) * 100);
 
   // Release Cadence (10%) — released tracks / expected
@@ -2009,15 +2082,26 @@ function showAllTrackScores(){
 function computeAlerts(){
   var alerts = [];
 
-  // Posting cadence (Monday-Sunday week)
+  // Posting cadence (Monday-Sunday week) — count ACTUAL posts from scraped data,
+  // not tasks marked complete (which were unreliable).
   var now = new Date();
   var dow = now.getDay(); // 0=Sun
   var daysSinceMon = dow === 0 ? 6 : dow - 1;
   var mondayStart = new Date(now);
   mondayStart.setDate(mondayStart.getDate() - daysSinceMon);
   mondayStart.setHours(0,0,0,0);
-  var postsThisWeek = STATE.tasks.filter(function(t){ return t.category==='Social Media' && t.status==='completed' && t.completedAt && new Date(t.completedAt) >= mondayStart; }).length;
-  if(postsThisWeek < 4) alerts.push({level:'amber', msg:'Only '+postsThisWeek+'/5 posts this week \u2014 cadence below target'});
+  var mondayMs = mondayStart.getTime();
+  var liveData = window._latestData || {};
+  var igPostsThisWeek = (liveData.igPosts || []).filter(function(p){
+    var t = p.timestamp ? new Date(p.timestamp).getTime() : 0;
+    return t >= mondayMs;
+  }).length;
+  var ttPostsThisWeek = (liveData.ttPosts || []).filter(function(p){
+    var t = p.createTimeISO ? new Date(p.createTimeISO).getTime() : 0;
+    return t >= mondayMs;
+  }).length;
+  var postsThisWeek = igPostsThisWeek + ttPostsThisWeek;
+  if(postsThisWeek < 4) alerts.push({level:'amber', msg:'Only '+postsThisWeek+'/5 posts this week \u2014 cadence below target ('+igPostsThisWeek+' IG, '+ttPostsThisWeek+' TT)'});
 
   // Overdue tasks
   var overdue = STATE.tasks.filter(function(t){ return t.status==='active' && t.dueDate && new Date(t.dueDate) < now && !t.parentId; });
@@ -2783,12 +2867,23 @@ function renderContentStats(){
 
 function renderCompetitorData(){
   var cdata = window._competitorData || {};
-  // Use accumulated reel pool when available (richer data), fall back to snapshot
+  // Use accumulated reel pool when available (richer data), fall back to snapshot.
+  // Sort the pool by firstSeenAt DESC so newest discoveries surface first — old
+  // viral reels still appear (we just don't lead with them anymore).
   var pool = window._competitorPool || [];
   var usePool = pool.length > 0;
   var sourceReels = usePool
-    ? pool.slice().sort(function(a,b){ return ((b.likesCount||0)+(b.commentsCount||0))-((a.likesCount||0)+(a.commentsCount||0)); })
+    ? pool.slice().sort(function(a,b){
+        var ax = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() : 0;
+        var bx = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() : 0;
+        if(bx !== ax) return bx - ax;
+        // Tiebreak by engagement so equally-fresh reels rank by quality
+        return ((b.likesCount||0)+(b.commentsCount||0)) - ((a.likesCount||0)+(a.commentsCount||0));
+      })
     : (cdata.patterns && Array.isArray(cdata.patterns.top10) ? cdata.patterns.top10 : []);
+  // Threshold for "NEW" badge — first seen in the last 7 days
+  var NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
+  var nowMs = Date.now();
 
   // Update pool stats banner if element exists
   var poolBanner = document.getElementById('competitor-pool-stats');
@@ -2821,6 +2916,12 @@ function renderCompetitorData(){
         ? '<a href="https://www.instagram.com/reel/' + r.shortCode + '/" target="_blank" style="color:inherit;text-decoration:none">' + displayText + '</a>'
         : displayText;
       var firstSeen = r.firstSeenAt ? r.firstSeenAt.slice(0,10) : (r.timestamp ? r.timestamp.slice(0,10) : '');
+      // NEW badge if first seen in the last 7 days
+      var firstSeenMs = r.firstSeenAt ? new Date(r.firstSeenAt).getTime() : 0;
+      var isNew = firstSeenMs && (nowMs - firstSeenMs) < NEW_BADGE_MS;
+      var newBadge = isNew
+        ? ' <span style="display:inline-block;padding:1px 5px;margin-left:4px;font-size:8px;font-weight:700;background:var(--ac);color:#000;border-radius:3px;letter-spacing:.5px">NEW</span>'
+        : '';
       var insightKey = user.toLowerCase().replace(/^@/,'');
       var insight = window._competitorInsightsMap && window._competitorInsightsMap[insightKey];
       var aiBtn = insight
@@ -2828,7 +2929,7 @@ function renderCompetitorData(){
         : '<span style="color:var(--dm);font-size:9px">—</span>';
       rows += '<tr>' +
         '<td>' + userLink + '</td>' +
-        '<td style="max-width:220px;font-size:10px">' + reelLink + '</td>' +
+        '<td style="max-width:220px;font-size:10px">' + reelLink + newBadge + '</td>' +
         '<td style="color:var(--ac);font-weight:700">' + likes + '</td>' +
         '<td>' + comments + '</td>' +
         '<td style="color:var(--dm);font-size:10px">' + firstSeen + '</td>' +
@@ -3164,9 +3265,19 @@ function renderWeeklyReview(){
 window._competitorInsightsMap = {};
 
 function renderCompetitorInsights(insights){
-  if(!insights || !insights.length) return;
-  var arr = Array.isArray(insights) ? insights : Object.values(insights);
+  // Merge this-week's AI insights with the accumulated growing-brain library so
+  // we don't lose past weeks' analysis. The library is keyed by normalized
+  // account+caption, so account-level lookup may have multiple library entries
+  // per account — we keep the most recently seen one.
+  var arr = Array.isArray(insights) ? insights : (insights ? Object.values(insights) : []);
+  var libArr = (window._library && window._library.competitorInsights) || [];
   window._competitorInsightsMap = {};
+  // Library first (older), then current week overlays (so latest wins on ties)
+  libArr.slice()
+    .sort(function(a,b){ return (a.lastSeenAt||'').localeCompare(b.lastSeenAt||''); })
+    .forEach(function(c){
+      if(c && c.account) window._competitorInsightsMap[c.account.toLowerCase().replace(/^@/,'')] = c;
+    });
   arr.forEach(function(c){
     if(c && c.account) window._competitorInsightsMap[c.account.toLowerCase().replace(/^@/,'')] = c;
   });
@@ -3416,233 +3527,51 @@ function renderWeeklyOverview(s){
   if(meta) meta.textContent = metaParts.join(' · ');
 
   var html = '';
-  var ki = s.keyInsights || {};
   var wr = s.weeklyReview || {};
 
-  // ─── STRATEGIC POSITION (hero card) ───
-  if(ki.summary || ki.strategicPosition){
-    html += '<div style="padding:14px 16px;border-radius:10px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(225,48,108,.04));border-left:4px solid var(--ac);margin-bottom:14px">';
-    html += '<div style="font-size:9px;color:var(--ac);font-weight:700;letter-spacing:.5px;margin-bottom:6px">🎯 STRATEGIC POSITION</div>';
-    if(ki.summary) html += '<div style="font-size:13px;color:var(--fg);line-height:1.55;font-weight:600;margin-bottom:'+(ki.strategicPosition?'6px':'0')+'">'+ki.summary+'</div>';
-    if(ki.strategicPosition) html += '<div style="font-size:11px;color:var(--dm);line-height:1.55;font-style:italic">'+ki.strategicPosition+'</div>';
-    html += '</div>';
+  // ─── THE NARRATIVE — flowing paragraphs, the only thing on HQ ───
+  // Prefer the new weeklyNarrative field. Fall back to weeklyReview.headline +
+  // trendAnalysis + artistScoreInsight stitched together if narrative isn't there yet.
+  var narrative = '';
+  if(typeof s.weeklyNarrative === 'string' && s.weeklyNarrative.trim().length > 100){
+    narrative = s.weeklyNarrative.trim();
+  } else {
+    // Legacy fallback — stitch a paragraph from existing fields
+    var parts = [];
+    if(wr.headline) parts.push(wr.headline);
+    if(s.trendAnalysis) parts.push(s.trendAnalysis);
+    if(s.artistScoreInsight) parts.push(s.artistScoreInsight);
+    if((s.keyInsights||{}).summary) parts.push(s.keyInsights.summary);
+    narrative = parts.join('\n\n');
   }
 
-  // ─── LAST WEEK RECAP (wins / misses / next focus) ───
-  if(wr.headline || (wr.wins && wr.wins.length) || (wr.misses && wr.misses.length)){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">📅 LAST WEEK RECAP</div>';
-    if(wr.headline){
-      html += '<div style="padding:8px 12px;border-radius:6px;background:rgba(255,255,255,.03);font-size:12px;color:var(--fg);font-weight:600;margin-bottom:8px">'+wr.headline+'</div>';
-    }
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">';
-    // Wins
-    html += '<div style="padding:10px 12px;border-radius:6px;background:rgba(0,230,118,.06);border-left:2px solid var(--gn)">';
-    html += '<div style="font-size:9px;color:var(--gn);font-weight:700;margin-bottom:5px">🏆 WINS</div>';
-    if(wr.wins && wr.wins.length){
-      wr.wins.forEach(function(w){
-        html += '<div style="font-size:11px;color:var(--tx);line-height:1.5;margin-bottom:4px">• '+w+'</div>';
-      });
-    } else { html += '<div style="font-size:10px;color:var(--dm)">No wins captured</div>'; }
-    html += '</div>';
-    // Misses
-    html += '<div style="padding:10px 12px;border-radius:6px;background:rgba(255,23,68,.06);border-left:2px solid var(--rd)">';
-    html += '<div style="font-size:9px;color:var(--rd);font-weight:700;margin-bottom:5px">⚠️ MISSES</div>';
-    if(wr.misses && wr.misses.length){
-      wr.misses.forEach(function(m){
-        html += '<div style="font-size:11px;color:var(--tx);line-height:1.5;margin-bottom:4px">• '+m+'</div>';
-      });
-    } else { html += '<div style="font-size:10px;color:var(--dm)">No misses captured</div>'; }
-    html += '</div>';
-    html += '</div>';
-    if(wr.nextWeekFocus){
-      html += '<div style="padding:8px 12px;border-radius:6px;background:rgba(0,229,255,.06);border-left:2px solid var(--ac);font-size:11px;color:var(--tx);line-height:1.5">';
-      html += '<span style="color:var(--ac);font-weight:700">→ THIS WEEK\'S FOCUS:</span> '+wr.nextWeekFocus+'</div>';
-    }
-    html += '</div>';
-  }
-
-  // ─── SOCIAL MEDIA INSIGHTS (trendAnalysis + performanceAlerts + opportunityAlerts) ───
-  var hasSocialContent = s.trendAnalysis || (s.performanceAlerts && s.performanceAlerts.length) || (s.opportunityAlerts && s.opportunityAlerts.length);
-  if(hasSocialContent){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">📱 SOCIAL MEDIA INSIGHTS</div>';
-    if(s.trendAnalysis){
-      html += '<div style="padding:8px 12px;border-radius:6px;background:rgba(255,255,255,.03);font-size:11px;color:var(--tx);line-height:1.55;margin-bottom:8px">'+s.trendAnalysis+'</div>';
-    }
-    // Alerts side by side
-    var hasPerf = s.performanceAlerts && s.performanceAlerts.length;
-    var hasOpp = s.opportunityAlerts && s.opportunityAlerts.length;
-    if(hasPerf || hasOpp){
-      html += '<div style="display:grid;grid-template-columns:'+(hasPerf&&hasOpp?'1fr 1fr':'1fr')+';gap:10px">';
-      if(hasPerf){
-        html += '<div><div style="font-size:9px;color:var(--am);font-weight:700;margin-bottom:4px">📊 PERFORMANCE</div>';
-        s.performanceAlerts.forEach(function(a){
-          var lvlColor = a.level==='red'?'var(--rd)':a.level==='amber'?'var(--am)':'var(--gn)';
-          var icon = a.level==='red'?'🔴':a.level==='amber'?'🟡':'🟢';
-          html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:5px;background:rgba(255,255,255,.03);border-left:2px solid '+lvlColor+';font-size:11px;color:var(--tx);line-height:1.45">'+icon+' '+a.message+'</div>';
-        });
-        html += '</div>';
-      }
-      if(hasOpp){
-        html += '<div><div style="font-size:9px;color:var(--gn);font-weight:700;margin-bottom:4px">💡 OPPORTUNITIES</div>';
-        s.opportunityAlerts.forEach(function(a){
-          var lvlColor = a.level==='red'?'var(--rd)':a.level==='amber'?'var(--am)':'var(--gn)';
-          var icon = a.level==='red'?'🔴':a.level==='amber'?'🟡':'🟢';
-          html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:5px;background:rgba(255,255,255,.03);border-left:2px solid '+lvlColor+';font-size:11px;color:var(--tx);line-height:1.45">'+icon+' '+a.message+'</div>';
-        });
-        html += '</div>';
-      }
-      html += '</div>';
-    }
-    html += '</div>';
-  }
-
-  // ─── POSTING CADENCE (you vs competitors) ───
-  if(s.postingCadenceAnalysis && s.postingCadenceAnalysis.you){
-    var pc = s.postingCadenceAnalysis;
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">⏱️ POSTING CADENCE vs COMPETITORS</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">';
-    html += '<div style="padding:8px 10px;border-radius:5px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2)">';
-    html += '<div style="font-size:9px;color:var(--ac);font-weight:700">YOU</div>';
-    html += '<div style="font-size:13px;color:var(--fg);font-weight:700;margin:2px 0">'+pc.you.rate+'</div>';
-    html += '<div style="font-size:10px;color:var(--dm);line-height:1.4">'+pc.you.commentary+'</div></div>';
-    if(pc.competitors && pc.competitors.length){
-      pc.competitors.slice(0,4).forEach(function(c){
-        html += '<div style="padding:8px 10px;border-radius:5px;background:rgba(255,255,255,.03)">';
-        html += '<div style="font-size:9px;color:var(--dm);font-weight:700">'+c.name+'</div>';
-        html += '<div style="font-size:13px;color:var(--fg);font-weight:700;margin:2px 0">'+c.rate+'</div>';
-        html += '<div style="font-size:10px;color:var(--dm);line-height:1.4">'+c.commentary+'</div></div>';
-      });
-    }
-    html += '</div></div>';
-  }
-
-  // ─── TRACK INSIGHTS (trackToPush + trackPostMatches summary) ───
-  var hasTrackContent = s.trackToPush || (s.trackPostMatches && s.trackPostMatches.length);
-  if(hasTrackContent){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">🎵 TRACK INSIGHTS</div>';
-    if(s.trackToPush){
-      html += '<div style="padding:10px 12px;border-radius:6px;background:rgba(0,230,118,.06);border-left:2px solid var(--gn);margin-bottom:8px">';
-      html += '<div style="font-size:9px;color:var(--gn);font-weight:700;margin-bottom:3px">⭐ TRACK TO PUSH THIS WEEK</div>';
-      html += '<div style="font-size:13px;color:var(--fg);font-weight:700;margin-bottom:3px">'+s.trackToPush.name+'</div>';
-      html += '<div style="font-size:10px;color:var(--dm);margin-bottom:4px">Momentum: '+s.trackToPush.momentum+' · Readiness: '+s.trackToPush.readiness+'</div>';
-      if(s.trackToPush.reason) html += '<div style="font-size:11px;color:var(--tx);line-height:1.5">'+s.trackToPush.reason+'</div>';
-      html += '</div>';
-    }
-    if(s.trackPostMatches && s.trackPostMatches.length){
-      html += '<div style="font-size:9px;color:var(--dm);font-weight:700;margin-bottom:5px">TRACK PERFORMANCE ON SOCIAL ('+s.trackPostMatches.length+' tracks matched to posts)</div>';
-      s.trackPostMatches.slice(0,5).forEach(function(t){
-        var igCount = t.igPosts ? t.igPosts.length : 0;
-        var ttCount = t.ttPosts ? t.ttPosts.length : 0;
-        html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:5px;background:rgba(255,255,255,.03);font-size:11px">';
-        html += '<span style="color:var(--fg);font-weight:600">'+t.trackName+'</span> ';
-        html += '<span style="color:var(--dm);font-size:10px">— '+igCount+' IG · '+ttCount+' TT</span>';
-        if(t.insight) html += '<div style="color:var(--dm);font-size:10px;line-height:1.4;margin-top:2px">'+t.insight+'</div>';
-        html += '</div>';
-      });
-    }
-    html += '</div>';
-  }
-
-  // ─── SCRAPE / COMPETITOR INSIGHTS ───
-  if(s.competitorInsights && s.competitorInsights.length){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">🔍 SCRAPE INSIGHTS — WHY COMPETITOR CONTENT WORKED</div>';
-    s.competitorInsights.slice(0,4).forEach(function(c){
-      html += '<div style="padding:8px 12px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,.03);border-left:2px solid var(--ac)">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
-      html += '<span style="font-size:11px;color:var(--ac);font-weight:700">'+c.account+'</span>';
-      if(c.likes) html += '<span style="font-size:10px;color:var(--dm)">❤️ '+c.likes.toLocaleString()+'</span>';
-      html += '</div>';
-      if(c.topReel) html += '<div style="font-size:11px;color:var(--fg);font-style:italic;margin-bottom:4px;line-height:1.4">"'+c.topReel.slice(0,140)+'"</div>';
-      if(c.whyItWorked) html += '<div style="font-size:11px;color:var(--tx);line-height:1.5;margin-bottom:3px"><span style="color:var(--gn);font-weight:600">Why it worked:</span> '+c.whyItWorked+'</div>';
-      if(c.takeaway) html += '<div style="font-size:11px;color:var(--am);line-height:1.5"><span style="font-weight:600">→ Takeaway:</span> '+c.takeaway+'</div>';
-      html += '</div>';
+  if(narrative){
+    var paragraphs = narrative.split(/\n\s*\n/).filter(function(p){ return p.trim().length > 0; });
+    html += '<div style="font-size:13px;color:var(--fg);line-height:1.7;letter-spacing:.1px">';
+    paragraphs.forEach(function(p, i){
+      var marginBottom = (i === paragraphs.length - 1) ? '0' : '14px';
+      html += '<p style="margin:0 0 '+marginBottom+' 0">'+p.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>';
     });
     html += '</div>';
+  } else {
+    html += '<div class="ds">Weekly narrative pending — the next Monday Gemini run will generate this.</div>';
   }
 
-  // ─── CONTENT FORMAT PLAYBOOK (priorityFormats + avoidItems) ───
-  var hasFormat = (s.priorityFormats && s.priorityFormats.length) || (s.avoidItems && s.avoidItems.length);
-  if(hasFormat){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">🎬 CONTENT FORMAT PLAYBOOK</div>';
-    html += '<div style="display:grid;grid-template-columns:'+((s.priorityFormats&&s.priorityFormats.length)&&(s.avoidItems&&s.avoidItems.length)?'1fr 1fr':'1fr')+';gap:10px">';
-    if(s.priorityFormats && s.priorityFormats.length){
-      html += '<div><div style="font-size:9px;color:var(--gn);font-weight:700;margin-bottom:4px">✅ DOUBLE DOWN ON</div>';
-      s.priorityFormats.slice(0,5).forEach(function(f){
-        var impactColor = f.impact==='HIGH'?'var(--gn)':'var(--am)';
-        html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:5px;background:rgba(0,230,118,.04);font-size:11px">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">';
-        html += '<span style="color:var(--fg);font-weight:600">'+f.format+'</span>';
-        html += '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:'+impactColor+';color:#000;font-weight:700">'+f.impact+'</span>';
-        html += '</div>';
-        html += '<div style="color:var(--dm);font-size:10px;line-height:1.4">'+f.evidence+'</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-    if(s.avoidItems && s.avoidItems.length){
-      html += '<div><div style="font-size:9px;color:var(--rd);font-weight:700;margin-bottom:4px">🚫 AVOID</div>';
-      s.avoidItems.slice(0,4).forEach(function(a){
-        html += '<div style="padding:6px 10px;margin-bottom:4px;border-radius:5px;background:rgba(255,23,68,.04);font-size:11px">';
-        html += '<div style="color:var(--fg);font-weight:600;margin-bottom:2px">'+a.title+'</div>';
-        html += '<div style="color:var(--dm);font-size:10px;line-height:1.4">'+a.reason+'</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div></div>';
-  }
-
-  // ─── SMART SCHEDULE (top 5 windows) ───
-  if(s.smartSchedule && s.smartSchedule.length){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">⏰ SMART POSTING SCHEDULE THIS WEEK</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px">';
-    s.smartSchedule.slice(0,7).forEach(function(sl){
-      var pColor = sl.platform==='IG'||sl.platform==='Instagram'?'#E1306C':'#69C9D0';
-      html += '<div style="padding:8px 10px;border-radius:5px;background:rgba(255,255,255,.03);border-left:2px solid '+pColor+'">';
-      html += '<div style="font-size:11px;color:var(--fg);font-weight:700">'+sl.day+' · '+sl.time+'</div>';
-      html += '<div style="font-size:9px;color:'+pColor+';font-weight:700;margin-bottom:2px">'+sl.platform+'</div>';
-      html += '<div style="font-size:10px;color:var(--dm);line-height:1.4">'+sl.reason+'</div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-  }
-
-  // ─── 30-DAY FOCUS + GAPS (from keyInsights) ───
-  if(ki.nextPriority || (ki.wins && ki.wins.length) || (ki.gaps && ki.gaps.length)){
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-size:10px;color:var(--dm);font-weight:700;letter-spacing:.5px;margin-bottom:6px">🔮 30-DAY OUTLOOK</div>';
-    if(ki.wins && ki.wins.length){
-      html += '<div style="margin-bottom:6px"><span style="font-size:9px;color:var(--gn);font-weight:700">STRATEGIC WINS:</span> ';
-      html += '<span style="font-size:11px;color:var(--tx)">'+ki.wins.join(' · ')+'</span></div>';
-    }
-    if(ki.gaps && ki.gaps.length){
-      html += '<div style="margin-bottom:6px"><span style="font-size:9px;color:var(--rd);font-weight:700">GAPS TO CLOSE:</span> ';
-      html += '<span style="font-size:11px;color:var(--tx)">'+ki.gaps.join(' · ')+'</span></div>';
-    }
-    if(ki.nextPriority){
-      html += '<div style="padding:10px 12px;border-radius:6px;background:linear-gradient(90deg,rgba(225,48,108,.08),rgba(0,229,255,.04));border:1px solid rgba(225,48,108,.2)">';
-      html += '<div style="font-size:9px;color:#E1306C;font-weight:700;margin-bottom:3px">⭐ #1 PRIORITY FOR NEXT 30 DAYS</div>';
-      html += '<div style="font-size:12px;color:var(--fg);font-weight:600;line-height:1.5">'+ki.nextPriority+'</div></div>';
-    }
+  // ─── THIS WEEK'S FOCUS (single line, accent color) ───
+  if(wr.nextWeekFocus){
+    html += '<div style="margin-top:18px;padding:10px 14px;border-radius:8px;background:linear-gradient(90deg,rgba(0,229,255,.08),rgba(225,48,108,.04));border-left:3px solid var(--ac);font-size:12px;color:var(--tx);line-height:1.5">';
+    html += '<span style="color:var(--ac);font-weight:700;letter-spacing:.5px;font-size:10px">→ THIS WEEK\'S FOCUS</span><br>';
+    html += '<span style="color:var(--fg);font-weight:600">'+wr.nextWeekFocus+'</span>';
     html += '</div>';
   }
 
-  // ─── DEEP DIVE LINKS — point user to where each section lives ───
-  html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:var(--dm)">';
-  html += '<div style="margin-bottom:4px;font-weight:700;color:var(--dm)">📍 DEEP DIVE — full data lives in:</div>';
-  html += '<div style="line-height:1.6">';
-  if(s.captionTemplates && s.captionTemplates.length) html += '<span style="margin-right:12px">📝 '+s.captionTemplates.length+' caption templates ready in <strong>Create</strong> tab</span>';
-  if(s.actionableAlerts && s.actionableAlerts.length) html += '<span style="margin-right:12px">⚡ '+s.actionableAlerts.length+' actionable AI suggestions on this page below</span>';
-  if(s.competitorInsights) html += '<span style="margin-right:12px">🔍 Per-reel breakdowns in <strong>Content → What Works</strong></span>';
-  if(s.trackPostMatches) html += '<span style="margin-right:12px">🎵 Track-by-track stats in <strong>Tracks</strong> tab</span>';
-  html += '</div></div>';
+  // ─── DEEP DIVE FOOTER — point user to where each section lives ───
+  html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:var(--dm);line-height:1.6">';
+  html += '<span style="margin-right:14px">📊 Cadence, formats &amp; alerts → <strong>Content → What Works</strong></span>';
+  html += '<span style="margin-right:14px">🎵 Track stats &amp; pipeline → <strong>Tracks</strong> tab</span>';
+  html += '<span style="margin-right:14px">📝 Caption templates &amp; ideas → <strong>Create</strong> tab</span>';
+  html += '<span style="margin-right:14px">⏰ Smart schedule → <strong>Schedule</strong> tab</span>';
+  html += '</div>';
 
   area.innerHTML = html;
 }
@@ -3878,6 +3807,47 @@ function loadHistory(callback){
   });
 }
 
+// Load the "growing brain" — accumulating libraries the strategy script
+// merges into each Monday. These persist across weeks instead of being
+// overwritten with each new AI run, so the dashboard reflects everything
+// we've ever learned, not just this week's snapshot.
+function loadGrowingBrain(callback){
+  Promise.all([
+    db.ref('library/captionTemplates').once('value'),
+    db.ref('library/postIdeas').once('value'),
+    db.ref('library/competitorInsights').once('value'),
+    db.ref('library/priorityFormats').once('value'),
+  ]).then(function(snaps){
+    function toArray(snap){
+      var v = snap.val();
+      return v ? Object.values(v) : [];
+    }
+    window._library = {
+      captionTemplates: toArray(snaps[0]),
+      postIdeas: toArray(snaps[1]),
+      competitorInsights: toArray(snaps[2]),
+      priorityFormats: toArray(snaps[3]),
+    };
+    var totals = window._library.captionTemplates.length + window._library.postIdeas.length +
+                 window._library.competitorInsights.length + window._library.priorityFormats.length;
+    console.log('[BRAIN] Loaded growing-brain library: '+totals+' total entries '+
+      '('+window._library.captionTemplates.length+' captions, '+
+      window._library.postIdeas.length+' ideas, '+
+      window._library.competitorInsights.length+' competitor insights, '+
+      window._library.priorityFormats.length+' formats)');
+    // Update brain counter in HQ if present
+    var brainEl = document.getElementById('brain-counter');
+    if(brainEl){
+      brainEl.textContent = '🧠 ' + totals + ' learned ideas in the library';
+    }
+    if(callback) callback();
+  }).catch(function(err){
+    console.error('[BRAIN] load failed:', err.message);
+    window._library = { captionTemplates: [], postIdeas: [], competitorInsights: [], priorityFormats: [] };
+    if(callback) callback();
+  });
+}
+
 function renderTrendCharts(){
   // ── Engagement Heatmap (from post-level data) ──────────────────
   var latestData = window._latestData || {};
@@ -4095,7 +4065,12 @@ function init(){
   loadPromotedPosts();
   loadAnalytics();
   loadCompetitors();
-  loadHistory(function(){ renderTrendCharts(); });
+  loadHistory(function(){
+    renderTrendCharts();
+    // Re-render artist score now that 7-day growth velocity can be computed from history
+    renderArtistScore();
+  });
+  loadGrowingBrain();
   loadWeeklyStrategy();
   loadStrategyHistory();
   renderAgenda();
@@ -4156,11 +4131,12 @@ function init(){
   </div>
 </div>
 
-<!-- Weekly AI Overview — comprehensive weekly digest pulling all AI fields -->
+<!-- Weekly AI Overview — flowing paragraph briefing, the only thing on HQ. Detail views live on other tabs. -->
 <div class="sec" id="weekly-overview-section">
   <div class="sh">
     <span class="sn">&#128202;</span>
     <span class="st">Weekly AI Overview</span>
+    <span id="brain-counter" style="font-size:9px;color:var(--ac);margin-left:12px;padding:2px 8px;border-radius:10px;background:rgba(0,229,255,.08);font-weight:600"></span>
     <span id="weekly-overview-meta" style="font-size:9px;color:var(--dm);margin-left:auto"></span>
   </div>
   <div id="weekly-overview-area">

@@ -464,6 +464,8 @@ ${JSON.stringify(dataSummary)}
 Return a JSON object with EXACTLY these fields:
 
 {
+  "weeklyNarrative": "A flowing 4-6 paragraph weekly briefing written like a manager's Monday memo to the artist. NO bullet points, NO headers — just paragraphs separated by line breaks. Cover in this order: (1) WHERE THINGS STAND — strategic position with specific numbers (followers across platforms, engagement deltas, what changed since last week), (2) WHAT WORKED & WHAT DIDN'T — narrative of last week's wins and misses with actual metrics, (3) WHAT WE LEARNED FROM COMPETITORS THIS WEEK — name 2-3 specific accounts and what their top-performing reels (with caption snippets) reveal about formats/hooks/angles working in our niche right now, (4) TRACK PIPELINE — where each priority track stands and which one to push and why, (5) THE BIG MOVE — the single most important thing to do this week and the algorithmic reasoning. Tone: confident, specific, direct, slightly informal. Reference real numbers and real accounts. This narrative is the ONLY thing displayed on the HQ dashboard summary — the deep-dive cards/grids/lists live on other tabs. So make this synthesize EVERYTHING into one readable narrative.",
+
   "artistScoreInsight": "1-2 sentences explaining the artist's current standing. Reference specific metrics like follower count, engagement rate, posting cadence. Be direct and actionable.",
 
   "trendAnalysis": "2-3 sentences analyzing recent trends across platforms. Identify what's working and what needs attention. Reference specific numbers from the trends data.",
@@ -612,6 +614,12 @@ function validateAIResponse(parsed) {
   if (!parsed || typeof parsed !== 'object') return null;
   const result = {};
 
+  // Weekly narrative — the headline flowing-paragraph briefing for HQ.
+  // Must be a substantial chunk of text (>= 200 chars) since it's the primary
+  // thing the user reads on Monday.
+  if (typeof parsed.weeklyNarrative === 'string' && parsed.weeklyNarrative.length >= 200)
+    result.weeklyNarrative = parsed.weeklyNarrative.trim();
+
   // String fields
   if (typeof parsed.artistScoreInsight === 'string' && parsed.artistScoreInsight.length > 10)
     result.artistScoreInsight = parsed.artistScoreInsight;
@@ -681,8 +689,118 @@ function validateAIResponse(parsed) {
     result.trackPostMatches = parsed.trackPostMatches.slice(0, 10);
 
   const validCount = Object.keys(result).length;
-  console.log(`  Validated ${validCount}/19 AI fields`);
+  console.log(`  Validated ${validCount}/20 AI fields`);
   return validCount > 0 ? result : null;
+}
+
+// ─── Growing-brain library accumulation ─────────────────────────
+// Each Monday's AI run produces fresh ideas (caption templates, post ideas,
+// competitor insights, priority formats). Instead of overwriting the previous
+// week's ideas, we MERGE them into a persistent library at `library/*` in
+// Firebase. Each entry is keyed by a normalized hash so we dedupe across
+// weeks. Existing entries get a bumped `lastSeenAt`; new ones get
+// `firstAddedAt = now`. Pruning keeps each library at MAX_LIB_SIZE most
+// recently-relevant entries (most recently seen + tied-by-recency).
+
+const MAX_LIB_SIZE = 200;
+
+// Build a stable, normalized key for deduplication.
+function libKey(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 12)        // first 12 normalized tokens — cap so trivial edits still dedupe
+    .join('-');
+}
+
+// Merge a list of new entries into an existing library object.
+// `existing` is a flat object keyed by libKey. `newItems` is the array.
+// `keyFn` builds the key from each item. Returns the merged & pruned object.
+function mergeIntoLibrary(existing, newItems, keyFn, weekOf, now) {
+  const lib = { ...(existing || {}) };
+  let added = 0, updated = 0;
+  for (const item of (newItems || [])) {
+    const k = keyFn(item);
+    if (!k || k.length < 3) continue;
+    if (lib[k]) {
+      lib[k] = {
+        ...lib[k],
+        ...item,                // refresh fields with latest AI values
+        firstAddedAt: lib[k].firstAddedAt || now,
+        lastSeenAt: now,
+        seenCount: (lib[k].seenCount || 1) + 1,
+        weeksSeen: Array.from(new Set([...(lib[k].weeksSeen || []), weekOf])).slice(-12),
+      };
+      updated++;
+    } else {
+      lib[k] = {
+        ...item,
+        firstAddedAt: now,
+        lastSeenAt: now,
+        seenCount: 1,
+        weeksSeen: [weekOf],
+      };
+      added++;
+    }
+  }
+  // Prune: keep MAX_LIB_SIZE entries with the most recent lastSeenAt.
+  const entries = Object.entries(lib);
+  if (entries.length > MAX_LIB_SIZE) {
+    entries.sort((a, b) => (b[1].lastSeenAt || '').localeCompare(a[1].lastSeenAt || ''));
+    const kept = entries.slice(0, MAX_LIB_SIZE);
+    const pruned = {};
+    for (const [k, v] of kept) pruned[k] = v;
+    return { lib: pruned, added, updated, pruned: entries.length - MAX_LIB_SIZE };
+  }
+  return { lib, added, updated, pruned: 0 };
+}
+
+// Run all the merges for one weekly AI cycle. Reads + writes happen in the
+// caller; this just produces the new library objects to PUT.
+async function accumulateLibraries(weeklyStrategy, weekOf, now) {
+  if (!weeklyStrategy) return;
+  console.log('\n🧠 Growing-brain library accumulation...');
+
+  const [existingCaptions, existingIdeas, existingCompetitors, existingFormats] = await Promise.all([
+    readFirebase('library/captionTemplates'),
+    readFirebase('library/postIdeas'),
+    readFirebase('library/competitorInsights'),
+    readFirebase('library/priorityFormats'),
+  ]);
+
+  const writes = [];
+
+  if (Array.isArray(weeklyStrategy.captionTemplates) && weeklyStrategy.captionTemplates.length) {
+    const r = mergeIntoLibrary(existingCaptions, weeklyStrategy.captionTemplates,
+      (it) => libKey((it.platform || '') + ' ' + (it.caption || '')), weekOf, now);
+    writes.push(writeFirebase('library/captionTemplates', r.lib));
+    console.log(`  📝 captionTemplates: +${r.added} new, ${r.updated} updated, ${r.pruned} pruned (total ${Object.keys(r.lib).length})`);
+  }
+
+  if (Array.isArray(weeklyStrategy.postIdeas) && weeklyStrategy.postIdeas.length) {
+    const r = mergeIntoLibrary(existingIdeas, weeklyStrategy.postIdeas,
+      (it) => libKey((it.format || '') + ' ' + (it.idea || '')), weekOf, now);
+    writes.push(writeFirebase('library/postIdeas', r.lib));
+    console.log(`  💡 postIdeas: +${r.added} new, ${r.updated} updated, ${r.pruned} pruned (total ${Object.keys(r.lib).length})`);
+  }
+
+  if (Array.isArray(weeklyStrategy.competitorInsights) && weeklyStrategy.competitorInsights.length) {
+    const r = mergeIntoLibrary(existingCompetitors, weeklyStrategy.competitorInsights,
+      (it) => libKey((it.account || '') + ' ' + (it.topReel || it.whyItWorked || '').slice(0, 60)), weekOf, now);
+    writes.push(writeFirebase('library/competitorInsights', r.lib));
+    console.log(`  🔍 competitorInsights: +${r.added} new, ${r.updated} updated, ${r.pruned} pruned (total ${Object.keys(r.lib).length})`);
+  }
+
+  if (Array.isArray(weeklyStrategy.priorityFormats) && weeklyStrategy.priorityFormats.length) {
+    const r = mergeIntoLibrary(existingFormats, weeklyStrategy.priorityFormats,
+      (it) => libKey(it.format || ''), weekOf, now);
+    writes.push(writeFirebase('library/priorityFormats', r.lib));
+    console.log(`  🎬 priorityFormats: +${r.added} new, ${r.updated} updated, ${r.pruned} pruned (total ${Object.keys(r.lib).length})`);
+  }
+
+  await Promise.all(writes);
 }
 
 // ─── Trend computation ──────────────────────────────────────────
@@ -1047,7 +1165,7 @@ async function main() {
       // most recent strategy in history (so the dashboard never goes blank) ──
       let carryOver = null;
       if (!aiFields && existingStrategy) {
-        const candidates = ['competitorInsights', 'captionTemplates', 'smartSchedule', 'keyInsights',
+        const candidates = ['weeklyNarrative', 'competitorInsights', 'captionTemplates', 'smartSchedule', 'keyInsights',
                             'priorityFormats', 'actionableAlerts', 'weeklyReview', 'avoidItems',
                             'postingCadenceAnalysis', 'artistScoreInsight', 'trendAnalysis',
                             'performanceAlerts', 'opportunityAlerts', 'trackPostMatches'];
@@ -1064,6 +1182,7 @@ async function main() {
         aiGenerated: !!aiFields,
         carriedOver: !aiFields && !!carryOver,
         carriedOverFrom: !aiFields && carryOver ? (carryOver.generatedAt || null) : null,
+        weeklyNarrative: aiFields?.weeklyNarrative || carryOver?.weeklyNarrative || null,
         priorities: aiFields?.priorities || carryOver?.priorities || computePriorities(latest, state, history),
         postIdeas: aiFields?.postIdeas || carryOver?.postIdeas || computePostIdeas(latest, competitors, state),
         trackToPush: aiFields?.trackToPush !== undefined ? aiFields.trackToPush : (carryOver?.trackToPush !== undefined ? carryOver.trackToPush : pickTrackToPush(state?.tracks)),
@@ -1137,6 +1256,15 @@ async function main() {
       writeFirebase('strategy/latest', weeklyStrategy),
       writeFirebase(`strategy/history/${dateKey}`, weeklyStrategy),
     ]);
+
+    // GROWING BRAIN — merge this week's AI ideas into accumulating libraries.
+    // Only runs on weekly refresh (not daily) so the library grows by ~1 week's
+    // worth of fresh ideas each Monday rather than churning daily.
+    try {
+      await accumulateLibraries(weeklyStrategy, dateKey, now);
+    } catch (err) {
+      console.log(`  ⚠️  Library accumulation failed (non-fatal): ${err.message}`);
+    }
   } else {
     // PATCH — only update daily insight fields, preserve existing weekly strategy
     const patch = {

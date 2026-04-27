@@ -99,14 +99,15 @@ async function scrapeCompetitorContent(handle) {
   console.log(`  Scraping @${handle}...`);
   const run = await client.actor('apify/instagram-post-scraper').call({
     username: [handle],
-    resultsLimit: 10, // Fetch more to filter for reels
+    resultsLimit: 25, // Fetch generously so the pool can grow each week — we filter to reels and keep up to 8.
   });
 
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
   const reels = items.filter(isReel);
 
-  // Prefer reels — fall back to all posts only if <3 reels found
-  const results = reels.length >= 3 ? reels.slice(0, 5) : items.slice(0, 5);
+  // Prefer reels — fall back to all posts only if <3 reels found.
+  // Bumped from 5 → 8 so the accumulating pool grows faster each week.
+  const results = reels.length >= 3 ? reels.slice(0, 8) : items.slice(0, 8);
 
   return results.map(p => ({
     shortCode: p.shortCode,
@@ -186,12 +187,15 @@ function prunePool(pool, maxSize) {
   const entries = Object.entries(pool);
   if (entries.length <= maxSize) return pool;
 
-  // Score each entry: engagement + recency bonus
+  // Score each entry: engagement + recency bonus.
+  // We weight recency much more aggressively so the pool stays "fresh" — a reel we
+  // first saw in the last 14 days gets a huge boost, after which the bonus decays.
+  // This prevents weeks-old viral reels from monopolizing the dashboard surface.
   const scored = entries.map(([key, r]) => {
     const engScore = (r.likesCount || 0) + (r.commentsCount || 0) * 3;
     const ageMs = Date.now() - new Date(r.firstSeenAt || 0).getTime();
     const ageDays = ageMs / (1000 * 60 * 60 * 24);
-    const recencyBonus = Math.max(0, 30 - ageDays) * 100; // 0-3000 bonus for <30 days old
+    const recencyBonus = Math.max(0, 14 - ageDays) * 500; // 0-7000 bonus for <14 days old
     return { key, r, score: engScore + recencyBonus };
   });
 
