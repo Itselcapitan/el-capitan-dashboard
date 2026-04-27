@@ -31,14 +31,17 @@ const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashb
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-// Model fallback chain — try newest first, fall back to stable production models
+// Model fallback chain — each entry has { model, base } to handle API version differences.
+// gemini-2.5-flash uses v1beta (preview). Stable models use v1.
 const GEMINI_MODELS = [
-  'gemini-2.5-flash',   // best quality, preview — often 503 during peak hours
-  'gemini-2.0-flash',   // stable production model, good capacity
-  'gemini-1.5-flash',   // mature stable fallback, very reliable
+  { model: 'gemini-2.5-flash',          base: 'https://generativelanguage.googleapis.com/v1beta/models' },
+  { model: 'gemini-2.5-flash',          base: 'https://generativelanguage.googleapis.com/v1beta/models' }, // retry same after pause
+  { model: 'gemini-2.0-flash',          base: 'https://generativelanguage.googleapis.com/v1/models' },
+  { model: 'gemini-2.0-flash-lite',     base: 'https://generativelanguage.googleapis.com/v1/models' },
+  { model: 'gemini-1.5-flash',          base: 'https://generativelanguage.googleapis.com/v1/models' },
+  { model: 'gemini-1.5-flash-8b',       base: 'https://generativelanguage.googleapis.com/v1/models' },
 ];
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Legacy single-URL for compatibility (unused — callGemini now cycles models)
 const GEMINI_URL = `${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const POSTS_PER_WEEK_TARGET = 5;
@@ -85,58 +88,56 @@ async function patchFirebase(path, data) {
 
 // ─── Gemini AI helpers ──────────────────────────────────────────
 
-// Try one model, 2 attempts max (fast fail to move to next model)
-async function tryModel(modelName, prompt, attempts = 2) {
-  const url = `${GEMINI_BASE}/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90000);
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
-        }),
-      });
-      clearTimeout(timeout);
-      if ((res.status === 429 || res.status === 503) && attempt < attempts - 1) {
-        console.warn(`  [${modelName}] ${res.status} — waiting 30s before retry...`);
-        await new Promise(r => setTimeout(r, 30000));
-        continue;
-      }
-      if (!res.ok) {
-        const text = await res.text();
-        console.warn(`  [${modelName}] HTTP ${res.status} — moving to next model`);
-        return null; // signal to try next model
-      }
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { console.warn(`  [${modelName}] empty response — moving to next model`); return null; }
-      const parsed = JSON.parse(text);
-      console.log(`  ✓ [${modelName}] success`);
-      return parsed;
-    } catch (err) {
-      console.warn(`  [${modelName}] error: ${err.message}`);
-      if (attempt < attempts - 1) { await new Promise(r => setTimeout(r, 15000)); continue; }
+// Try one model entry { model, base }, single attempt. Returns parsed JSON or null.
+async function tryModel({ model, base }, prompt) {
+  const url = `${base}/${model}:generateContent?key=${GEMINI_API_KEY}`;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+      }),
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      console.warn(`  [${model}] HTTP ${res.status} — moving to next model`);
       return null;
     }
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) { console.warn(`  [${model}] empty response — moving to next model`); return null; }
+    const parsed = JSON.parse(text);
+    console.log(`  ✓ [${model}] success`);
+    return parsed;
+  } catch (err) {
+    console.warn(`  [${model}] error: ${err.message}`);
+    return null;
   }
-  return null;
 }
 
-// Main Gemini caller — cycles through model fallback chain until one succeeds
+// Main Gemini caller — cycles through model fallback chain until one succeeds.
+// On 503 (service overloaded), waits 45s then continues to next entry.
+// The chain includes two gemini-2.5-flash entries so it gets a second chance after a pause.
 async function callGemini(prompt) {
   if (!GEMINI_API_KEY) return null;
-  for (const model of GEMINI_MODELS) {
-    console.log(`  Trying ${model}...`);
-    const result = await tryModel(model, prompt, 2);
+  let lastWas503 = false;
+  for (let i = 0; i < GEMINI_MODELS.length; i++) {
+    const entry = GEMINI_MODELS[i];
+    const isRetryOf2_5 = i === 1; // second entry is a retry of 2.5-flash
+    if (isRetryOf2_5) {
+      console.log('  Pausing 60s before retrying gemini-2.5-flash...');
+      await new Promise(r => setTimeout(r, 60000));
+    }
+    console.log(`  Trying ${entry.model} (${entry.base.includes('v1beta') ? 'v1beta' : 'v1'})...`);
+    const result = await tryModel(entry, prompt);
     if (result !== null) return result;
-    console.warn(`  [${model}] all attempts failed — trying next model`);
   }
-  console.error('  All Gemini models failed. No AI output this run.');
+  console.error('  All Gemini models exhausted. No AI output this run.');
   return null;
 }
 
