@@ -31,21 +31,24 @@ const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashb
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-// Model fallback chain — each entry has { model, base } to handle API version differences.
-// gemini-2.5-flash uses v1beta (preview). Stable models use v1.
-// All models use v1beta — the Google AI Studio key works with v1beta for all Gemini models.
-// v1 returns 404 for this key type. The 2.5-flash entry is duplicated for a retry after a pause.
+// Model fallback chain — each entry has { model, base, waitBefore } where waitBefore is seconds to wait before this attempt.
+// CURRENT MODELS ONLY: gemini-2.0/1.5 are deprecated for new API keys (return 404).
+// Strategy:
+//   - Try gemini-2.5-flash repeatedly with progressive waits (it's overloaded but the most capable)
+//   - Interleave with gemini-2.5-flash-lite (lighter, less contended) and gemini-2.5-pro (different load)
+//   - Use latest aliases as final tries
+// One single run cycles through ALL of these — ~6 minutes worst case before falling back.
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODELS = [
-  { model: 'gemini-2.5-flash',          base: BASE },
-  { model: 'gemini-2.5-flash',          base: BASE }, // retry after 60s pause
-  { model: 'gemini-2.0-flash',          base: BASE },
-  { model: 'gemini-2.0-flash-lite',     base: BASE },
-  { model: 'gemini-1.5-flash',          base: BASE },
-  { model: 'gemini-1.5-flash-8b',       base: BASE },
+  { model: 'gemini-2.5-flash',          base: BASE, waitBefore: 0 },
+  { model: 'gemini-2.5-flash-lite',     base: BASE, waitBefore: 5 },   // lighter, often less loaded
+  { model: 'gemini-2.5-flash',          base: BASE, waitBefore: 30 },  // retry primary after pause
+  { model: 'gemini-2.5-pro',            base: BASE, waitBefore: 5 },   // different model — different load
+  { model: 'gemini-flash-latest',       base: BASE, waitBefore: 30 },  // alias — sometimes routes to less-loaded
+  { model: 'gemini-flash-lite-latest',  base: BASE, waitBefore: 5 },
+  { model: 'gemini-2.5-flash',          base: BASE, waitBefore: 60 },  // final aggressive retry
+  { model: 'gemini-2.5-flash-lite',     base: BASE, waitBefore: 30 },
 ];
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_URL = `${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const POSTS_PER_WEEK_TARGET = 5;
 
@@ -136,24 +139,42 @@ async function tryModel({ model, base }, prompt) {
 }
 
 // Main Gemini caller — cycles through model fallback chain until one succeeds.
-// On 503 (service overloaded), waits 45s then continues to next entry.
-// The chain includes two gemini-2.5-flash entries so it gets a second chance after a pause.
+// Each entry has a waitBefore (seconds) to spread requests over time and let 503s clear.
+// Total max wait ~165s = ~3 min, plus model response time = ~5-6 min worst case.
 async function callGemini(prompt) {
   if (!GEMINI_API_KEY) return null;
-  let lastWas503 = false;
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const entry = GEMINI_MODELS[i];
-    const isRetryOf2_5 = i === 1; // second entry is a retry of 2.5-flash
-    if (isRetryOf2_5) {
-      console.log('  Pausing 60s before retrying gemini-2.5-flash...');
-      await new Promise(r => setTimeout(r, 60000));
+    if (entry.waitBefore && entry.waitBefore > 0) {
+      console.log(`  Pausing ${entry.waitBefore}s before trying ${entry.model}...`);
+      await new Promise(r => setTimeout(r, entry.waitBefore * 1000));
     }
-    console.log(`  Trying ${entry.model} (${entry.base.includes('v1beta') ? 'v1beta' : 'v1'})...`);
+    console.log(`  Trying ${entry.model}...`);
     const result = await tryModel(entry, prompt);
     if (result !== null) return result;
   }
   console.error('  All Gemini models exhausted. No AI output this run.');
   return null;
+}
+
+// Diagnostic: list available models for this API key (logged once at startup).
+async function listAvailableModels() {
+  if (!GEMINI_API_KEY) return;
+  try {
+    const url = `${BASE}?key=${GEMINI_API_KEY}&pageSize=50`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`  [models] ListModels HTTP ${res.status}`);
+      return;
+    }
+    const data = await res.json();
+    const generateContentModels = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => m.name.replace('models/', ''));
+    console.log(`  [models] Available for generateContent: ${generateContentModels.join(', ')}`);
+  } catch (err) {
+    console.log(`  [models] ListModels error: ${err.message}`);
+  }
 }
 
 function buildDataSummary(latest, history, competitors, state, allReelsPool) {
@@ -966,6 +987,9 @@ async function main() {
 
   console.log(`\n📋 Daily Strategy Generator — ${dateKey}\n`);
 
+  // One-time diagnostic — log what models are available for this API key
+  await listAvailableModels();
+
   // Read all Firebase data + existing strategy
   const [latest, history, competitors, allReelsPool, state, existingStrategy] = await Promise.all([
     readFirebase('analytics/latest'),
@@ -1019,29 +1043,46 @@ async function main() {
         }
       }
 
+      // ── Carry-over fallback: if AI failed entirely, copy AI fields from the
+      // most recent strategy in history (so the dashboard never goes blank) ──
+      let carryOver = null;
+      if (!aiFields && existingStrategy) {
+        const candidates = ['competitorInsights', 'captionTemplates', 'smartSchedule', 'keyInsights',
+                            'priorityFormats', 'actionableAlerts', 'weeklyReview', 'avoidItems',
+                            'postingCadenceAnalysis', 'artistScoreInsight', 'trendAnalysis',
+                            'performanceAlerts', 'opportunityAlerts', 'trackPostMatches'];
+        const hasAny = candidates.some(f => existingStrategy[f] != null);
+        if (hasAny) {
+          carryOver = existingStrategy;
+          console.log('  ↻ Carrying over AI fields from previous strategy (Gemini unavailable this run)');
+        }
+      }
+
       weeklyStrategy = {
         generatedAt: now,
         weekOf: dateKey,
         aiGenerated: !!aiFields,
-        priorities: aiFields?.priorities || computePriorities(latest, state, history),
-        postIdeas: aiFields?.postIdeas || computePostIdeas(latest, competitors, state),
-        trackToPush: aiFields?.trackToPush !== undefined ? aiFields.trackToPush : pickTrackToPush(state?.tracks),
-        campaignAction: aiFields?.campaignAction || evaluateCampaigns(state?.campaigns, latest),
+        carriedOver: !aiFields && !!carryOver,
+        carriedOverFrom: !aiFields && carryOver ? (carryOver.generatedAt || null) : null,
+        priorities: aiFields?.priorities || carryOver?.priorities || computePriorities(latest, state, history),
+        postIdeas: aiFields?.postIdeas || carryOver?.postIdeas || computePostIdeas(latest, competitors, state),
+        trackToPush: aiFields?.trackToPush !== undefined ? aiFields.trackToPush : (carryOver?.trackToPush !== undefined ? carryOver.trackToPush : pickTrackToPush(state?.tracks)),
+        campaignAction: aiFields?.campaignAction || carryOver?.campaignAction || evaluateCampaigns(state?.campaigns, latest),
         alertsToHandle: pickTopAlerts(latest?.alerts),
-        artistScoreInsight: aiFields?.artistScoreInsight || null,
-        trendAnalysis: aiFields?.trendAnalysis || null,
-        performanceAlerts: aiFields?.performanceAlerts || null,
-        opportunityAlerts: aiFields?.opportunityAlerts || null,
-        avoidItems: aiFields?.avoidItems || null,
-        postingCadenceAnalysis: aiFields?.postingCadenceAnalysis || null,
-        priorityFormats: aiFields?.priorityFormats || null,
-        actionableAlerts: aiFields?.actionableAlerts || null,
-        weeklyReview: aiFields?.weeklyReview || null,
-        competitorInsights: aiFields?.competitorInsights || null,
-        captionTemplates: aiFields?.captionTemplates || null,
-        smartSchedule: aiFields?.smartSchedule || null,
-        keyInsights: aiFields?.keyInsights || null,
-        trackPostMatches: aiFields?.trackPostMatches || null,
+        artistScoreInsight: aiFields?.artistScoreInsight || carryOver?.artistScoreInsight || null,
+        trendAnalysis: aiFields?.trendAnalysis || carryOver?.trendAnalysis || null,
+        performanceAlerts: aiFields?.performanceAlerts || carryOver?.performanceAlerts || null,
+        opportunityAlerts: aiFields?.opportunityAlerts || carryOver?.opportunityAlerts || null,
+        avoidItems: aiFields?.avoidItems || carryOver?.avoidItems || null,
+        postingCadenceAnalysis: aiFields?.postingCadenceAnalysis || carryOver?.postingCadenceAnalysis || null,
+        priorityFormats: aiFields?.priorityFormats || carryOver?.priorityFormats || null,
+        actionableAlerts: aiFields?.actionableAlerts || carryOver?.actionableAlerts || null,
+        weeklyReview: aiFields?.weeklyReview || carryOver?.weeklyReview || null,
+        competitorInsights: aiFields?.competitorInsights || carryOver?.competitorInsights || null,
+        captionTemplates: aiFields?.captionTemplates || carryOver?.captionTemplates || null,
+        smartSchedule: aiFields?.smartSchedule || carryOver?.smartSchedule || null,
+        keyInsights: aiFields?.keyInsights || carryOver?.keyInsights || null,
+        trackPostMatches: aiFields?.trackPostMatches || carryOver?.trackPostMatches || null,
       };
     } else {
       console.log('⚠️  No GEMINI_API_KEY — using rule-based weekly strategy');
