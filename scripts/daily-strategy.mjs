@@ -30,7 +30,16 @@ function getMondayStartMs() {
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+// Model fallback chain — try newest first, fall back to stable production models
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',   // best quality, preview — often 503 during peak hours
+  'gemini-2.0-flash',   // stable production model, good capacity
+  'gemini-1.5-flash',   // mature stable fallback, very reliable
+];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+// Legacy single-URL for compatibility (unused — callGemini now cycles models)
+const GEMINI_URL = `${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const POSTS_PER_WEEK_TARGET = 5;
 
@@ -76,51 +85,58 @@ async function patchFirebase(path, data) {
 
 // ─── Gemini AI helpers ──────────────────────────────────────────
 
-async function callGemini(prompt, retries = 4) {
-  if (!GEMINI_API_KEY) return null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+// Try one model, 2 attempts max (fast fail to move to next model)
+async function tryModel(modelName, prompt, attempts = 2) {
+  const url = `${GEMINI_BASE}/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
-      if (attempt > 0) console.log(`  Retry ${attempt}/${retries}...`);
-      const res = await fetch(GEMINI_URL, {
+      const timeout = setTimeout(() => controller.abort(), 90000);
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.7,
-          },
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
         }),
       });
       clearTimeout(timeout);
-      // Retry on 429 (rate limit) AND 503 (service unavailable / high demand)
-      if ((res.status === 429 || res.status === 503) && attempt < retries) {
-        const wait = (attempt + 1) * 30; // 30s, 60s, 90s, 120s
-        console.warn(`  Gemini ${res.status} — waiting ${wait}s before retry...`);
-        await new Promise(r => setTimeout(r, wait * 1000));
+      if ((res.status === 429 || res.status === 503) && attempt < attempts - 1) {
+        console.warn(`  [${modelName}] ${res.status} — waiting 30s before retry...`);
+        await new Promise(r => setTimeout(r, 30000));
         continue;
       }
       if (!res.ok) {
         const text = await res.text();
-        console.error(`  Gemini API error: ${res.status} ${text.slice(0, 200)}`);
-        return null;
+        console.warn(`  [${modelName}] HTTP ${res.status} — moving to next model`);
+        return null; // signal to try next model
       }
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { console.error('  Gemini returned empty response'); return null; }
-      return JSON.parse(text);
+      if (!text) { console.warn(`  [${modelName}] empty response — moving to next model`); return null; }
+      const parsed = JSON.parse(text);
+      console.log(`  ✓ [${modelName}] success`);
+      return parsed;
     } catch (err) {
-      console.error(`  Gemini call failed: ${err.message}`);
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 15000));
-        continue;
-      }
+      console.warn(`  [${modelName}] error: ${err.message}`);
+      if (attempt < attempts - 1) { await new Promise(r => setTimeout(r, 15000)); continue; }
       return null;
     }
   }
+  return null;
+}
+
+// Main Gemini caller — cycles through model fallback chain until one succeeds
+async function callGemini(prompt) {
+  if (!GEMINI_API_KEY) return null;
+  for (const model of GEMINI_MODELS) {
+    console.log(`  Trying ${model}...`);
+    const result = await tryModel(model, prompt, 2);
+    if (result !== null) return result;
+    console.warn(`  [${model}] all attempts failed — trying next model`);
+  }
+  console.error('  All Gemini models failed. No AI output this run.');
   return null;
 }
 
