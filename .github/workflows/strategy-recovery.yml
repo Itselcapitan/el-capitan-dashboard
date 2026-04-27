@@ -31,15 +31,19 @@ jobs:
       # Check Firebase to see if today's strategy is fully populated.
       # We check both dailyInsight AND a weekly AI field (competitorInsights).
       # If today is Monday and weekly fields are blank, force_weekly=true.
+      # FIREBASE_DB_URL is hardcoded (matches all other workflows in this repo);
+      # only the auth secret comes from GitHub secrets.
       - name: Check if strategy is fully populated for today
         id: check
+        env:
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
         run: |
           TODAY=$(date -u +%Y-%m-%d)
           DOW=$(date -u +%u)  # 1=Mon, 7=Sun
 
-          DAILY=$(curl -s "${{ secrets.FIREBASE_DB_URL }}/strategy/history/${TODAY}/dailyInsight/generatedAt.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
-          WEEKLY=$(curl -s "${{ secrets.FIREBASE_DB_URL }}/strategy/latest/competitorInsights.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
-          WEEKLY_AT=$(curl -s "${{ secrets.FIREBASE_DB_URL }}/strategy/latest/generatedAt.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
+          DAILY=$(curl -s "${FIREBASE_DB_URL}/strategy/history/${TODAY}/dailyInsight/generatedAt.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
+          WEEKLY=$(curl -s "${FIREBASE_DB_URL}/strategy/latest/competitorInsights.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
+          WEEKLY_AT=$(curl -s "${FIREBASE_DB_URL}/strategy/latest/generatedAt.json?auth=${{ secrets.FIREBASE_DB_SECRET }}")
 
           # Parse weekly date from ISO timestamp (first 10 chars after the quote)
           WEEKLY_DATE=$(echo "$WEEKLY_AT" | sed 's/"//g' | cut -c1-10)
@@ -79,7 +83,7 @@ jobs:
         if: steps.check.outputs.needs_run == 'true'
         run: node scripts/daily-strategy.mjs
         env:
-          FIREBASE_DB_URL: ${{ secrets.FIREBASE_DB_URL }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FORCE_WEEKLY: ${{ steps.check.outputs.force_weekly || github.event.inputs.force_weekly || 'false' }}
