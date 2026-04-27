@@ -88,6 +88,15 @@ async function patchFirebase(path, data) {
 
 // ─── Gemini AI helpers ──────────────────────────────────────────
 
+// Extract JSON from a Gemini text response — handles both raw JSON and markdown-fenced ```json blocks
+function extractJSON(text) {
+  if (!text) return null;
+  // Strip markdown code fences if present
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fenced ? fenced[1].trim() : text.trim();
+  return JSON.parse(raw);
+}
+
 // Try one model entry { model, base }, single attempt. Returns parsed JSON or null.
 async function tryModel({ model, base }, prompt) {
   const url = `${base}/${model}:generateContent?key=${GEMINI_API_KEY}`;
@@ -100,7 +109,8 @@ async function tryModel({ model, base }, prompt) {
       signal: controller.signal,
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+        // No responseMimeType — prompt instructs JSON output, works across all model versions
+        generationConfig: { temperature: 0.7 },
       }),
     });
     clearTimeout(timeout);
@@ -111,7 +121,7 @@ async function tryModel({ model, base }, prompt) {
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) { console.warn(`  [${model}] empty response — moving to next model`); return null; }
-    const parsed = JSON.parse(text);
+    const parsed = extractJSON(text);
     console.log(`  ✓ [${model}] success`);
     return parsed;
   } catch (err) {
