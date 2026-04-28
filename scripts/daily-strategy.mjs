@@ -225,17 +225,68 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     .sort((a, b) => b.avgLikes - a.avgLikes)
     .slice(0, 8);
 
-  // Top reels from accumulated pool (up to 8 for richer AI context)
-  const topReels = [...poolEntries]
-    .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0)) - ((a.likesCount || 0) + (a.commentsCount || 0)))
-    .slice(0, 8)
-    .map(r => ({
+  // ── RECENT competitor reels — for "what's trending THIS WEEK" analysis ──
+  // The accumulated pool has months of history. If we just feed Gemini the
+  // top-engagement reels, it'll re-cite the same all-time viral hits every
+  // week. Instead we filter to reels first seen in the last 14 days (or
+  // posted in the last 30 days if the original timestamp is available),
+  // then sort by recency primarily with engagement as tiebreak.
+  const nowMs = Date.now();
+  const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const recentEntries = poolEntries.filter(r => {
+    const firstSeenMs = r.firstSeenAt ? new Date(r.firstSeenAt).getTime() : 0;
+    const postedMs = r.timestamp ? new Date(r.timestamp).getTime() : 0;
+    const seenRecently = firstSeenMs && (nowMs - firstSeenMs) <= FOURTEEN_DAYS_MS;
+    const postedRecently = postedMs && (nowMs - postedMs) <= THIRTY_DAYS_MS;
+    return seenRecently || postedRecently;
+  });
+
+  // Helper: tag a reel with how old it is (in days) so Gemini can SEE freshness.
+  const tagAge = (r) => {
+    const firstSeenMs = r.firstSeenAt ? new Date(r.firstSeenAt).getTime() : 0;
+    const postedMs = r.timestamp ? new Date(r.timestamp).getTime() : 0;
+    const seenDays = firstSeenMs ? Math.round((nowMs - firstSeenMs) / 864e5) : null;
+    const postedDays = postedMs ? Math.round((nowMs - postedMs) / 864e5) : null;
+    return {
       account: r.ownerUsername,
       likes: r.likesCount || 0,
-      caption: (r.caption || '').slice(0, 80),
+      comments: r.commentsCount || 0,
+      caption: (r.caption || '').slice(0, 120),
       hook: r.hook || '',
-      firstSeen: r.firstSeenAt ? r.firstSeenAt.slice(0, 10) : '',
-    }));
+      seenDaysAgo: seenDays,    // when WE first scraped this
+      postedDaysAgo: postedDays, // when the reel was actually posted (Apify timestamp)
+    };
+  };
+
+  // PRIMARY signal for AI: recent reels sorted by recency, engagement as tiebreak.
+  // This is what Gemini cites in `competitorInsights` and `weeklyNarrative`.
+  const recentSorted = recentEntries.slice().sort((a, b) => {
+    const aMs = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() :
+                a.timestamp ? new Date(a.timestamp).getTime() : 0;
+    const bMs = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() :
+                b.timestamp ? new Date(b.timestamp).getTime() : 0;
+    if (bMs !== aMs) return bMs - aMs;
+    return ((b.likesCount || 0) + (b.commentsCount || 0)) - ((a.likesCount || 0) + (a.commentsCount || 0));
+  });
+
+  // Up to 12 recent reels — give Gemini enough to spot patterns
+  const topReels = recentSorted.slice(0, 12).map(tagAge);
+
+  // FALLBACK: if recent set is sparse (<3), fall back to most-recently-seen
+  // overall so Gemini has at least *something* to analyze (better than nothing
+  // on first scrape after a long gap).
+  if (topReels.length < 3) {
+    const fallback = poolEntries.slice()
+      .sort((a, b) => {
+        const aMs = a.firstSeenAt ? new Date(a.firstSeenAt).getTime() : 0;
+        const bMs = b.firstSeenAt ? new Date(b.firstSeenAt).getTime() : 0;
+        return bMs - aMs;
+      })
+      .slice(0, 8)
+      .map(tagAge);
+    topReels.push(...fallback.filter(r => !topReels.some(t => t.account === r.account && t.caption === r.caption)).slice(0, 8 - topReels.length));
+  }
 
   // Post timing patterns for smart scheduling
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -274,8 +325,10 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     .slice(0, 5)
     .map(p => ({ caption: (p.caption||'').slice(0, 120), engRate: +(((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100).toFixed(1) }));
 
-  // Top competitor captions + hooks from accumulated pool
-  const topCompCaptions = [...poolEntries]
+  // Top competitor captions + hooks — RECENT only, same windowing as topReels.
+  // Falls back to high-engagement overall if recent set is empty.
+  const recentForCaptions = recentEntries.length >= 5 ? recentEntries : poolEntries;
+  const topCompCaptions = recentForCaptions.slice()
     .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0)) - ((a.likesCount || 0) + (a.commentsCount || 0)))
     .slice(0, 8)
     .map(r => ({
@@ -283,10 +336,12 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
       caption: (r.caption || '').slice(0, 120),
       hook: r.hook || '',
       likes: r.likesCount || 0,
+      seenDaysAgo: r.firstSeenAt ? Math.round((nowMs - new Date(r.firstSeenAt).getTime()) / 864e5) : null,
     }));
 
-  // Top hooks specifically (high-signal for caption writing)
-  const topHooks = [...poolEntries]
+  // Top hooks — RECENT only, weighted by engagement among recent reels.
+  const recentForHooks = recentEntries.length >= 5 ? recentEntries : poolEntries;
+  const topHooks = recentForHooks
     .filter(r => r.hook && r.isReel)
     .sort((a, b) => ((b.likesCount || 0) + (b.commentsCount || 0) * 3) - ((a.likesCount || 0) + (a.commentsCount || 0) * 3))
     .slice(0, 10)
@@ -437,13 +492,14 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     campaigns,
     competitors: {
       summary: compSummary,
-      topReels,         // top 8 reels from ACCUMULATED pool (NOT just this scrape)
-      topCompCaptions,  // captions + hooks from top pool reels
-      topHooks,         // opening hook phrases from top-performing reels
-      poolSize,         // how many accumulated reels are in the pool
-      note: poolSize > 0
-        ? `Competitor data is from ${poolSize} accumulated reels scraped over time. This is reel-only data (video content), not regular posts.`
-        : 'Competitor data is from the most recent scrape only — pool will grow over time.',
+      topReels,         // RECENT reels (last 14 days seen, last 30 days posted) — for trend spotting
+      topCompCaptions,  // captions + hooks from RECENT reels only
+      topHooks,         // opening hook phrases from RECENT reels only
+      poolSize,         // how many accumulated reels are in the pool overall
+      recentCount: recentEntries.length, // how many of those are recent
+      note: recentEntries.length >= 3
+        ? `topReels/topCompCaptions/topHooks are filtered to RECENT competitor reels only — first seen by us within the last 14 days OR posted within the last 30 days (per Apify's timestamp). Each entry includes seenDaysAgo and postedDaysAgo so you can see freshness. DO NOT cite reels older than this for "this week's trends" — these are what's actually current right now. Pool has ${poolSize} reels total but only ${recentEntries.length} qualify as recent — analyze the recent ones for "what's trending this week".`
+        : `Recent reel set is sparse (${recentEntries.length} reels in the last 14 days) — fell back to most-recently-seen overall. Be cautious citing these as "this week's trends" — note the seenDaysAgo on each.`,
     },
     currentAlerts: (latest?.alerts || []).map(a => ({ msg: a.msg, level: a.level, category: a.category })),
     postTiming: { ig: igPostTiming, tt: ttPostTiming },
@@ -461,10 +517,13 @@ function buildPrompt(dataSummary) {
 DATA:
 ${JSON.stringify(dataSummary)}
 
+RECENCY RULE FOR COMPETITOR ANALYSIS — READ FIRST:
+The competitors.topReels array has been pre-filtered for you. Each entry includes "seenDaysAgo" (when we first scraped it) and "postedDaysAgo" (when the reel was actually posted). When you write competitorInsights, weeklyNarrative's "what we learned from competitors this week" paragraph, or any other forward-looking competitor commentary, you MUST cite reels where seenDaysAgo <= 14 (preferably <= 7) OR postedDaysAgo <= 30. Reels older than that are stale; the user has been seeing them for weeks and explicitly said "those reels came out months ago and have been in my system for a while." If competitors.recentCount < 3 you should say so honestly ("competitor scrape was thin this week" / "limited new signal") rather than padding with old viral hits. Old reels are fine for historical context (the trends.summary aggregate uses them) but never cite them as "this week's trends."
+
 Return a JSON object with EXACTLY these fields:
 
 {
-  "weeklyNarrative": "A flowing 4-6 paragraph weekly briefing written like a manager's Monday memo to the artist. NO bullet points, NO headers — just paragraphs separated by line breaks. Cover in this order: (1) WHERE THINGS STAND — strategic position with specific numbers (followers across platforms, engagement deltas, what changed since last week), (2) WHAT WORKED & WHAT DIDN'T — narrative of last week's wins and misses with actual metrics, (3) WHAT WE LEARNED FROM COMPETITORS THIS WEEK — name 2-3 specific accounts and what their top-performing reels (with caption snippets) reveal about formats/hooks/angles working in our niche right now, (4) TRACK PIPELINE — where each priority track stands and which one to push and why, (5) THE BIG MOVE — the single most important thing to do this week and the algorithmic reasoning. Tone: confident, specific, direct, slightly informal. Reference real numbers and real accounts. This narrative is the ONLY thing displayed on the HQ dashboard summary — the deep-dive cards/grids/lists live on other tabs. So make this synthesize EVERYTHING into one readable narrative.",
+  "weeklyNarrative": "A flowing 4-6 paragraph weekly briefing written like a manager's Monday memo to the artist. NO bullet points, NO headers — just paragraphs separated by line breaks. Cover in this order: (1) WHERE THINGS STAND — strategic position with specific numbers (followers across platforms, engagement deltas, what changed since last week), (2) WHAT WORKED & WHAT DIDN'T — narrative of last week's wins and misses with actual metrics, (3) WHAT WE LEARNED FROM COMPETITORS THIS WEEK — name 2-3 specific accounts and cite reels from competitors.topReels that have a LOW seenDaysAgo (≤14) or LOW postedDaysAgo (≤30). DO NOT cite a reel with seenDaysAgo > 21 or postedDaysAgo > 45 — those are stale and the user has seen them before. The whole point of this section is to surface NEW patterns from the LAST WEEK'S scrape, not all-time viral hits. If competitors.recentCount < 3, say so honestly: 'this week's competitor scrape was thin' instead of fabricating freshness. (4) TRACK PIPELINE — where each priority track stands and which one to push and why, (5) THE BIG MOVE — the single most important thing to do this week and the algorithmic reasoning. Tone: confident, specific, direct, slightly informal. Reference real numbers and real accounts. This narrative is the ONLY thing displayed on the HQ dashboard summary — the deep-dive cards/grids/lists live on other tabs. So make this synthesize EVERYTHING into one readable narrative.",
 
   "artistScoreInsight": "1-2 sentences explaining the artist's current standing. Reference specific metrics like follower count, engagement rate, posting cadence. Be direct and actionable.",
 
@@ -542,8 +601,9 @@ Return a JSON object with EXACTLY these fields:
   "competitorInsights": [
     {
       "account": "@username",
-      "topReel": "reel caption or description",
+      "topReel": "reel caption or description (must be a reel with seenDaysAgo <= 14 OR postedDaysAgo <= 30 — see RECENCY RULE below)",
       "likes": number,
+      "seenDaysAgo": "copy the seenDaysAgo value from the source reel (or null if unknown)",
       "whyItWorked": "2-3 sentences analyzing why this content performed well",
       "takeaway": "1 sentence actionable takeaway for El Capitán"
     }
