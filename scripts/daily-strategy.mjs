@@ -478,8 +478,33 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
   ];
 
   return {
-    ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, posts: ig.posts || 0 },
-    tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0, contentNote: 'ALL TikTok posts to date have been direct cross-posts of Instagram Reels — no TikTok-native content yet. Strong metrics despite this handicap. Opportunity: TikTok-native content would significantly outperform current cross-posts.' },
+    // Platform metrics are SYMMETRIC so the AI can compare like-for-like.
+    // CORRECT pairings (use these, not cross-pairings):
+    //   ig.avgReelViews  ↔  tiktok.avgPlays     (video views on each platform)
+    //   ig.avgLikes      ↔  tiktok.avgLikes     (likes/hearts)
+    //   ig.avgComments   ↔  tiktok.avgComments
+    //   ig.savesCount    ↔  tiktok.avgShares    (closest "intent" pair)
+    // DO NOT compare ig.avgLikes to tiktok.avgPlays — they are different metrics
+    // and TikTok will always look 50–100x stronger because plays are views, not likes.
+    ig: {
+      followers: ig.followers || 0,
+      engRate: ig.engRate || 0,
+      avgReelViews: ig.avgReelViews || 0,
+      avgLikes: ig.avgLikes || 0,
+      avgComments: ig.avgComments || 0,
+      reelsScraped: ig.reelsScraped || 0,
+      posts: ig.posts || 0,
+    },
+    tiktok: {
+      followers: tt.followers || 0,
+      hearts: tt.hearts || tt.likes || 0,
+      videos: tt.videos || tt.posts || 0,
+      avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0,
+      avgLikes: tt.avgLikes || 0,
+      avgComments: tt.avgComments || 0,
+      avgShares: tt.avgShares || 0,
+      contentNote: 'ALL TikTok posts to date have been direct cross-posts of Instagram Reels — no TikTok-native content yet. The watermark penalty likely suppresses TikTok reach versus what truly native content would achieve.',
+    },
     sc: { followers: sc.followers || 0, tracks: sc.tracks || 0 },
     trends7d: {
       igFollowers: computeTrend(history, 'ig', 'followers', 7),
@@ -647,6 +672,7 @@ Return a JSON object with EXACTLY these fields:
 }
 
 RULES:
+- CRITICAL — CROSS-PLATFORM COMPARISON RULE: When comparing Instagram vs. TikTok performance, ONLY compare like-for-like metrics. The valid pairings are: ig.avgReelViews ↔ tiktok.avgPlays (both are video VIEW counts), ig.avgLikes ↔ tiktok.avgLikes (both are likes/hearts), ig.avgComments ↔ tiktok.avgComments. NEVER compare ig.avgLikes to tiktok.avgPlays — likes and plays are different metrics and the play count will always look 50–100x larger because views >> likes on every platform. If you claim "TikTok is outperforming Instagram" or vice versa, you MUST cite specific same-metric numbers (e.g., "TikTok avgPlays of 1,200 vs Instagram avgReelViews of 4,800 — Instagram reels are reaching 4x more viewers per post"). If the data shows IG avgReelViews > TT avgPlays, then INSTAGRAM is the stronger platform regardless of what raw "play" numbers might suggest. Do not assume TikTok is the growth opportunity by default.
 - CRITICAL: The industryBestPractices array contains 2026 algorithm intelligence for both TikTok and Instagram (entries starting with "TIKTOK ALGO:" and "INSTAGRAM ALGO:"). EVERY content, posting, and strategy recommendation MUST be grounded in these algorithm signals. When suggesting post ideas, specify why the format optimizes for the relevant algorithm (e.g., "Reel under 90s with text overlay + strong hook = optimized for IG shares + muted viewing"). When suggesting posting times or frequency, reference the algorithm data.
 - Use industryBestPractices context to inform all recommendations.
 - performanceAlerts: exactly 2-3 items

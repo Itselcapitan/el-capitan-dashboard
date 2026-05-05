@@ -67,11 +67,16 @@ async function scrapeIG() {
 
   const totalLikes = posts.reduce((s, x) => s + (x.likesCount || 0), 0);
   const totalComments = posts.reduce((s, x) => s + (x.commentsCount || 0), 0);
+  // Reels-only view counts. Carousels/images don't have videoPlayCount.
+  // We compute avgViews against ONLY the reels so the metric is comparable
+  // to TikTok's avgPlays (which is also video-only).
+  const reelPosts = posts.filter(x => (x.videoPlayCount || 0) > 0);
+  const totalReelViews = reelPosts.reduce((s, x) => s + (x.videoPlayCount || 0), 0);
   const engRate = p.followersCount > 0
     ? ((totalLikes + totalComments) / posts.length / p.followersCount * 100)
     : 0;
 
-  console.log(`  IG: ${p.followersCount} followers, ${posts.length} posts scraped, ${engRate.toFixed(1)}% eng`);
+  console.log(`  IG: ${p.followersCount} followers, ${posts.length} posts scraped, ${engRate.toFixed(1)}% eng, ${reelPosts.length} reels avg ${reelPosts.length ? Math.round(totalReelViews/reelPosts.length) : 0} views`);
 
   return {
     ig: {
@@ -81,6 +86,9 @@ async function scrapeIG() {
       engRate: parseFloat(engRate.toFixed(1)),
       avgLikes: posts.length ? Math.round(totalLikes / posts.length) : 0,
       avgComments: posts.length ? Math.round(totalComments / posts.length) : 0,
+      // NEW: reel-only avg views — directly comparable to tiktok.avgPlays
+      avgReelViews: reelPosts.length ? Math.round(totalReelViews / reelPosts.length) : 0,
+      reelsScraped: reelPosts.length,
     },
     igPosts: posts.map(x => ({
       id: x.id || x.shortCode,
@@ -115,8 +123,10 @@ async function scrapeTikTok() {
   const author = posts[0].authorMeta || {};
   const totalPlays = posts.reduce((s, x) => s + (x.playCount || 0), 0);
   const totalLikes = posts.reduce((s, x) => s + (x.diggCount || 0), 0);
+  const totalComments = posts.reduce((s, x) => s + (x.commentCount || 0), 0);
+  const totalShares = posts.reduce((s, x) => s + (x.shareCount || 0), 0);
 
-  console.log(`  TT: ${author.fans} followers, ${author.heart} hearts, ${posts.length} posts scraped`);
+  console.log(`  TT: ${author.fans} followers, ${author.heart} hearts, ${posts.length} posts scraped, avg ${posts.length ? Math.round(totalPlays/posts.length) : 0} plays`);
 
   return {
     tiktok: {
@@ -126,6 +136,9 @@ async function scrapeTikTok() {
       following: author.following || 0,
       avgPlays: posts.length ? Math.round(totalPlays / posts.length) : 0,
       avgLikes: posts.length ? Math.round(totalLikes / posts.length) : 0,
+      // NEW: comments + shares so the platform comparison is symmetric
+      avgComments: posts.length ? Math.round(totalComments / posts.length) : 0,
+      avgShares: posts.length ? Math.round(totalShares / posts.length) : 0,
     },
     ttPosts: posts.map(x => ({
       id: x.id,
@@ -310,14 +323,28 @@ function generateAlerts(data, deltas, previousData, igDiff, ttDiff) {
 
   // ── OPPORTUNITY alerts ──
 
-  // TikTok outperforming IG
-  if (data.tiktok?.avgPlays > 0 && data.ig?.avgLikes > 0) {
-    const ttEngPerPost = data.tiktok.avgPlays + (data.tiktok.avgLikes || 0);
-    const igEngPerPost = data.ig.avgLikes + data.ig.avgComments;
-    if (ttEngPerPost > igEngPerPost * 3) {
+  // Platform performance comparison — APPLES TO APPLES.
+  // The previous version compared TT plays (views) to IG likes which is
+  // structurally wrong and always made TT look 100x stronger. The correct
+  // comparison is views-to-views and likes-to-likes:
+  //   IG avgReelViews ↔ tiktok.avgPlays    (both = video view counts)
+  //   IG avgLikes     ↔ tiktok.avgLikes    (both = hearts/likes)
+  //   IG avgComments  ↔ tiktok.avgComments
+  // We compare on AVG VIEWS PER VIDEO (the closest to a "reach" metric on
+  // both platforms) and only fire the alert when one platform genuinely
+  // out-views the other by 3x.
+  const igViews = data.ig?.avgReelViews || 0;
+  const ttViews = data.tiktok?.avgPlays || 0;
+  if (igViews > 0 && ttViews > 0) {
+    if (ttViews > igViews * 3) {
       alerts.push({
         level: 'green', category: 'opportunity', type: 'platform',
-        msg: `TikTok outperforming IG ${Math.round(ttEngPerPost / igEngPerPost)}x per post — shift more content there`,
+        msg: `TikTok outperforming IG by views: ${ttViews} avg plays/video vs ${igViews} avg reel views (${Math.round(ttViews/igViews)}x). Shift more content to TikTok-native.`,
+      });
+    } else if (igViews > ttViews * 3) {
+      alerts.push({
+        level: 'green', category: 'opportunity', type: 'platform',
+        msg: `Instagram outperforming TikTok by views: ${igViews} avg reel views vs ${ttViews} avg plays/video (${Math.round(igViews/ttViews)}x). Lean into IG reels — TT cross-posts aren't traveling.`,
       });
     }
   }

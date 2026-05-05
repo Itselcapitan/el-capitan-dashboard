@@ -240,8 +240,10 @@ function buildDataSummary(latest, history, competitors, state) {
   ];
 
   return {
-    ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, posts: ig.posts || 0 },
-    tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0 },
+    // SYMMETRIC platform metrics so comparisons are valid.
+    // IG.avgReelViews ↔ tiktok.avgPlays | IG.avgLikes ↔ tiktok.avgLikes | IG.avgComments ↔ tiktok.avgComments
+    ig: { followers: ig.followers || 0, engRate: ig.engRate || 0, avgReelViews: ig.avgReelViews || 0, avgLikes: ig.avgLikes || 0, avgComments: ig.avgComments || 0, reelsScraped: ig.reelsScraped || 0, posts: ig.posts || 0 },
+    tiktok: { followers: tt.followers || 0, hearts: tt.hearts || tt.likes || 0, videos: tt.videos || tt.posts || 0, avgPlays: tt.avgPlays || tt.avgPlaysPerPost || 0, avgLikes: tt.avgLikes || 0, avgComments: tt.avgComments || 0, avgShares: tt.avgShares || 0 },
     sc: { followers: sc.followers || 0, tracks: sc.tracks || 0 },
     trends7d: {
       igFollowers: computeTrend(history, 'ig', 'followers', 7),

@@ -133,11 +133,12 @@ async function main() {
   console.log(`\n📊 Totals: ${totalPlays} plays, ${totalLikes} likes, ${totalComments} comments, ${totalReposts} reposts`);
 
   // Print track table
-  console.log('\n  Track                              Plays    Likes  Comments  Reposts');
-  console.log('  ' + '─'.repeat(75));
+  console.log('\n  Track                              Released      Plays    Likes  Comments  Reposts');
+  console.log('  ' + '─'.repeat(90));
   scTracks.forEach(t => {
     const name = t.title.substring(0, 35).padEnd(35);
-    console.log(`  ${name} ${String(t.playback_count).padStart(7)}  ${String(t.likes_count).padStart(6)}  ${String(t.comment_count).padStart(8)}  ${String(t.reposts_count).padStart(7)}`);
+    const released = (t.created_at || '').substring(0, 10).padEnd(10) || '—'.padEnd(10);
+    console.log(`  ${name} ${released}  ${String(t.playback_count).padStart(7)}  ${String(t.likes_count).padStart(6)}  ${String(t.comment_count).padStart(8)}  ${String(t.reposts_count).padStart(7)}`);
   });
 
   // Get previous data for deltas
