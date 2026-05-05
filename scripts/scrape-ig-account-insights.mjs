@@ -74,9 +74,8 @@ async function fetchMetric(metric, opts = {}) {
   };
   if (opts.useAggregate) {
     params.metric_type = 'total_value';
-    // Aggregate metrics typically use a since/until window. Default
-    // to last 28 days for monthly aggregate values. Smaller windows
-    // available if needed.
+    params.period = 'day'; // required even with total_value
+    // 28-day rolling window for the aggregate value
     const sinceTs = Math.floor((Date.now() - 28 * 864e5) / 1000);
     const untilTs = Math.floor(Date.now() / 1000);
     params.since = String(sinceTs);
