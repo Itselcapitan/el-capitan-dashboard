@@ -18,3 +18,14 @@ jobs:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+
+      # Pull IG Insights (saves, shares, skip rate, follows-from-post,
+      # profile visits, avg watch time) via Meta Graph API. These are
+      # the metrics Apify can't see and they're the entire reason for
+      # the Graph API integration.
+      - run: node scripts/scrape-ig-insights.mjs
+        env:
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
