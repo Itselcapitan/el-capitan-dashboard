@@ -22,8 +22,10 @@ jobs:
       # Pull IG Insights (saves, shares, skip rate, follows-from-post,
       # profile visits, avg watch time) via Meta Graph API. These are
       # the metrics Apify can't see and they're the entire reason for
-      # the Graph API integration.
+      # the Graph API integration. Runs even if the previous Apify
+      # step failed — Graph API and Apify are independent paths.
       - run: node scripts/scrape-ig-insights.mjs
+        if: always()
         env:
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
           IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
