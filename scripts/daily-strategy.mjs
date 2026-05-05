@@ -177,7 +177,7 @@ async function listAvailableModels() {
   }
 }
 
-function buildDataSummary(latest, history, competitors, state, allReelsPool) {
+function buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary) {
   const ig = latest?.ig || {};
   const tt = latest?.tiktok || {};
   const sc = latest?.sc || {};
@@ -347,15 +347,40 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     .slice(0, 10)
     .map(r => ({ hook: r.hook, account: r.ownerUsername, likes: r.likesCount || 0 }));
 
-  // All posts for AI track-to-post matching (capped to keep prompt lean)
-  const allIGPosts = (latest?.igPosts || []).slice(0, 25).map(p => ({
-    caption: (p.caption || '(no caption)').slice(0, 120),
-    views: p.videoPlayCount || 0,
-    likes: p.likesCount || 0,
-    comments: p.commentsCount || 0,
-    date: p.timestamp ? p.timestamp.slice(0, 10) : '',
-    type: p.videoPlayCount > 0 ? 'Reel' : 'Image',
-  }));
+  // Per-post IG Insights from Graph API (saves, shares, skip rate, follows
+  // from post, profile visits, avg watch time). Apify can't see these —
+  // they come from the Graph API scraper. Indexed by media ID.
+  const insightsArr = igInsights ? Object.values(igInsights) : [];
+  // Build a quick lookup by truncated caption (best join key since
+  // Apify and Graph API use different post ID formats)
+  const insightsByCaption = {};
+  for (const ins of insightsArr) {
+    const captionKey = (ins.caption || '').slice(0, 60).trim();
+    if (captionKey) insightsByCaption[captionKey] = ins;
+  }
+
+  // All posts for AI track-to-post matching (capped to keep prompt lean).
+  // Each post is enriched with Graph API insights when caption matches.
+  const allIGPosts = (latest?.igPosts || []).slice(0, 25).map(p => {
+    const captionKey = (p.caption || '').slice(0, 60).trim();
+    const ins = insightsByCaption[captionKey] || null;
+    return {
+      caption: (p.caption || '(no caption)').slice(0, 120),
+      views: p.videoPlayCount || 0,
+      likes: p.likesCount || 0,
+      comments: p.commentsCount || 0,
+      date: p.timestamp ? p.timestamp.slice(0, 10) : '',
+      type: p.videoPlayCount > 0 ? 'Reel' : 'Image',
+      // Graph API insights (only present if caption matched a media in igInsights)
+      reach: ins?.reach ?? null,
+      saves: ins?.saves ?? null,
+      shares: ins?.shares ?? null,
+      skipRate: ins?.skipRate ?? null,        // REELS only — null on static
+      avgWatchTimeMs: ins?.avgWatchTimeMs ?? null,
+      follows: ins?.follows ?? null,           // follows-FROM-this-post
+      profileVisits: ins?.profileVisits ?? null,
+    };
+  });
   const allTTPosts = (latest?.ttPosts || []).slice(0, 25).map(p => ({
     caption: (p.text || '(no caption)').slice(0, 120),
     views: p.playCount || 0,
@@ -533,6 +558,18 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool) {
     allTTPosts,
     allTrackNames,
     industryBestPractices,
+    // Graph API insights — present when scrape-ig-insights.mjs has run.
+    // Headline numbers for the AI to reference at a glance, alongside
+    // per-post breakdowns embedded in allIGPosts above.
+    igInsightsSummary: igInsightsSummary ? {
+      reelsAnalyzed: igInsightsSummary.reelsAnalyzed ?? 0,
+      avgSkipRate: igInsightsSummary.avgSkipRate ?? null,     // % skipped in first 3 sec
+      avgReach: igInsightsSummary.avgReach ?? null,
+      totalSaves: igInsightsSummary.totalSaves ?? 0,
+      totalShares: igInsightsSummary.totalShares ?? 0,
+      totalFollows: igInsightsSummary.totalFollows ?? 0,      // follows-FROM-posts
+      fetchedAt: igInsightsSummary.fetchedAt || null,
+    } : null,
   };
 }
 
@@ -673,6 +710,7 @@ Return a JSON object with EXACTLY these fields:
 
 RULES:
 - CRITICAL — CROSS-PLATFORM COMPARISON RULE: When comparing Instagram vs. TikTok performance, ONLY compare like-for-like metrics. The valid pairings are: ig.avgReelViews ↔ tiktok.avgPlays (both are video VIEW counts), ig.avgLikes ↔ tiktok.avgLikes (both are likes/hearts), ig.avgComments ↔ tiktok.avgComments. NEVER compare ig.avgLikes to tiktok.avgPlays — likes and plays are different metrics and the play count will always look 50–100x larger because views >> likes on every platform. If you claim "TikTok is outperforming Instagram" or vice versa, you MUST cite specific same-metric numbers (e.g., "TikTok avgPlays of 1,200 vs Instagram avgReelViews of 4,800 — Instagram reels are reaching 4x more viewers per post"). If the data shows IG avgReelViews > TT avgPlays, then INSTAGRAM is the stronger platform regardless of what raw "play" numbers might suggest. Do not assume TikTok is the growth opportunity by default.
+- CRITICAL — IG INSIGHTS RULE: When igInsightsSummary and per-post insight fields (skipRate, saves, shares, follows, profileVisits, avgWatchTimeMs) are present in the data, USE THEM as the primary diagnostic for content quality. Specifically: (1) If a reel's skipRate > 60%, the hook is broken — recommend a hook fix in postIdeas/improvements; cite the exact post by caption. (2) If avgSkipRate across reels > 50%, the catalog has a systemic hook problem; the top recommendation should be hook-focused content variants (Trial Reels variant cycling). (3) follows-from-post is the true conversion metric — if a single post drove a disproportionate share of total follows, study its caption/format and replicate. (4) saves are low across the catalog — reels are good for one-time consumption but lack replay value; recommend save-worthy formats (tutorials, save-this-mix carousels). (5) Never recommend "post more" generically when insights data is present — always tie recommendations to specific skip rates, share rates, or follows-from-post numbers. (6) When insights data is absent (scrape-ig-insights.mjs hasn't run yet), say so honestly rather than fabricating skip rates.
 - CRITICAL: The industryBestPractices array contains 2026 algorithm intelligence for both TikTok and Instagram (entries starting with "TIKTOK ALGO:" and "INSTAGRAM ALGO:"). EVERY content, posting, and strategy recommendation MUST be grounded in these algorithm signals. When suggesting post ideas, specify why the format optimizes for the relevant algorithm (e.g., "Reel under 90s with text overlay + strong hook = optimized for IG shares + muted viewing"). When suggesting posting times or frequency, reference the algorithm data.
 - Use industryBestPractices context to inform all recommendations.
 - performanceAlerts: exactly 2-3 items
@@ -1195,13 +1233,16 @@ async function main() {
   await listAvailableModels();
 
   // Read all Firebase data + existing strategy
-  const [latest, history, competitors, allReelsPool, state, existingStrategy] = await Promise.all([
+  const [latest, history, competitors, allReelsPool, state, existingStrategy, igInsights, igInsightsSummary] = await Promise.all([
     readFirebase('analytics/latest'),
     readFirebase('analytics/history'),
     readFirebase('competitors/latest'),
     readFirebase('competitors/allReels'),  // accumulated reel pool
     readFirebase('state'),
     readFirebase('strategy/latest'),
+    // NEW: Graph API insights data (skip rate, saves, shares, follows-from-post)
+    readFirebase('analytics/latest/igInsights'),
+    readFirebase('analytics/latest/igInsightsSummary'),
   ]);
   const poolSize = allReelsPool ? Object.keys(allReelsPool).length : 0;
   console.log(`  Competitor pool: ${poolSize} accumulated reels`);
@@ -1228,7 +1269,12 @@ async function main() {
   console.log(`  Today: ${todayStr} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][todayDate.getUTCDay()]})`);
   console.log(`  Mode: ${needsWeekly ? 'WEEKLY + DAILY (Monday refresh)' : 'DAILY ONLY'}\n`);
 
-  const dataSummary = buildDataSummary(latest, history, competitors, state, allReelsPool);
+  const dataSummary = buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary);
+  if (igInsightsSummary) {
+    console.log(`  IG Insights loaded: ${igInsightsSummary.reelsAnalyzed} reels, avg skip ${igInsightsSummary.avgSkipRate}%`);
+  } else {
+    console.log('  IG Insights: not yet populated (scrape-ig-insights.mjs may not have run)');
+  }
 
   // ── WEEKLY STRATEGY (only if 7+ days since last) ──
   let weeklyStrategy = null;

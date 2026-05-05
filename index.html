@@ -2731,6 +2731,16 @@ function renderContentStats(){
   var igTable = document.getElementById('ig-posts-table');
   if(igTable && data.igPosts && data.igPosts.length){
     var igFollowers = ig.followers || 0;
+    // Build a caption-based lookup of Graph API insights so we can join
+    // them onto Apify posts. Apify and Graph API use different post-ID
+    // formats, but the caption text is shared.
+    var insightsByCaption = {};
+    if (data.igInsights) {
+      Object.values(data.igInsights).forEach(function(ins){
+        var key = (ins.caption || '').slice(0, 60).trim();
+        if (key) insightsByCaption[key] = ins;
+      });
+    }
     var posts = data.igPosts.slice().sort(function(a,b){ return (b.likesCount||0) - (a.likesCount||0); });
     var rows = '';
     posts.forEach(function(p){
@@ -2741,18 +2751,44 @@ function renderContentStats(){
       var views = p.videoPlayCount || 0;
       var likes = p.likesCount || 0;
       var comments = p.commentsCount || 0;
-      var saves = p.savesCount || 0;
+
+      // Graph API enrichment — overrides the Apify zero-saves with real data
+      var insKey = (p.caption || '').slice(0, 60).trim();
+      var ins = insightsByCaption[insKey] || null;
+      var saves = ins && ins.saves != null ? ins.saves : (p.savesCount || 0);
+      var shares = ins && ins.shares != null ? ins.shares : null;
+      var reach = ins && ins.reach != null ? ins.reach : null;
+      var skipRate = ins && ins.skipRate != null ? ins.skipRate : null;
+      var follows = ins && ins.follows != null ? ins.follows : null;
+
       var engRate = views > 0 ? ((likes + comments + saves) / views * 100) : (igFollowers > 0 ? ((likes + comments) / igFollowers * 100) : 0);
       var pid = p.id || p.shortCode || '';
       var promoted = window._promotedPosts && window._promotedPosts[pid];
       var rateStr = engRate.toFixed(1) + '%' + (promoted ? '*' : '');
       var badge = getRatingBadge(engRate, promoted);
       var cb = '<input type="checkbox" title="Mark as promoted/ad" ' + (promoted?'checked ':'') + 'onchange="togglePromoted(\'' + pid.replace(/'/g,"\\'") + '\', this.checked)" style="cursor:pointer">';
+
+      // Color skip rate by quality bucket (lower = better hook)
+      var skipColor = '#666';
+      if (skipRate != null) {
+        if (skipRate <= 40) skipColor = 'var(--ac)';       // strong hook
+        else if (skipRate <= 60) skipColor = '#f5a623';    // okay
+        else skipColor = '#e85a4f';                        // weak hook
+      }
+      var skipCell = skipRate != null ? '<td style="color:' + skipColor + ';font-weight:600">' + skipRate.toFixed(0) + '%</td>' : '<td style="color:#444">—</td>';
+      var reachCell = reach != null ? '<td>' + fmtK(reach) + '</td>' : '<td style="color:#444">—</td>';
+      var sharesCell = shares != null ? '<td>' + shares.toLocaleString() + '</td>' : '<td style="color:#444">—</td>';
+      var followsCell = follows != null ? '<td style="color:' + (follows > 0 ? 'var(--ac)' : '#666') + ';font-weight:600">' + follows + '</td>' : '<td style="color:#444">—</td>';
+
       rows += '<tr><td>' + captionHtml + '</td><td>' + type + '</td><td>' + date + '</td>' +
         '<td>' + fmtK(views) + '</td>' +
+        reachCell +
         '<td>' + likes.toLocaleString() + '</td>' +
         '<td>' + comments.toLocaleString() + '</td>' +
         '<td>' + saves.toLocaleString() + '</td>' +
+        sharesCell +
+        skipCell +
+        followsCell +
         '<td style="font-weight:700;color:var(--ac)">' + rateStr + '</td>' +
         '<td>' + badge + '</td>' +
         '<td style="text-align:center">' + cb + '</td></tr>';
@@ -4293,7 +4329,7 @@ function init(){
       <div class="chart-cell"><div class="chart-label">Engagement Breakdown</div><canvas id="cc-engagement" height="180"></canvas></div>
       <div class="chart-cell"><div class="chart-label">View Share by Format</div><canvas id="cc-viewshare" height="180"></canvas></div>
     </div>
-    <div class="tw" style="margin-top:12px;overflow-x:auto"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Views</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Eng Rate</th><th>Rating</th><th>Ad</th></tr></thead><tbody id="ig-posts-table">
+    <div class="tw" style="margin-top:12px;overflow-x:auto"><table><thead><tr><th>Post</th><th>Type</th><th>Date</th><th>Views</th><th title="Unique accounts reached (Graph API)">Reach</th><th>Likes</th><th>Comments</th><th title="Saves — real value from Graph API (Apify can't see saves)">Saves</th><th title="Shares — real value from Graph API">Shares</th><th title="% of viewers who skipped within first 3 sec (REELS only)">Skip%</th><th title="Follows-from-this-post — true conversion metric">Fol</th><th>Eng Rate</th><th>Rating</th><th>Ad</th></tr></thead><tbody id="ig-posts-table">
       <tr><td colspan="4" style="color:var(--dm)">Loading scraped posts...</td></tr>
     </tbody></table></div>
   </div></div>
