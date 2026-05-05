@@ -62,12 +62,15 @@ variants from that single asset.
 
 | Parameter | Value |
 |---|---|
-| Variants per test | 3-5 |
-| Spacing between uploads | 30-90 minutes (NOT simultaneous — algorithm processes each as native) |
+| Variants per test | 3-5 (sweet spot per follow-up #4 refinement) |
+| Platform limit | **20 trial reels per 24 hours** — hard cap |
+| Recommended daily volume | **5 per day** — diminishing returns above this |
+| Spacing between uploads | A few hours apart (NOT simultaneous — algorithm processes each as native; simultaneous uploads also risk duplicate-detection flag) |
 | Initial performance window | 24 hours (early read) |
 | Internal evaluation period (auto-graduation decision) | 72 hours |
-| Winning threshold | `media_reels_skip_rate` < 40% (i.e., 3-second hold rate > 60%) |
+| Winning threshold | `reels_skip_rate` < 40% (i.e., 3-second hold rate > 60%) |
 | Stretch target | Skip rate < 20% |
+| Field name correction | Use `reels_skip_rate` (canonical Meta), NOT `media_reels_skip_rate` (the third-party docs prefix) — verified working in scrape-ig-insights.mjs as of 2026-05-05 |
 
 Reels clearing the 60% hold-rate threshold reportedly outperform
 sub-threshold reels by 5-10x in total reach. (This stat comes from
@@ -147,7 +150,7 @@ ONLY. Discard the rest.
 | **Nire Donahue** | 9 consecutive Trial Reels → 2.3M impressions in 14 days; breakouts 1.1M, 1.4M, 5M views | ✅ Verified, cite freely |
 | Kaleb Karnow | Used micro-edits on Trial Reels to scale to 1.4M followers | ⚠️ Spot-check before citing |
 | Stereo Brother | DJ/producer in tech-house lane; broke out of 800-follower plateau, turned engagement into 2026 club bookings | ⚠️ Spot-check; if real, this is the most directly comparable case |
-| Brock Johnson | 3-week rapid testing system isolating audio + 3-sec hook variables | ⚠️ Spot-check before citing |
+| Brock Johnson | Posted **100 trial reels in 24 hours** to map exactly how the algorithm processes unconnected reach | ⚠️ Spot-check before citing — but this volume is far above the recommended 5/day sweet spot, so treat as outlier-test data, not template |
 
 ## 8. 30-Day Application for El Capitán
 
