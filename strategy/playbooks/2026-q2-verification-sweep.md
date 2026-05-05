@@ -9,29 +9,29 @@ budget to recommendations built on them.*
 
 ## Verified — Trust and Build Around
 
-| Claim | Status | Notes |
-|---|---|---|
-| `media_reels_skip_rate` exposed via Graph API | Verified per third-party docs (Supermetrics, Storrito) | **PENDING manual test in Graph API Explorer before integration** — third-party docs sometimes lag/diverge from canonical Meta docs |
-| Higgsfield Cinema Studio 3.0 presets ("Bullet Time," "Ramp Up," "Genre" with Noir/Drama/Epic options) | Verified per Higgsfield Product Blog | Plan workflows around these named presets |
-| Instagram Graph API rate limit of 200 calls/user/hour for Business Use Cases | Verified per Phyllo + WP Social Ninja | Engineering plan must use batched requests; pulling 50 reels individually would burn 25% of hourly limit |
-| `profile_reposts` account-level metric exposed | Verified per Storrito + Supermetrics | **PENDING manual test in Graph API Explorer** — same caveat as skip rate |
-| John Summit was a CPA at Ernst & Young before music career | Verified per EDM House Network | Real precedent for finance-to-DJ pivot |
-| John Summit's CTRL ESCAPE released April 15, 2026 (US Tax Day) | Verified | Thematic-anchor release date is replicable |
-| Erin Donahue (Nire Donahue?) Trial Reels case study (9 reels, 2.3M impressions, 14 days) | Verified per "Nire Donahue Official Blog" | **Name discrepancy: Erin vs. Nire — second manual verification suggested before citing in pitch materials** |
+| Claim | Status | Source | Notes |
+|---|---|---|---|
+| `media_reels_skip_rate` exposed via Graph API | Verified per third-party docs | [Storrito](https://storrito.com/resources/how-instagram-marketing-api-metrics-work/), [Supermetrics](https://docs.supermetrics.com/docs/instagram-insights-fields) | **PENDING manual test in Graph API Explorer before integration.** Third-party API wrapper services (Storrito, Supermetrics) document fields they EXPOSE; they do not always reflect canonical Meta documentation. The 5-minute Graph API Explorer test is non-negotiable before building infrastructure. |
+| `profile_reposts` account-level metric exposed | Verified per Storrito + Supermetrics | Same as above | **PENDING manual test in Graph API Explorer.** Same caveat as skip rate. |
+| Instagram Graph API rate limit of 200 calls/user/hour (BUC) | Verified | [Phyllo](https://www.getphyllo.com/post/instagram-api-integration-101-for-developers-of-the-creator-economy), [WP Social Ninja](https://wpsocialninja.com/instagram-graph-api/) | Engineering plan must use batched requests. Pulling 50 reels individually would burn 25% of hourly limit. |
+| Higgsfield Cinema Studio 3.0 presets verified | Verified | [Higgsfield Product Blog (canonical)](https://higgsfield.ai/blog/cinema-studio-3) | Genre system (Noir, Drama, Epic) + 8 Speed Ramp presets including "Bullet Time" and "Ramp Up." Plan workflows around these. |
+| John Summit was a CPA at Ernst & Young | Verified | [EDM House Network](https://edmhousenetwork.com/john-summit-ctrl-escape-from-cpa-to-dj/) | Real precedent for finance-to-DJ pivot. |
+| John Summit's CTRL ESCAPE released April 15, 2026 (US Tax Day) | Verified | [XO Diva D](https://xodivad.com/2026/04/15/john-summit-drops-new-album-ctrl-escape/) | Thematic-anchor release date is replicable. |
+| **Nire Donahue** Trial Reels case study (9 reels, 2.3M impressions, 14 days; breakouts at 1.1M, 1.4M, 5M views) | Verified | [niredonahue.com/instagram-trial-reels-case-study](https://niredonahue.com/instagram-trial-reels-case-study/) | **Name correction: "Nire" not "Erin"** — the original playbook misspelled the creator's name. Citation now traceable to her actual blog post. |
 
 ## Refuted — Strike from Vocabulary
 
-| Claim | Status | Notes |
-|---|---|---|
-| OpenAI "RealityForge 2.0" released April 2026 | REFUTED | Phantom product. Original claim traces to a speculative/satirical post on Startup Fortune. State-of-the-art video models in 2026 are Sora 2, Veo 3.1, Kling 3.0. |
-| "Global Content Consumption Report" with 73% AI-tolerance stat | UNVERIFIED / SUSPECT | Single editorial source ("Dr. Elena Vance" on Startup Fortune). No major data firm (Nielsen, Pew) published this stat. Authenticity rule must remain absolute regardless. |
+| Claim | Status | Source | Notes |
+|---|---|---|---|
+| OpenAI "RealityForge 2.0" released April 2026 | REFUTED | [Startup Fortune editorial](https://startupfortune.com/the-authenticity-backlash-against-ai-was-always-more-wishful-thinking-than-market-reality/), [OpenAI release notes](https://help.openai.com/en/articles/9624314-model-release-notes) | Phantom product. The "RealityForge" name appears only in a speculative editorial. OpenAI's actual April 2026 release notes detail GPT-5.3 / GPT-5.4 only. State-of-the-art video models are Sora 2, Veo 3.1, Kling 3.0. |
+| "Global Content Consumption Report" 73% AI-tolerance stat | UNVERIFIED | Same Startup Fortune editorial | Stat cited by an "AI ethicist" in a single editorial. No primary data firm (Nielsen, Pew) published a report with this title or metric. Authenticity rule must remain absolute regardless. |
+| **"Made with Edits" metadata tag provides algorithmic boost** | **REFUTED** (upgraded from Disputed in earlier run) | [SocialEcho 2026 Algorithm Guide](https://www.socialecho.net/en/blog/docs/instagram-2026-algorithm-updates-guide), [Splice Blog](https://spliceapp.com/blog/what-video-editing-app-is-better-than-edits/) | Long-term data shows the badge is not a core ranking indicator. Use Edits app defensively to avoid CapCut watermark penalties, NOT as a reach multiplier. |
 
 ## Disputed — Use With Caveats
 
-| Claim | Status | Notes |
-|---|---|---|
-| "Made with Edits" metadata tag provides algorithmic boost | DISPUTED | No official Mosseri/Meta statement guarantees a boost. Use Edits app for defensive reasons (avoid CapCut watermarks, access native skip-rate insights), NOT as a magic-bullet for inflated reach. |
-| Don Diablo finance/tech-investment background comparable to Aoki | PARTIALLY VERIFIED | Aoki has a formalized $100M VC firm (Aoki Labs). Don Diablo is invested in Web3 (Hexcoin, VR) but no traditional Wall Street/institutional VC background. Use Aoki + Summit as primary precedents for the finance-DJ identity, not Don Diablo. |
+| Claim | Status | Source | Notes |
+|---|---|---|---|
+| Don Diablo finance/tech-investment background comparable to Aoki | PARTIALLY VERIFIED | [iConnections (Aoki)](https://iconnections.io/insights/video/how-steve-aoki-turned-20m-into-350m-and-why-hes-obsessed-with-health-global-alts-2026/), [Music/Money/Metaverse (Aoki + Web3)](https://cloviahamilton.com/wp-content/uploads/2025/07/music-money-metaverse-how-avenged-sevenfold-steve-aoki-navigate-web3.pdf) | Aoki has formalized $100M VC firm (Aoki Labs); Don Diablo is invested in Web3 (Hexcoin, VR) but no traditional institutional finance background. Use Aoki + Summit as primary precedents for the finance-DJ identity, not Don Diablo. |
 
 ---
 
@@ -56,6 +56,6 @@ The Instagram Edits app is for AVOIDING watermark penalties (vs. CapCut), not fo
 
 ## Manual Verification Tasks (5 min each, must complete before building)
 
-1. **Graph API Explorer test for `media_reels_skip_rate`** — try `GET /{ig-media-id}?fields=insights.metric(media_reels_skip_rate)`. If returns data, verified. If "Invalid metric," refuted.
+1. **Graph API Explorer test for `media_reels_skip_rate`** — try `GET /{ig-media-id}?fields=insights.metric(media_reels_skip_rate)`. If returns data, verified. If "Invalid metric," refuted. **Highest-stakes verification.**
 2. **Graph API Explorer test for `profile_reposts`** — try `GET /{ig-user-id}/insights?metric=profile_reposts&period=day`. Verify or refute.
-3. **Google search "Nire Donahue Trial Reels" and "Erin Donahue Trial Reels"** — confirm one or the other is a real creator with a real blog. If neither returns a real source, downgrade Trial Reels case study to "directionally correct, citation-pending."
+3. ✅ **Nire Donahue case study** — confirmed real with citation URL: [niredonahue.com/instagram-trial-reels-case-study](https://niredonahue.com/instagram-trial-reels-case-study/). Safe to cite in pitch materials.
