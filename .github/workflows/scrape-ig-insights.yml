@@ -26,3 +26,16 @@ jobs:
           IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
           FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
+
+      # Account-level Insights — pulls website_clicks (bio link clicks),
+      # profile_views, reach, accounts_engaged, total_interactions, etc.
+      # The website_clicks metric is the direct measurement of the
+      # 1% link-click rate problem. Account-level data updates every
+      # 24h per Meta docs so once daily is sufficient.
+      - run: node scripts/scrape-ig-account-insights.mjs
+        if: always()
+        env:
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
