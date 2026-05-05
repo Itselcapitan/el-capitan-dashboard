@@ -51,12 +51,40 @@ async function patchFirebase(path, data) {
 
 // ─── Graph API helper ───────────────────────────────────────────
 
-async function fetchMetric(metric, period = 'day') {
-  const qs = new URLSearchParams({
+async function fetchMetric(metric, opts = {}) {
+  // Account-level Insights in 2026 split into two API patterns:
+  //
+  //   Time-series (period=day):
+  //     reach, follower_count, online_followers
+  //     Returns values[] array with one entry per day.
+  //
+  //   Aggregate (metric_type=total_value):
+  //     website_clicks, profile_views, profile_links_taps,
+  //     accounts_engaged, total_interactions, likes, comments,
+  //     shares, saves, replies, follows_and_unfollows, views,
+  //     content_views, *_demographics
+  //     Returns single total_value for the requested period.
+  //
+  // The metric_type approach also requires metric_type=total_value
+  // explicitly OR the API errors out. We pass opts.useAggregate to
+  // pick which format per metric.
+  const params = {
     metric,
-    period,
     access_token: FB_PAGE_ACCESS_TOKEN,
-  }).toString();
+  };
+  if (opts.useAggregate) {
+    params.metric_type = 'total_value';
+    // Aggregate metrics typically use a since/until window. Default
+    // to last 28 days for monthly aggregate values. Smaller windows
+    // available if needed.
+    const sinceTs = Math.floor((Date.now() - 28 * 864e5) / 1000);
+    const untilTs = Math.floor(Date.now() / 1000);
+    params.since = String(sinceTs);
+    params.until = String(untilTs);
+  } else {
+    params.period = opts.period || 'day';
+  }
+  const qs = new URLSearchParams(params).toString();
   const url = `${GRAPH_BASE}/${IG_BUSINESS_ACCOUNT_ID}/insights?${qs}`;
   const res = await fetch(url);
   const json = await res.json();
@@ -71,70 +99,93 @@ async function fetchMetric(metric, period = 'day') {
 async function main() {
   console.log('\n📊 IG Account-Level Insights scrape starting...');
 
-  // Try the metrics we care about. Some endpoints reject mixed periods,
-  // so each metric is fetched individually so a single failure doesn't
-  // wipe out the rest.
+  // Confirmed valid metrics from Meta's error response (May 2026):
+  //   reach, follower_count, website_clicks, profile_views,
+  //   online_followers, accounts_engaged, total_interactions, likes,
+  //   comments, shares, saves, replies, profile_links_taps, views,
+  //   content_views, follows_and_unfollows
   //
-  // Metric inventory and what each measures:
-  //   website_clicks   — daily bio link clicks (THE link-click rate fix)
-  //   profile_views    — daily profile visits (top-of-funnel)
-  //   reach            — unique accounts that saw any of your content
-  //   accounts_engaged — newer aggregate (replaced impressions in 2024)
-  //   total_interactions, likes, comments, shares, saves, replies, follows
+  // Format split:
+  //   useAggregate=false: reach, follower_count, online_followers
+  //                       (period=day time-series)
+  //   useAggregate=true:  everything else
+  //                       (metric_type=total_value over a window)
   const targets = [
-    'website_clicks',
-    'profile_views',
-    'reach',
-    'accounts_engaged',
-    'total_interactions',
-    'likes',
-    'comments',
-    'shares',
-    'saves',
-    'replies',
-    'follows',
+    // PRIMARY GOAL — bio link click metric. Two related fields:
+    //   website_clicks   — clicks on the bio website link
+    //   profile_links_taps — broader: any tap on bio links
+    //                        (includes IG-internal links, story
+    //                        highlights, etc.)
+    { metric: 'website_clicks', useAggregate: true },
+    { metric: 'profile_links_taps', useAggregate: true },
+
+    // Funnel metrics
+    { metric: 'profile_views', useAggregate: true },
+    { metric: 'reach', useAggregate: false }, // time series
+    { metric: 'accounts_engaged', useAggregate: true },
+
+    // Engagement aggregates
+    { metric: 'total_interactions', useAggregate: true },
+    { metric: 'likes', useAggregate: true },
+    { metric: 'comments', useAggregate: true },
+    { metric: 'shares', useAggregate: true },
+    { metric: 'saves', useAggregate: true },
+    { metric: 'replies', useAggregate: true },
+
+    // Follower change (replaced "follows" in 2026)
+    { metric: 'follows_and_unfollows', useAggregate: true },
+
+    // Content reach
+    { metric: 'views', useAggregate: true },
+    { metric: 'content_views', useAggregate: true },
   ];
 
   const results = {};
   let okCount = 0;
   let errCount = 0;
 
-  for (const metric of targets) {
-    const r = await fetchMetric(metric, 'day');
+  for (const target of targets) {
+    const r = await fetchMetric(target.metric, target);
     if (r.error) {
-      results[metric] = { error: r.error };
+      results[target.metric] = { error: r.error };
       errCount += 1;
-      console.warn(`  ✗ ${metric}: ${r.error}`);
-    } else {
-      const data = r.data?.[0];
-      if (!data) {
-        results[metric] = { error: 'no data returned' };
-        errCount += 1;
-        console.warn(`  ✗ ${metric}: empty response`);
-        continue;
-      }
-      // Account-level insights with metric_type=total_value return
-      // a single value; legacy ones return values[] arrays. Handle both.
-      const values = data.values || [];
-      const total = data.total_value?.value;
-      const lastValue = values.length ? values[values.length - 1].value : null;
-      const sumLast7 = values.length
-        ? values.slice(-7).reduce((s, v) => s + (v.value || 0), 0)
-        : null;
-
-      results[metric] = {
-        latest: lastValue ?? total ?? null,
-        last7Sum: sumLast7,
-        valuesByDay: values.map(v => ({ value: v.value, end_time: v.end_time })),
-        title: data.title,
-        description: data.description,
-      };
-      okCount += 1;
-      const display = lastValue !== null
-        ? `latest=${lastValue}` + (sumLast7 !== null ? ` 7dSum=${sumLast7}` : '')
-        : (total !== null ? `total=${total}` : 'no values');
-      console.log(`  ✓ ${metric}: ${display}`);
+      console.warn(`  ✗ ${target.metric}: ${r.error.slice(0, 100)}`);
+      continue;
     }
+    const data = r.data?.[0];
+    if (!data) {
+      results[target.metric] = { error: 'no data returned' };
+      errCount += 1;
+      console.warn(`  ✗ ${target.metric}: empty response`);
+      continue;
+    }
+
+    // Two response shapes:
+    //   total_value approach: { total_value: { value: N } }
+    //   period=day approach:  { values: [{value: N, end_time: ...}, ...] }
+    const values = data.values || [];
+    const totalValue = data.total_value?.value;
+    const breakdownTotal = data.total_value?.breakdowns?.[0]?.results?.reduce
+      ? data.total_value.breakdowns[0].results.reduce((s, r) => s + (r.value || 0), 0)
+      : null;
+    const lastValue = values.length ? values[values.length - 1].value : null;
+    const sumLast7 = values.length
+      ? values.slice(-7).reduce((s, v) => s + (v.value || 0), 0)
+      : null;
+
+    results[target.metric] = {
+      latest: lastValue,
+      last7Sum: sumLast7,
+      total: totalValue ?? breakdownTotal ?? null, // 28-day aggregate window
+      valuesByDay: values.map(v => ({ value: v.value, end_time: v.end_time })),
+      title: data.title,
+      description: data.description,
+    };
+    okCount += 1;
+    const display = totalValue !== undefined
+      ? `28d total=${totalValue}`
+      : (lastValue !== null ? `latest=${lastValue}${sumLast7 !== null ? ` 7dSum=${sumLast7}` : ''}` : 'no values');
+    console.log(`  ✓ ${target.metric}: ${display}`);
   }
 
   console.log(`\n  Account insights: ${okCount} ok, ${errCount} errors\n`);
@@ -147,31 +198,35 @@ async function main() {
   });
   console.log('  ✓ Wrote to analytics/latest/igAccountInsights');
 
-  // Also snapshot a slim daily summary for trend tracking
+  // Also snapshot a slim daily summary for trend tracking. Uses the
+  // 28-day aggregate windows since most account metrics now come back
+  // that way per Meta's 2026 API.
   const dateKey = new Date().toISOString().slice(0, 10);
   const summary = {
     date: dateKey,
-    websiteClicksLatest: results.website_clicks?.latest ?? null,
-    websiteClicks7dSum: results.website_clicks?.last7Sum ?? null,
-    profileViewsLatest: results.profile_views?.latest ?? null,
-    profileViews7dSum: results.profile_views?.last7Sum ?? null,
+    websiteClicks28d: results.website_clicks?.total ?? null,
+    profileLinksTaps28d: results.profile_links_taps?.total ?? null,
+    profileViews28d: results.profile_views?.total ?? null,
+    accountsEngaged28d: results.accounts_engaged?.total ?? null,
+    totalInteractions28d: results.total_interactions?.total ?? null,
+    views28d: results.views?.total ?? null,
     reachLatest: results.reach?.latest ?? null,
-    accountsEngagedLatest: results.accounts_engaged?.latest ?? null,
+    reach7dSum: results.reach?.last7Sum ?? null,
     fetchedAt: new Date().toISOString(),
   };
   await patchFirebase(`analytics/history/${dateKey}/igAccountSummary`, summary);
   console.log(`  ✓ Snapshotted daily summary to analytics/history/${dateKey}/igAccountSummary`);
 
-  // Compute the headline diagnostic: bio link click-through rate.
-  // Defined as website_clicks / profile_views (both account-level
-  // 1-day numbers). This replaces the dashboard's previous estimate.
-  if (summary.websiteClicksLatest !== null && summary.profileViewsLatest > 0) {
-    const ctr = summary.websiteClicksLatest / summary.profileViewsLatest;
-    console.log(`\n  🎯 Bio link CTR (today): ${(ctr * 100).toFixed(1)}% (${summary.websiteClicksLatest} clicks / ${summary.profileViewsLatest} profile views)`);
-    if (summary.websiteClicks7dSum !== null && summary.profileViews7dSum > 0) {
-      const ctr7d = summary.websiteClicks7dSum / summary.profileViews7dSum;
-      console.log(`  🎯 Bio link CTR (7d): ${(ctr7d * 100).toFixed(1)}% (${summary.websiteClicks7dSum} clicks / ${summary.profileViews7dSum} profile views)`);
-    }
+  // Compute the headline diagnostic: bio link CTR over the 28-day window.
+  // This is the actual measurement of the dashboard's flagged 1% link-
+  // click rate problem, replacing the previous indirect estimate.
+  if (summary.websiteClicks28d !== null && summary.profileViews28d > 0) {
+    const ctr = summary.websiteClicks28d / summary.profileViews28d;
+    console.log(`\n  🎯 Website-clicks CTR (28d): ${(ctr * 100).toFixed(2)}% (${summary.websiteClicks28d} clicks / ${summary.profileViews28d} profile views)`);
+  }
+  if (summary.profileLinksTaps28d !== null && summary.profileViews28d > 0) {
+    const ctr = summary.profileLinksTaps28d / summary.profileViews28d;
+    console.log(`  🎯 ALL bio-link taps CTR (28d): ${(ctr * 100).toFixed(2)}% (${summary.profileLinksTaps28d} taps / ${summary.profileViews28d} profile views)`);
   }
 
   console.log('\n✅ IG Account-Level Insights scrape complete\n');
