@@ -26,6 +26,11 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 const MEDIA_LIMIT = 25;
 const COMMENTS_LIMIT = 50;
 
+// Firebase keys can't contain . $ # [ ] /
+function sanitizeKey(str) {
+  return str.replace(/[.$#\[\]/]/g, '_');
+}
+
 if (!FB_PAGE_ACCESS_TOKEN) {
   console.error('Missing FB_PAGE_ACCESS_TOKEN environment variable');
   process.exit(1);
@@ -137,9 +142,10 @@ async function main() {
         totalComments += 1;
         const likeCount = c.like_count || 0;
 
-        // Track in scrape map
-        if (!scrapeMap[username]) {
-          scrapeMap[username] = {
+        // Track in scrape map (sanitize key for Firebase compatibility)
+        const key = sanitizeKey(username);
+        if (!scrapeMap[key]) {
+          scrapeMap[key] = {
             commentCount: 0,
             posts: [],
             lastCommentAt: c.timestamp,
@@ -147,7 +153,7 @@ async function main() {
             likeEntries: 0,
           };
         }
-        const entry = scrapeMap[username];
+        const entry = scrapeMap[key];
         if (!entry.posts.includes(item.id)) {
           entry.posts.push(item.id);
           entry.commentCount += 1;
@@ -180,15 +186,15 @@ async function main() {
   const now = new Date().toISOString();
   const mergedMap = { ...existingMap };
 
-  for (const [username, scrapeEntry] of Object.entries(scrapeMap)) {
-    const existing = mergedMap[username];
+  for (const [key, scrapeEntry] of Object.entries(scrapeMap)) {
+    const existing = mergedMap[key];
     if (existing) {
-      // Merge: add new post IDs, update counts
       const existingPosts = existing.posts || [];
       const newPosts = scrapeEntry.posts.filter(p => !existingPosts.includes(p));
       const allPosts = [...existingPosts, ...newPosts];
 
-      mergedMap[username] = {
+      mergedMap[key] = {
+        username: existing.username || key,
         commentCount: (existing.commentCount || 0) + newPosts.length,
         posts: allPosts,
         lastCommentAt: scrapeEntry.lastCommentAt > (existing.lastCommentAt || '')
@@ -201,8 +207,8 @@ async function main() {
         tier: classifyTier((existing.commentCount || 0) + newPosts.length),
       };
     } else {
-      // New commenter
-      mergedMap[username] = {
+      mergedMap[key] = {
+        username: key,
         commentCount: scrapeEntry.commentCount,
         posts: scrapeEntry.posts,
         lastCommentAt: scrapeEntry.lastCommentAt,
@@ -224,8 +230,8 @@ async function main() {
   const warmIntros = Object.entries(mergedMap)
     .filter(([, e]) => e.commentCount >= 2)
     .sort((a, b) => b[1].commentCount - a[1].commentCount)
-    .map(([username, e]) => ({
-      username,
+    .map(([key, e]) => ({
+      username: e.username || key,
       commentCount: e.commentCount,
       lastCommentAt: e.lastCommentAt,
       tier: e.tier,

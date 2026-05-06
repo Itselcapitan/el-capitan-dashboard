@@ -87,9 +87,16 @@ async function discoverAdAccount() {
 
   // Auto-discover from /me/adaccounts
   console.log('  FB_AD_ACCOUNT_ID not set — attempting auto-discovery...');
-  const result = await graphGet('me/adaccounts', {
-    fields: 'id,name,account_status,currency,business_name',
-  });
+  let result;
+  try {
+    result = await graphGet('me/adaccounts', {
+      fields: 'id,name,account_status,currency,business_name',
+    });
+  } catch (err) {
+    console.log(`  Auto-discovery failed: ${err.message}`);
+    console.log('  Set the FB_AD_ACCOUNT_ID secret if you have an ad account.');
+    return null;
+  }
 
   const accounts = result.data || [];
   if (!accounts.length) {
