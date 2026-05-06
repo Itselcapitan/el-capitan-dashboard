@@ -1,0 +1,21 @@
+name: IG Demographics & Posting Times
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '15 11 * * *' # 7:15 AM ET daily (1 hour after insights scrape)
+
+jobs:
+  scrape-demographics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/scrape-ig-demographics.mjs
+        env:
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}

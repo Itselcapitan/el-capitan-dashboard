@@ -56,7 +56,8 @@ async function main() {
     console.log('  📡 Trying direct v2 API fallback...');
     try {
       const clientId = sc.api.clientID;
-      const userId = user.id;
+      // Use URN if available (SC is migrating from numeric IDs to URNs)
+      const userId = user.urn || user.id;
       const v2Url = `https://api-v2.soundcloud.com/users/${userId}/tracks?client_id=${clientId}&limit=50&offset=0`;
       const v2Res = await fetch(v2Url);
       if (!v2Res.ok) throw new Error(`v2 API returned ${v2Res.status}`);

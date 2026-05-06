@@ -4010,6 +4010,83 @@ function renderHQCharts(){
 }
 
 // =====================================================
+// LIVE DATA → CHART WIRING
+// =====================================================
+
+function updateChartsFromAccountInsights(){
+  var ai = window._igAccountInsights;
+  if(!ai || !ai.metrics) return;
+  var m = ai.metrics;
+  // Engagement breakdown chart — replace hardcoded MSE totals with 28-day aggregates
+  if(m.likes && m.likes.total != null) MSE.ig.totalLikes = m.likes.total;
+  if(m.comments && m.comments.total != null) MSE.ig.totalComments = m.comments.total;
+  if(m.shares && m.shares.total != null) MSE.ig.totalShares = m.shares.total;
+  if(m.saves && m.saves.total != null) MSE.ig.totalSaves = m.saves.total;
+  // Funnel chart — replace hardcoded reach/profileVisits/linkClicks
+  if(m.reach && m.reach.last7Sum != null) MSE.ig.accountsReached = m.reach.last7Sum;
+  if(m.profile_views && m.profile_views.total != null) MSE.ig.profileVisits = m.profile_views.total;
+  if(m.website_clicks && m.website_clicks.total != null) MSE.ig.externalLinkTaps = m.website_clicks.total;
+  else if(m.profile_links_taps && m.profile_links_taps.total != null) MSE.ig.externalLinkTaps = m.profile_links_taps.total;
+  // Re-render if content tab is open
+  if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
+}
+
+function updateChartsFromPostInsights(){
+  var insights = window._igInsights;
+  if(!insights) return;
+  var posts = Object.values(insights);
+  // Compute interaction totals by content type from live per-post data
+  var reelInteractions = 0, staticInteractions = 0;
+  var reelViews = 0, staticViews = 0;
+  posts.forEach(function(p){
+    if(p.isReel){
+      reelInteractions += (p.totalInteractions || 0);
+      reelViews += (p.views || p.plays || 0);
+    } else {
+      staticInteractions += (p.totalInteractions || 0);
+      staticViews += (p.views || 0);
+    }
+  });
+  // Story interactions come from igStories if available
+  var storyInteractions = 0;
+  if(window._igStories && window._igStories.stories){
+    var stories = window._igStories.stories;
+    var storyKeys = Object.keys(stories);
+    storyKeys.forEach(function(k){
+      var s = stories[k];
+      storyInteractions += (s.replies || 0) + (s.tapsBack || 0);
+    });
+  }
+  if(reelInteractions > 0 || staticInteractions > 0){
+    MSE.ig.reelInteractions = reelInteractions;
+    MSE.ig.postInteractions = staticInteractions;
+    MSE.ig.storyInteractions = storyInteractions;
+  }
+  // View share by format
+  var totalViews = reelViews + staticViews;
+  if(totalViews > 0){
+    MSE.ig.reelsViewShare = Math.round((reelViews / totalViews) * 100);
+    MSE.ig.postsViewShare = Math.round((staticViews / totalViews) * 100);
+    MSE.ig.storiesViewShare = 100 - MSE.ig.reelsViewShare - MSE.ig.postsViewShare;
+    if(MSE.ig.storiesViewShare < 0) MSE.ig.storiesViewShare = 0;
+  }
+  if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
+}
+
+function renderTrialReelsBadge(){
+  var tr = window._igTrialReels;
+  if(!tr || !tr.count) return;
+  // Add a Trial Reels badge to the content stats area if it exists
+  var statsArea = document.getElementById('content-live-badges');
+  if(!statsArea) return;
+  var badge = document.createElement('div');
+  badge.className = 'metric-badge';
+  badge.style.cssText = 'background:rgba(255,171,0,.12);border:1px solid rgba(255,171,0,.3);border-radius:8px;padding:6px 12px;display:inline-block;margin:4px;font-size:11px;';
+  badge.innerHTML = '<span style="color:#ffab00;font-weight:700;">🧪 ' + tr.count + ' Trial Reel' + (tr.count > 1 ? 's' : '') + '</span> in testing phase';
+  statsArea.appendChild(badge);
+}
+
+// =====================================================
 // CONTENT ANALYTICS CHARTS
 // =====================================================
 function renderContentCharts(){
@@ -4093,6 +4170,315 @@ function renderContentCharts(){
 }
 
 // =====================================================
+// GRAPH API EXTRAS — Demographics, Stories, Comments, Ads
+// =====================================================
+function loadGraphAPIExtras(){
+  // Demographics (gender, age, cities, countries, online_followers)
+  db.ref('analytics/latest/igDemographics').once('value', function(snap){
+    var d = snap.val();
+    if(!d) return;
+    window._igDemographics = d;
+    console.log('[DATA] igDemographics loaded');
+    renderDemographics();
+    renderPostingTimes();
+  });
+  // Stories Insights
+  db.ref('analytics/latest/igStories').once('value', function(snap){
+    var d = snap.val();
+    window._igStories = d || { storyCount: 0, stories: {} };
+    console.log('[DATA] igStories loaded, count:', window._igStories.storyCount || 0);
+    renderStoriesInsights();
+  });
+  // Comment Tracker
+  db.ref('analytics/latest/igComments').once('value', function(snap){
+    var d = snap.val();
+    window._igComments = d || { uniqueCommenters: 0, warmIntros: [], recentComments: [] };
+    console.log('[DATA] igComments loaded, warm intros:', (window._igComments.warmIntros||[]).length);
+    renderCommentTracker();
+  });
+  // Ads Performance
+  db.ref('analytics/latest/igAds').once('value', function(snap){
+    var d = snap.val();
+    window._igAds = d || null;
+    console.log('[DATA] igAds loaded, campaigns:', d ? Object.keys(d.campaigns||{}).length : 0);
+    renderLiveAds();
+  });
+  // Account-level insights for live funnel
+  db.ref('analytics/latest/igAccountInsights').once('value', function(snap){
+    var d = snap.val();
+    window._igAccountInsights = d || null;
+    console.log('[DATA] igAccountInsights loaded');
+    renderLiveFunnel();
+    updateChartsFromAccountInsights();
+  });
+  // Per-post insights for engagement/interaction/viewshare charts
+  db.ref('analytics/latest/igInsights').once('value', function(snap){
+    var d = snap.val();
+    window._igInsights = d || null;
+    console.log('[DATA] igInsights loaded, posts:', d ? Object.keys(d).length : 0);
+    updateChartsFromPostInsights();
+  });
+  // Trial Reels data
+  db.ref('analytics/latest/igTrialReels').once('value', function(snap){
+    var d = snap.val();
+    window._igTrialReels = d || null;
+    if(d && d.count > 0) console.log('[DATA] igTrialReels loaded, count:', d.count);
+    renderTrialReelsBadge();
+  });
+}
+
+function renderDemographics(){
+  var d = window._igDemographics;
+  if(!d) return;
+  // Update gender chart data
+  if(d.gender){
+    MSE.ig.demoMale = d.gender.male || MSE.ig.demoMale;
+    MSE.ig.demoFemale = d.gender.female || MSE.ig.demoFemale;
+  }
+  // Update age data
+  if(d.ageGroups && d.ageGroups.length){
+    d.ageGroups.forEach(function(ag){
+      if(ag.range === '18-24') MSE.ig.demo18_24 = ag.pct;
+      else if(ag.range === '25-34') MSE.ig.demo25_34 = ag.pct;
+      else if(ag.range === '35-44') MSE.ig.demo35_44 = ag.pct;
+    });
+  }
+  // Update cities dynamically
+  var geoWrap = document.getElementById('demo-cities-live');
+  if(geoWrap && d.topCities && d.topCities.length){
+    var html = '';
+    d.topCities.slice(0, 8).forEach(function(c){
+      html += '<div class="geo-i"><div class="geo-v">'+c.pct.toFixed(1)+'%</div><div class="geo-l">'+c.name+'</div></div>';
+    });
+    geoWrap.innerHTML = html;
+    // NYC shift diagnostic
+    var nycPct = 0, schenPct = 0;
+    d.topCities.forEach(function(c){
+      if(c.name.match(/new york|nyc/i)) nycPct += c.pct;
+      if(c.name.match(/schenectady/i)) schenPct += c.pct;
+    });
+    var diagEl = document.getElementById('demo-city-diagnostic');
+    if(diagEl){
+      if(schenPct > 30) diagEl.innerHTML = '<strong>'+schenPct.toFixed(1)+'% Schenectady</strong> = hyper-local. NYC at '+nycPct.toFixed(1)+'%. Track this shift weekly as you move to NYC.';
+      else if(nycPct > schenPct) diagEl.innerHTML = '<strong style="color:var(--gn)">NYC overtook Schenectady!</strong> NYC '+nycPct.toFixed(1)+'% vs Schenectady '+schenPct.toFixed(1)+'%. The audience shift is working.';
+      else diagEl.innerHTML = 'Schenectady '+schenPct.toFixed(1)+'% &middot; NYC '+nycPct.toFixed(1)+'%. Keep pushing NYC-targeted content.';
+    }
+  }
+  // Update countries
+  var countryWrap = document.getElementById('demo-countries-live');
+  if(countryWrap && d.topCountries && d.topCountries.length){
+    var html = '';
+    d.topCountries.slice(0, 6).forEach(function(c){
+      html += '<div class="geo-i"><div class="geo-v">'+c.pct.toFixed(1)+'%</div><div class="geo-l">'+c.name+'</div></div>';
+    });
+    countryWrap.innerHTML = html;
+  }
+  // Update locales (languages)
+  var localeWrap = document.getElementById('demo-locales-live');
+  if(localeWrap && d.topLocales && d.topLocales.length){
+    var html = '';
+    d.topLocales.slice(0, 6).forEach(function(c){
+      html += '<div class="geo-i"><div class="geo-v">'+c.pct.toFixed(1)+'%</div><div class="geo-l">'+c.name+'</div></div>';
+    });
+    localeWrap.innerHTML = html;
+  }
+  // Update badge
+  var badge = document.getElementById('demo-badge');
+  if(badge && d.ageGroups && d.ageGroups.length && d.gender){
+    var topAge = d.ageGroups[0];
+    badge.innerHTML = topAge.pct.toFixed(1)+'% age '+topAge.range+' &middot; '+d.gender.male.toFixed(1)+'% male';
+  }
+  // Update fetch time
+  var ts = document.getElementById('demo-fetched-at');
+  if(ts && d.fetchedAt) ts.textContent = 'Live via Graph API · ' + new Date(d.fetchedAt).toLocaleDateString();
+  // Re-render charts with live data
+  if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
+}
+
+function renderPostingTimes(){
+  var d = window._igDemographics;
+  if(!d || !d.onlineFollowers) return;
+  var wrap = document.getElementById('posting-times-live');
+  if(!wrap) return;
+  var of = d.onlineFollowers;
+  var hourly = of.hourly || {};
+  var hours = Object.keys(hourly).map(Number).sort(function(a,b){ return a-b; });
+  if(!hours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers data yet.</div>'; return; }
+  var maxVal = Math.max.apply(null, hours.map(function(h){ return hourly[h]; }));
+  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE</div>';
+  html += '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding:0 4px">';
+  hours.forEach(function(h){
+    var val = hourly[h] || 0;
+    var pct = maxVal > 0 ? (val / maxVal * 100) : 0;
+    var isPeak = h === of.peakHour;
+    var color = isPeak ? 'var(--gn)' : (pct > 70 ? 'var(--ac)' : 'rgba(136,136,170,.4)');
+    var label = h === 0 ? '12a' : h < 12 ? h+'a' : h === 12 ? '12p' : (h-12)+'p';
+    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">';
+    html += '<div style="width:100%;height:'+Math.max(pct, 3)+'%;background:'+color+';border-radius:2px 2px 0 0;min-height:2px" title="'+label+': '+val+' followers online"></div>';
+    if(h % 3 === 0) html += '<div style="font-size:7px;color:var(--dm)">'+label+'</div>';
+    else html += '<div style="font-size:7px;color:transparent">.</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  if(of.peakWindow) html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+of.peakWindow+'</div>';
+  wrap.innerHTML = html;
+}
+
+function renderStoriesInsights(){
+  var wrap = document.getElementById('stories-insights-live');
+  if(!wrap) return;
+  var d = window._igStories;
+  if(!d || !d.storyCount){
+    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px;padding:8px">No stories data yet. Stories expire after 24h — data appears when stories are live during scrape.</div>';
+    return;
+  }
+  var s = d.summary || {};
+  var html = '<div class="g" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">';
+  html += '<div class="c"><div class="cl">STORIES</div><div class="cv">'+d.storyCount+'</div></div>';
+  html += '<div class="c"><div class="cl">AVG REACH</div><div class="cv">'+fmtK(s.avgReach||0)+'</div></div>';
+  html += '<div class="c"><div class="cl">COMPLETION</div><div class="cv">'+(s.avgCompletionRate||0).toFixed(0)+'%</div></div>';
+  html += '<div class="c"><div class="cl">REPLIES</div><div class="cv">'+(s.totalReplies||0)+'</div></div>';
+  html += '<div class="c"><div class="cl">RE-WATCHES</div><div class="cv">'+(s.totalTapsBack||0)+'</div></div>';
+  html += '</div>';
+  // Per-story table
+  var stories = d.stories ? Object.values(d.stories) : [];
+  if(stories.length){
+    stories.sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
+    html += '<table class="tbl"><tr><th>Time</th><th>Type</th><th>Reach</th><th>Exits</th><th>Completion</th><th>Fwd</th><th>Back</th><th>Replies</th><th>Signal</th></tr>';
+    stories.forEach(function(st){
+      var compColor = (st.completionRate||0) >= 80 ? 'var(--gn)' : (st.completionRate||0) >= 60 ? 'var(--am)' : 'var(--rd)';
+      var signalBadge = st.engagementSignal === 'rewatch' ? '<span class="tg" style="background:rgba(0,200,83,.15);color:var(--gn)">REWATCH</span>'
+        : st.engagementSignal === 'reply' ? '<span class="tg" style="background:rgba(0,229,255,.15);color:var(--ac)">REPLY</span>'
+        : '<span class="tg" style="background:rgba(136,136,170,.1);color:var(--dm)">PASSIVE</span>';
+      html += '<tr><td>'+new Date(st.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</td>';
+      html += '<td>'+(st.mediaType||'—')+'</td>';
+      html += '<td>'+fmtK(st.reach||0)+'</td>';
+      html += '<td>'+(st.exits||0)+'</td>';
+      html += '<td style="color:'+compColor+'">'+(st.completionRate||0).toFixed(0)+'%</td>';
+      html += '<td>'+(st.tapsForward||0)+'</td>';
+      html += '<td style="color:'+(st.tapsBack>0?'var(--gn)':'inherit')+'">'+(st.tapsBack||0)+'</td>';
+      html += '<td style="color:'+(st.replies>0?'var(--ac)':'inherit')+'">'+(st.replies||0)+'</td>';
+      html += '<td>'+signalBadge+'</td></tr>';
+    });
+    html += '</table>';
+  }
+  wrap.innerHTML = html;
+}
+
+function renderCommentTracker(){
+  var wrap = document.getElementById('comment-tracker-live');
+  if(!wrap) return;
+  var d = window._igComments;
+  if(!d || !d.totalComments){
+    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px;padding:8px">No comment data yet. Runs daily at 9:15 AM ET.</div>';
+    return;
+  }
+  var html = '<div class="g" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">';
+  html += '<div class="c"><div class="cl">TOTAL COMMENTS</div><div class="cv">'+d.totalComments+'</div></div>';
+  html += '<div class="c"><div class="cl">UNIQUE COMMENTERS</div><div class="cv">'+d.uniqueCommenters+'</div></div>';
+  html += '<div class="c"><div class="cl">WARM INTROS</div><div class="cv" style="color:var(--gn)">'+(d.warmIntros||[]).length+'</div></div>';
+  html += '</div>';
+  // Warm intros table
+  var wi = d.warmIntros || [];
+  if(wi.length){
+    html += '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin:12px 0 8px">WARM INTRO CANDIDATES (2+ comments)</div>';
+    html += '<table class="tbl"><tr><th>Username</th><th>Comments</th><th>Tier</th><th>Last Active</th></tr>';
+    wi.forEach(function(w){
+      var tierBadge = w.tier === 'superfan' ? '<span class="tg" style="background:rgba(0,200,83,.15);color:var(--gn)">SUPERFAN</span>'
+        : '<span class="tg" style="background:rgba(255,171,0,.15);color:var(--am)">REPEAT</span>';
+      html += '<tr><td style="color:var(--ac)">@'+w.username+'</td><td>'+w.commentCount+'</td><td>'+tierBadge+'</td>';
+      html += '<td>'+new Date(w.lastCommentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+    });
+    html += '</table>';
+  }
+  // Recent comments
+  var rc = d.recentComments || [];
+  if(rc.length){
+    html += '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin:12px 0 8px">RECENT COMMENTS</div>';
+    html += '<div style="max-height:200px;overflow-y:auto">';
+    rc.slice(0, 15).forEach(function(c){
+      html += '<div style="padding:6px 0;border-bottom:1px solid var(--s2);font-size:10px">';
+      html += '<span style="color:var(--ac);font-weight:700">@'+(c.username||'unknown')+'</span> ';
+      html += '<span style="color:var(--tx)">'+((c.text||'').slice(0,80))+'</span>';
+      if(c.likeCount > 0) html += ' <span style="color:var(--dm)">❤ '+c.likeCount+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function renderLiveFunnel(){
+  var wrap = document.getElementById('funnel-live-data');
+  if(!wrap) return;
+  var d = window._igAccountInsights;
+  if(!d || !d.metrics) return;
+  var m = d.metrics;
+  var reached = m.reach ? (m.reach.last7Sum || m.reach.latest || 0) : 0;
+  var profViews = m.profile_views ? (m.profile_views.total || 0) : 0;
+  var linkClicks = m.website_clicks ? (m.website_clicks.total || 0) : 0;
+  var linkTaps = m.profile_links_taps ? (m.profile_links_taps.total || 0) : 0;
+  var pvRate = reached > 0 ? (profViews / reached * 100) : 0;
+  var lcRate = profViews > 0 ? (linkClicks / profViews * 100) : 0;
+  // Update funnel numbers
+  var rEl = document.getElementById('funnel-reached'); if(rEl) rEl.textContent = fmtK(reached);
+  var pEl = document.getElementById('funnel-profvisits'); if(pEl) pEl.textContent = fmtK(profViews);
+  var lEl = document.getElementById('funnel-linkclicks'); if(lEl) lEl.textContent = fmtK(linkClicks > 0 ? linkClicks : linkTaps);
+  var prEl = document.getElementById('funnel-pvrate'); if(prEl) prEl.textContent = '(' + pvRate.toFixed(1) + '%)';
+  var lrEl = document.getElementById('funnel-lcrate'); if(lrEl) lrEl.textContent = '(' + lcRate.toFixed(1) + '%)';
+  // Update badge
+  var badge = document.getElementById('funnel-badge');
+  if(badge) badge.innerHTML = lcRate.toFixed(1) + '% link click rate';
+  // Update diagnostic
+  var diag = document.getElementById('funnel-diagnostic');
+  if(diag){
+    if(lcRate < 2) diag.innerHTML = '<strong>Conversion Gap:</strong> '+pvRate.toFixed(0)+'% profile visit rate, but only '+lcRate.toFixed(1)+'% click the link. Fix: stronger CTA in bio, comment-keyword automation, "DM for link" CTAs.';
+    else if(lcRate < 5) diag.innerHTML = '<strong>Improving:</strong> '+lcRate.toFixed(1)+'% link CTR is above the 1% baseline. Keep pushing CTA experiments.';
+    else diag.innerHTML = '<strong style="color:var(--gn)">Strong:</strong> '+lcRate.toFixed(1)+'% link CTR. Bio link is converting well.';
+  }
+  var tsEl = document.getElementById('funnel-fetched-at');
+  if(tsEl && d.fetchedAt) tsEl.textContent = 'Live via Graph API · 28-day window · ' + new Date(d.fetchedAt).toLocaleDateString();
+}
+
+function renderLiveAds(){
+  var wrap = document.getElementById('live-ads-data');
+  if(!wrap) return;
+  var d = window._igAds;
+  if(!d || !d.summary || d.summary.totalCampaigns === 0){
+    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px;padding:8px">No ad data from Marketing API yet. Runs daily at 10:15 AM ET. Make sure FB_AD_ACCOUNT_ID is set in GitHub secrets.</div>';
+    return;
+  }
+  var s = d.summary;
+  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--gn);letter-spacing:1.5px;margin-bottom:10px">MARKETING API &middot; LIVE DATA</div>';
+  html += '<div class="g" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">';
+  html += '<div class="c"><div class="cl">TOTAL SPEND (30d)</div><div class="cv">$'+(s.totalSpend30d||0).toFixed(2)+'</div></div>';
+  html += '<div class="c"><div class="cl">IMPRESSIONS</div><div class="cv">'+fmtK(s.totalImpressions30d||0)+'</div></div>';
+  html += '<div class="c"><div class="cl">CLICKS</div><div class="cv">'+(s.totalClicks30d||0)+'</div></div>';
+  html += '<div class="c"><div class="cl">AVG CPM</div><div class="cv">$'+(s.avgCPM||0).toFixed(2)+'</div></div>';
+  html += '<div class="c"><div class="cl">AVG CPC</div><div class="cv">$'+(s.avgCPC||0).toFixed(2)+'</div></div>';
+  html += '<div class="c"><div class="cl">AVG CTR</div><div class="cv">'+(s.avgCTR||0).toFixed(2)+'%</div></div>';
+  html += '</div>';
+  // Campaign table
+  var camps = d.campaigns ? Object.values(d.campaigns) : [];
+  if(camps.length){
+    html += '<table class="tbl"><tr><th>Campaign</th><th>Status</th><th>Spend</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th></tr>';
+    camps.forEach(function(c){
+      var ins = c.insights30d || {};
+      var statusColor = c.status === 'ACTIVE' ? 'var(--gn)' : 'var(--dm)';
+      html += '<tr><td>'+c.name+'</td>';
+      html += '<td style="color:'+statusColor+'">'+c.status+'</td>';
+      html += '<td>$'+(ins.spend||0).toFixed(2)+'</td>';
+      html += '<td>'+fmtK(ins.impressions||0)+'</td>';
+      html += '<td>'+(ins.clicks||0)+'</td>';
+      html += '<td>'+(ins.ctr||0).toFixed(2)+'%</td>';
+      html += '<td>$'+(ins.cpc||0).toFixed(2)+'</td></tr>';
+    });
+    html += '</table>';
+  }
+  wrap.innerHTML = html;
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function init(){
@@ -4100,6 +4486,7 @@ function init(){
   loadState();
   loadPromotedPosts();
   loadAnalytics();
+  loadGraphAPIExtras();
   loadCompetitors();
   loadHistory(function(){
     renderTrendCharts();
@@ -4265,6 +4652,7 @@ function init(){
 <!-- ==================== ANALYTICS SUB-TAB ==================== -->
 <div class="sub-c on" id="cs-analytics">
 <div class="ds"><span id="last-scraped-date">Last scraped: loading...</span> &middot; IG deep report: Dec 27 &ndash; Mar 26 (90 days)</div>
+<div id="content-live-badges" style="margin:6px 0;"></div>
 
 <!-- CROSS-PLATFORM OVERVIEW -->
 <div class="acc-panel">
@@ -4382,7 +4770,7 @@ function init(){
   <div class="acc-hdr acc-hdr-audience" onclick="toggleAcc('acc-audience')">
     <span class="acc-chevron" id="acc-audience-chevron">&#9654;</span>
     <span class="acc-title" style="color:#b388ff">Audience &amp; Demographics</span>
-    <span class="acc-badge">58.3% age 18-24 &middot; 70.5% male</span>
+    <span class="acc-badge" id="demo-badge">58.3% age 18-24 &middot; 70.5% male</span>
   </div>
   <div class="acc-body" id="acc-audience-body"><div class="acc-body-inner">
     <div class="chart-row">
@@ -4391,14 +4779,24 @@ function init(){
     </div>
     <div style="margin-top:12px">
       <div style="font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:8px">TOP CITIES (IG)</div>
-      <div class="geo">
-        <div class="geo-i"><div class="geo-v">41.3%</div><div class="geo-l">Schenectady</div></div>
-        <div class="geo-i"><div class="geo-v">3.2%</div><div class="geo-l">NYC</div></div>
-        <div class="geo-i"><div class="geo-v">2.8%</div><div class="geo-l">Boston</div></div>
-        <div class="geo-i"><div class="geo-v">2.4%</div><div class="geo-l">Albany</div></div>
+      <div class="geo" id="demo-cities-live">
+        <div class="geo-i"><div class="geo-v">—</div><div class="geo-l">Loading...</div></div>
       </div>
-      <div style="margin-top:8px;font-size:10px;color:var(--am)">41.3% Schenectady = hyper-local. Need to break into NYC/Boston for venue growth.</div>
+      <div id="demo-city-diagnostic" style="margin-top:8px;font-size:10px;color:var(--am)">Waiting for live demographics data...</div>
     </div>
+    <div style="margin-top:12px">
+      <div style="font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:8px">TOP COUNTRIES</div>
+      <div class="geo" id="demo-countries-live">
+        <div class="geo-i"><div class="geo-v">—</div><div class="geo-l">Loading...</div></div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div style="font:700 8px/1 'Space Mono',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:8px">TOP LANGUAGES</div>
+      <div class="geo" id="demo-locales-live">
+        <div class="geo-i"><div class="geo-v">—</div><div class="geo-l">Loading...</div></div>
+      </div>
+    </div>
+    <div id="demo-fetched-at" style="margin-top:8px;font-size:9px;color:var(--dm)"></div>
   </div></div>
 </div>
 
@@ -4407,30 +4805,73 @@ function init(){
   <div class="acc-hdr acc-hdr-funnel" onclick="toggleAcc('acc-funnel')">
     <span class="acc-chevron" id="acc-funnel-chevron">&#9654;</span>
     <span class="acc-title" style="color:var(--rd)">Funnel &amp; Conversion</span>
-    <span class="acc-badge" style="color:var(--rd);background:rgba(255,82,82,.08)">1% link click rate</span>
+    <span class="acc-badge" id="funnel-badge" style="color:var(--rd);background:rgba(255,82,82,.08)">loading...</span>
   </div>
   <div class="acc-body" id="acc-funnel-body"><div class="acc-body-inner">
     <div class="chart-row" style="margin-top:0">
-      <div class="chart-cell" style="max-width:500px"><div class="chart-label">Conversion Funnel (90 Days)</div><canvas id="cc-funnel" height="180"></canvas></div>
+      <div class="chart-cell" style="max-width:500px"><div class="chart-label">Conversion Funnel (28-Day Rolling)</div><canvas id="cc-funnel" height="180"></canvas></div>
     </div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px;background:var(--s2);border-radius:7px">
+    <div id="funnel-live-data" style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px;background:var(--s2);border-radius:7px">
       <div style="text-align:center;flex:1;min-width:90px">
-        <div style="font-size:20px;font-weight:700;color:var(--gn)">11,003</div>
-        <div style="font-size:9px;color:var(--dm)">Reached</div>
+        <div id="funnel-reached" style="font-size:20px;font-weight:700;color:var(--gn)">—</div>
+        <div style="font-size:9px;color:var(--dm)">Reached (7d)</div>
       </div>
       <div style="color:var(--dm);font-size:16px">&rarr;</div>
       <div style="text-align:center;flex:1;min-width:90px">
-        <div style="font-size:20px;font-weight:700;color:var(--am)">2,564</div>
-        <div style="font-size:9px;color:var(--dm)">Profile Visits (23%)</div>
+        <div id="funnel-profvisits" style="font-size:20px;font-weight:700;color:var(--am)">—</div>
+        <div style="font-size:9px;color:var(--dm)">Profile Visits <span id="funnel-pvrate"></span></div>
       </div>
       <div style="color:var(--dm);font-size:16px">&rarr;</div>
       <div style="text-align:center;flex:1;min-width:90px">
-        <div style="font-size:20px;font-weight:700;color:var(--rd)">26</div>
-        <div style="font-size:9px;color:var(--dm)">Link Clicks (1%)</div>
+        <div id="funnel-linkclicks" style="font-size:20px;font-weight:700;color:var(--rd)">—</div>
+        <div style="font-size:9px;color:var(--dm)">Link Clicks <span id="funnel-lcrate"></span></div>
       </div>
     </div>
-    <div style="margin-top:10px;padding:8px;background:rgba(255,82,82,.06);border:1px solid rgba(255,82,82,.15);border-radius:5px;font-size:10px;color:var(--rd)">
-      <strong>Conversion Gap:</strong> 23% profile visit rate is strong, but only 1% click the link. Fix: stronger CTA in bio, link-in-bio landing page, "link in bio" in every caption.
+    <div id="funnel-diagnostic" style="margin-top:10px;padding:8px;background:rgba(255,82,82,.06);border:1px solid rgba(255,82,82,.15);border-radius:5px;font-size:10px;color:var(--rd)">
+      Waiting for live account insights data...
+    </div>
+    <div id="funnel-fetched-at" style="margin-top:6px;font-size:9px;color:var(--dm)"></div>
+  </div></div>
+</div>
+
+<!-- BEST POSTING TIMES -->
+<div class="acc-panel">
+  <div class="acc-hdr" style="border-left:3px solid var(--gn)" onclick="toggleAcc('acc-posting-times')">
+    <span class="acc-chevron" id="acc-posting-times-chevron">&#9654;</span>
+    <span class="acc-title" style="color:var(--gn)">Best Posting Times</span>
+    <span class="acc-badge" style="color:var(--gn);background:rgba(0,200,83,.08)">via Graph API</span>
+  </div>
+  <div class="acc-body" id="acc-posting-times-body"><div class="acc-body-inner">
+    <div id="posting-times-live">
+      <div style="color:var(--dm);font-size:10px;padding:8px">Loading online_followers data... Runs daily at 7:15 AM ET.</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- STORIES INSIGHTS -->
+<div class="acc-panel">
+  <div class="acc-hdr" style="border-left:3px solid #b388ff" onclick="toggleAcc('acc-stories')">
+    <span class="acc-chevron" id="acc-stories-chevron">&#9654;</span>
+    <span class="acc-title" style="color:#b388ff">Stories Insights</span>
+    <span class="acc-badge" style="color:#b388ff;background:rgba(123,47,247,.08)">via Graph API</span>
+  </div>
+  <div class="acc-body" id="acc-stories-body"><div class="acc-body-inner">
+    <div id="stories-insights-live">
+      <div style="color:var(--dm);font-size:10px;padding:8px">Loading stories data... Runs daily at 8:15 AM ET.</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- COMMENT TRACKER / WARM INTROS -->
+<div class="acc-panel">
+  <div class="acc-hdr" style="border-left:3px solid var(--ac)" onclick="toggleAcc('acc-comments')">
+    <span class="acc-chevron" id="acc-comments-chevron">&#9654;</span>
+    <span class="acc-title" style="color:var(--ac)">Comment Tracker &amp; Warm Intros</span>
+    <span class="acc-badge" style="color:var(--ac);background:rgba(0,229,255,.08)">via Graph API</span>
+  </div>
+  <div class="acc-body" id="acc-comments-body"><div class="acc-body-inner">
+    <div id="comment-tracker-live">
+      <div style="color:var(--dm);font-size:10px;padding:8px">Loading comment data... Runs daily at 9:15 AM ET.</div>
     </div>
   </div></div>
 </div>
@@ -4724,6 +5165,7 @@ function init(){
 <div class="sub-c" id="cmp-ads">
 <div class="sec">
   <div class="sh"><span class="sn">&#128176;</span><span class="st">Paid Media Command Center</span></div>
+  <div id="live-ads-data" style="margin-bottom:14px"></div>
   <div id="ads-command-center"></div>
 </div>
 <div class="mini-add-task">

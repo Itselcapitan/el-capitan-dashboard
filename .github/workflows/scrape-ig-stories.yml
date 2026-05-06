@@ -1,0 +1,21 @@
+name: IG Stories Insights
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '15 12 * * *' # 8:15 AM ET daily (2 hours after insights scrape)
+
+jobs:
+  scrape-stories:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/scrape-ig-stories.mjs
+        env:
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}

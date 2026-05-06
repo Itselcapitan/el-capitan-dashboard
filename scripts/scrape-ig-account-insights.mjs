@@ -137,6 +137,9 @@ async function main() {
     // Content reach
     { metric: 'views', useAggregate: true },
     { metric: 'content_views', useAggregate: true },
+
+    // Virality — organic reposts of your media to other profiles
+    { metric: 'profile_reposts', useAggregate: true },
   ];
 
   const results = {};
@@ -211,6 +214,7 @@ async function main() {
     views28d: results.views?.total ?? null,
     reachLatest: results.reach?.latest ?? null,
     reach7dSum: results.reach?.last7Sum ?? null,
+    profileReposts28d: results.profile_reposts?.total ?? null,
     fetchedAt: new Date().toISOString(),
   };
   await patchFirebase(`analytics/history/${dateKey}/igAccountSummary`, summary);
