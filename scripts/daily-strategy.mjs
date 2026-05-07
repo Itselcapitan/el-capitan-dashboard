@@ -177,6 +177,110 @@ async function listAvailableModels() {
   }
 }
 
+// ─── Deterministic Track-Post Matching ────────────────────────
+// Builds keyword patterns from track names and matches against
+// post captions. Catches: exact track names, common abbreviations,
+// "original audio - El Capitan" patterns, hashtag versions.
+
+function buildTrackKeywords(tracks) {
+  return (tracks || []).map(t => {
+    const name = t.name || '';
+    const keywords = [];
+
+    // Exact name (case-insensitive matching later)
+    keywords.push(name.toLowerCase());
+
+    // Remove "El Capitan Remix" suffix for matching
+    const stripped = name.replace(/\s*\(el\s+capitan?\s+remix\)\s*/i, '').trim();
+    if (stripped && stripped.toLowerCase() !== name.toLowerCase()) {
+      keywords.push(stripped.toLowerCase());
+    }
+
+    // Handle multi-word names — also match individual significant words (4+ chars)
+    const words = stripped.split(/\s+/).filter(w => w.length >= 4);
+    if (words.length > 1) {
+      words.forEach(w => keywords.push(w.toLowerCase()));
+    }
+
+    // Hashtag version: #paradise, #packupyabags
+    const hashtag = stripped.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (hashtag.length >= 4) keywords.push(hashtag);
+
+    // Common abbreviations (e.g., "PUYB" for "Pack Up Ya Bags")
+    if (stripped.split(/\s+/).length >= 3) {
+      const abbr = stripped.split(/\s+/).map(w => w[0]).join('').toLowerCase();
+      if (abbr.length >= 3) keywords.push(abbr);
+    }
+
+    return {
+      trackName: name,
+      keywords: [...new Set(keywords)],
+      releasedAt: t.releasedAt || null,
+    };
+  });
+}
+
+function preMatchPostsToTracks(trackKeywords, igPosts, ttPosts, igFollowers) {
+  const results = [];
+
+  for (const track of trackKeywords) {
+    const igMatched = [];
+    const ttMatched = [];
+
+    for (const post of igPosts) {
+      const caption = (post.caption || '').toLowerCase();
+      const matched = track.keywords.some(kw => caption.includes(kw));
+      if (matched) {
+        const isReel = post.type === 'Reel';
+        const engRate = isReel && post.views > 0
+          ? +((post.likes / post.views) * 100).toFixed(2)
+          : igFollowers > 0
+            ? +(((post.likes + post.comments) / igFollowers) * 100).toFixed(2)
+            : 0;
+        igMatched.push({
+          caption: post.caption,
+          views: post.views,
+          likes: post.likes,
+          comments: post.comments,
+          engRate,
+          date: post.date,
+          reach: post.reach,
+          saves: post.saves,
+          shares: post.shares,
+          skipRate: post.skipRate,
+          follows: post.follows,
+        });
+      }
+    }
+
+    for (const post of ttPosts) {
+      const caption = (post.caption || '').toLowerCase();
+      const matched = track.keywords.some(kw => caption.includes(kw));
+      if (matched) {
+        const engRate = post.views > 0 ? +((post.likes / post.views) * 100).toFixed(2) : 0;
+        ttMatched.push({
+          caption: post.caption,
+          views: post.views,
+          likes: post.likes,
+          engRate,
+          date: post.date,
+        });
+      }
+    }
+
+    if (igMatched.length > 0 || ttMatched.length > 0) {
+      results.push({
+        trackName: track.trackName,
+        igPosts: igMatched,
+        ttPosts: ttMatched,
+        insight: '', // AI fills this in
+      });
+    }
+  }
+
+  return results;
+}
+
 function buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary) {
   const ig = latest?.ig || {};
   const tt = latest?.tiktok || {};
@@ -389,6 +493,16 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool, igI
   }));
   const allTrackNames = (state?.tracks || []).map(t => t.name);
 
+  // ── Deterministic track-to-post matching ──
+  // Matches posts to tracks by searching captions for track name keywords,
+  // common abbreviations, and song-related terms. This runs BEFORE the AI
+  // so the AI gets pre-matched data and just adds insights.
+  const trackKeywords = buildTrackKeywords(state?.tracks || []);
+  const preMatchedTrackPosts = preMatchPostsToTracks(
+    trackKeywords, allIGPosts, allTTPosts,
+    latest?.ig?.followers || 0
+  );
+
   // DJ/producer industry best practices (static context for Gemini)
   // Sources: Indepenjend Free Content Guide, Wall Pro Academy, Buffer IG Algorithm Guide 2026, Buffer/Sprout Social TikTok Algorithm Guide 2026
   const industryBestPractices = [
@@ -557,6 +671,7 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool, igI
     allIGPosts,
     allTTPosts,
     allTrackNames,
+    preMatchedTrackPosts,
     industryBestPractices,
     // Graph API insights — present when scrape-ig-insights.mjs has run.
     // Headline numbers for the AI to reference at a glance, alongside
@@ -726,7 +841,7 @@ RULES:
 - captionTemplates: 5-8 items. Mix styles from the artist's top captions AND competitor top captions. Make them ready-to-post with hashtags.
 - smartSchedule: 5-7 items. Use the postTiming data to find patterns. If postTiming.ig has fewer than 8 posts OR postTiming.tt has fewer than 8 posts, add "(low confidence — small sample)" to that platform's reason fields.
 - keyInsights: required. summary must be HQ-appropriate — specific numbers, not generic. Synthesize across all platforms and tracks.
-- trackPostMatches: match posts from allIGPosts/allTTPosts to tracks in allTrackNames using caption keywords, track name mentions, or date proximity to known release dates. Calculate engRate = (likes / views * 100) for reels, (likes + comments) / ig.followers * 100 for images. Only include tracks with at least 1 matched post. Omit tracks with zero matches.
+- trackPostMatches: USE the preMatchedTrackPosts data as the primary source — it already matched posts to tracks by caption keywords and audio names. Add your own matches ONLY if you spot a clear connection the keyword matcher missed (e.g., a post clearly about a track but using slang or indirect reference). For each track, add an "insight" sentence about that track's social media performance. engRate is pre-calculated. Only include tracks with at least 1 matched post. Omit tracks with zero matches.
 - Use ONLY the data provided. Do not invent metrics or track names.
 - Be specific: reference actual numbers, track names, and platform names.
 - Tone: direct, confident, slightly informal. Like a strategist briefing an artist.

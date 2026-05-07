@@ -167,10 +167,18 @@ async function main() {
     else staticItems.push(item);
   }
 
-  // Flag Trial Reels (is_shared_to_feed === false means still in trial)
-  const trialReels = items.filter(i => i.is_shared_to_feed === false);
+  // Trial Reels: is_shared_to_feed=false on a RECENT reel (< 72 hours old)
+  // indicates it's still in the trial/test phase. Older reels with
+  // is_shared_to_feed=false just weren't cross-posted to the grid.
+  const now = Date.now();
+  const TRIAL_WINDOW_MS = 72 * 60 * 60 * 1000;
+  const trialReels = items.filter(i => {
+    if (i.is_shared_to_feed !== false) return false;
+    const postAge = now - new Date(i.timestamp).getTime();
+    return postAge < TRIAL_WINDOW_MS;
+  });
   if (trialReels.length > 0) {
-    console.log(`\n  🧪 Trial Reels detected: ${trialReels.length} reel(s) not yet shared to feed`);
+    console.log(`\n  🧪 Trial Reels detected: ${trialReels.length} reel(s) in testing phase (< 72h old, not shared to feed)`);
     for (const tr of trialReels) {
       const caption = (tr.caption || '').slice(0, 40).replace(/\n/g, ' ');
       console.log(`     - ${tr.id} "${caption}" (posted ${tr.timestamp})`);
@@ -210,7 +218,7 @@ async function main() {
         flat.fetchedAt = new Date().toISOString();
         flat.isReel = true;
         flat.isSharedToFeed = item.is_shared_to_feed ?? null;
-        flat.isTrialReel = item.is_shared_to_feed === false;
+        flat.isTrialReel = item.is_shared_to_feed === false && (now - new Date(item.timestamp).getTime()) < TRIAL_WINDOW_MS;
 
         insightsByMediaId[item.id] = flat;
         okCount += 1;
