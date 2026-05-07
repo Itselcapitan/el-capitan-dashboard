@@ -37,18 +37,60 @@ if (!IG_BUSINESS_ACCOUNT_ID) {
 
 // ─── Firebase helpers ───────────────────────────────────────────
 
-async function patchFirebase(path, data) {
+async function putFirebase(path, data) {
   const auth = FIREBASE_DB_SECRET ? `?auth=${FIREBASE_DB_SECRET}` : '';
   const url = `${FIREBASE_DB_URL}/${path}.json${auth}`;
   const res = await fetch(url, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Firebase PATCH ${path} failed: ${res.status} ${text}`);
+    throw new Error(`Firebase PUT ${path} failed: ${res.status} ${text}`);
   }
+}
+
+// ─── Country / locale name mappings ─────────────────────────────
+
+const COUNTRY_NAMES = {
+  US:'United States',CA:'Canada',GB:'United Kingdom',AU:'Australia',
+  DE:'Germany',FR:'France',IT:'Italy',ES:'Spain',NL:'Netherlands',
+  BR:'Brazil',MX:'Mexico',AR:'Argentina',CO:'Colombia',CL:'Chile',
+  JP:'Japan',KR:'South Korea',IN:'India',PH:'Philippines',ID:'Indonesia',
+  TH:'Thailand',VN:'Vietnam',MY:'Malaysia',SG:'Singapore',TW:'Taiwan',
+  HK:'Hong Kong',CN:'China',RU:'Russia',UA:'Ukraine',PL:'Poland',
+  SE:'Sweden',NO:'Norway',DK:'Denmark',FI:'Finland',IE:'Ireland',
+  PT:'Portugal',AT:'Austria',CH:'Switzerland',BE:'Belgium',CZ:'Czechia',
+  GR:'Greece',TR:'Turkey',ZA:'South Africa',NG:'Nigeria',EG:'Egypt',
+  SA:'Saudi Arabia',AE:'UAE',IL:'Israel',NZ:'New Zealand',PE:'Peru',
+  EC:'Ecuador',DO:'Dominican Republic',PR:'Puerto Rico',JM:'Jamaica',
+  RO:'Romania',HU:'Hungary',SK:'Slovakia',HR:'Croatia',RS:'Serbia',
+  BG:'Bulgaria',LT:'Lithuania',LV:'Latvia',EE:'Estonia',SI:'Slovenia',
+  PK:'Pakistan',BD:'Bangladesh',LK:'Sri Lanka',NP:'Nepal',KE:'Kenya',
+  GH:'Ghana',TZ:'Tanzania',MA:'Morocco',TN:'Tunisia',DZ:'Algeria',
+  QA:'Qatar',KW:'Kuwait',BH:'Bahrain',OM:'Oman',JO:'Jordan',LB:'Lebanon',
+};
+
+const LOCALE_NAMES = {
+  en_US:'English (US)',en_GB:'English (UK)',es_ES:'Spanish (Spain)',
+  es_LA:'Spanish (Latin America)',pt_BR:'Portuguese (Brazil)',
+  pt_PT:'Portuguese (Portugal)',fr_FR:'French',de_DE:'German',
+  it_IT:'Italian',nl_NL:'Dutch',ja_JP:'Japanese',ko_KR:'Korean',
+  zh_CN:'Chinese (Simplified)',zh_TW:'Chinese (Traditional)',
+  hi_IN:'Hindi',ar_AR:'Arabic',ru_RU:'Russian',pl_PL:'Polish',
+  sv_SE:'Swedish',da_DK:'Danish',no_NO:'Norwegian',fi_FI:'Finnish',
+  tr_TR:'Turkish',th_TH:'Thai',vi_VN:'Vietnamese',id_ID:'Indonesian',
+  ms_MY:'Malay',tl_PH:'Filipino',en_AU:'English (AU)',en_CA:'English (CA)',
+  fr_CA:'French (Canada)',es_MX:'Spanish (Mexico)',en:'English',es:'Spanish',
+};
+
+function resolveCountryName(code) {
+  return COUNTRY_NAMES[code] || code;
+}
+
+function resolveLocaleName(code) {
+  return LOCALE_NAMES[code] || code.replace(/_/g, ' ');
 }
 
 // ─── Graph API helpers ──────────────────────────────────────────
@@ -268,9 +310,9 @@ async function main() {
       errCount += 1;
       console.warn(`  ✗ follower_demographics(country): ${parsed.error}`);
     } else {
-      results.topCountries = parsed.map(c => ({ name: c.name, pct: c.pct }));
+      results.topCountries = parsed.map(c => ({ name: resolveCountryName(c.name), pct: c.pct }));
       okCount += 1;
-      console.log(`  ✓ follower_demographics(country): #1 ${parsed[0]?.name} (${parsed[0]?.pct}%), ${parsed.length} countries total`);
+      console.log(`  ✓ follower_demographics(country): #1 ${resolveCountryName(parsed[0]?.name)} (${parsed[0]?.pct}%), ${parsed.length} countries total`);
     }
   }
 
@@ -283,11 +325,13 @@ async function main() {
     ...results,
   };
 
-  await patchFirebase('analytics/latest/igDemographics', payload);
-  console.log('  ✓ Wrote to analytics/latest/igDemographics');
+  // PUT (not PATCH) to fully replace — prevents stale error data from
+  // previous failed runs from persisting alongside new good data
+  await putFirebase('analytics/latest/igDemographics', payload);
+  console.log('  ✓ Wrote to analytics/latest/igDemographics (full replace)');
 
   const dateKey = new Date().toISOString().slice(0, 10);
-  await patchFirebase(`analytics/history/${dateKey}/igDemographics`, payload);
+  await putFirebase(`analytics/history/${dateKey}/igDemographics`, payload);
   console.log(`  ✓ Snapshotted to analytics/history/${dateKey}/igDemographics`);
 
   console.log('\n✅ IG Demographics & Posting Times scrape complete\n');
