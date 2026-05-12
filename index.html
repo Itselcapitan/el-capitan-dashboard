@@ -2719,10 +2719,10 @@ function renderContentStats(){
     igGrid.innerHTML =
       '<div class="c ig"><div class="cl">FOLLOWERS</div><div class="cv">' + (ig.followers||0).toLocaleString() + '</div><div class="cs">' + (ig.posts||0) + ' posts</div></div>' +
       '<div class="c ig"><div class="cl">ENG RATE</div><div class="cv">' + (ig.engRate||0) + '%</div><div class="cs">Avg ' + (ig.avgLikes||ig.avgEng||0) + ' likes &middot; ' + (ig.avgComments||0) + ' comments</div></div>' +
-      '<div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">' + (ig.accountsReached||11003).toLocaleString() + '</div><div class="cs">97.3% non-followers</div></div>' +
-      '<div class="c ig"><div class="cl">IMPRESSIONS</div><div class="cv">' + (ig.impressions||45344).toLocaleString() + '</div><div class="cs">90-day total</div></div>' +
-      '<div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">' + (ig.profileViews||2564).toLocaleString() + '</div><div class="cs">23% visit rate</div></div>' +
-      '<div class="c ig"><div class="cl">PEAK TIME</div><div class="cv">12\u20133pm</div><div class="cs">Tue\u2013Wed \u00b7 Reels 65.1%</div></div>';
+      '<div class="c ig"><div class="cl">ACCOUNTS REACHED</div><div class="cv">' + (ig.accountsReached||0).toLocaleString() + '</div><div class="cs">7-day sum via Graph API</div></div>' +
+      '<div class="c ig"><div class="cl">VIEWS (28d)</div><div class="cv">' + (ig.views||ig.impressions||0).toLocaleString() + '</div><div class="cs">28-day total via Graph API</div></div>' +
+      '<div class="c ig"><div class="cl">PROFILE VISITS</div><div class="cv">' + (ig.profileVisits||ig.profileViews||0).toLocaleString() + '</div><div class="cs">28-day total via Graph API</div></div>' +
+      '<div class="c ig"><div class="cl">LINK CLICKS</div><div class="cv">' + (ig.externalLinkTaps||0).toLocaleString() + '</div><div class="cs">Bio link taps (28d)</div></div>';
   }
   var igBadge = document.getElementById('ig-badge');
   if(igBadge) igBadge.textContent = '90-day deep report \u00b7 ' + (ig.followers||0).toLocaleString() + ' followers';
@@ -2799,10 +2799,11 @@ function renderContentStats(){
   // --- TikTok stats ---
   var ttGrid = document.getElementById('tt-stats-grid');
   if(ttGrid){
+    var ttNote = (!tt.totalPlays && !tt.followers) ? '<div style="color:var(--am);font-size:9px;margin-top:6px;padding:4px 8px;background:rgba(255,171,0,.08);border-radius:4px">TikTok data requires Apify scraper (quota may be exhausted) or official TikTok API (coming soon).</div>' : '';
     ttGrid.innerHTML =
       '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">TOTAL PLAYS</div><div class="cv" style="color:#00f2ea">' + (tt.totalPlays||0).toLocaleString() + '</div><div class="cs">Across ' + (tt.posts||tt.videos||0) + ' posts</div></div>' +
       '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">FOLLOWERS</div><div class="cv" style="color:#00f2ea">' + (tt.followers||0).toLocaleString() + '</div><div class="cs">' + (tt.likes||tt.hearts||0).toLocaleString() + ' total likes</div></div>' +
-      '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">AVG PLAYS/POST</div><div class="cv" style="color:#00f2ea">' + (tt.avgPlaysPerPost||tt.avgPlays||0).toLocaleString() + '</div><div class="cs">Per video average</div></div>';
+      '<div class="c" style="border-left:3px solid #00f2ea"><div class="cl" style="color:#00f2ea">AVG PLAYS/POST</div><div class="cv" style="color:#00f2ea">' + (tt.avgPlaysPerPost||tt.avgPlays||0).toLocaleString() + '</div><div class="cs">Per video average</div></div>' + ttNote;
   }
   var ttBadge = document.getElementById('tt-badge');
   if(ttBadge) ttBadge.textContent = (tt.totalPlays||0).toLocaleString() + ' plays \u00b7 ' + (tt.followers||0).toLocaleString() + ' followers';
@@ -3425,6 +3426,9 @@ function filterPlaybook(cat){
 function renderSmartSchedule(schedule){
   var area = document.getElementById('smart-schedule-area');
   if(!area || !schedule || !schedule.length) return;
+  // Filter out TikTok entries until official TikTok API is integrated
+  schedule = schedule.filter(function(s){ return s.platform !== 'TT' && s.platform !== 'TikTok'; });
+  if(!schedule.length) return;
   var section = document.getElementById('smart-schedule-section');
   if(section) section.style.display = '';
 
@@ -4024,10 +4028,18 @@ function updateChartsFromAccountInsights(){
   if(m.saves && m.saves.total != null) MSE.ig.totalSaves = m.saves.total;
   // Funnel chart — replace hardcoded reach/profileVisits/linkClicks
   if(m.reach && m.reach.last7Sum != null) MSE.ig.accountsReached = m.reach.last7Sum;
+  if(m.reach && m.reach.total != null) MSE.ig.impressions = m.reach.total;
+  if(m.views && m.views.total != null) MSE.ig.views = m.views.total;
+  if(m.profile_views && m.profile_views.total != null) MSE.ig.profileViews = m.profile_views.total;
   if(m.profile_views && m.profile_views.total != null) MSE.ig.profileVisits = m.profile_views.total;
   if(m.website_clicks && m.website_clicks.total != null) MSE.ig.externalLinkTaps = m.website_clicks.total;
   else if(m.profile_links_taps && m.profile_links_taps.total != null) MSE.ig.externalLinkTaps = m.profile_links_taps.total;
-  // Re-render if content tab is open
+  // Engagement rate from total_interactions / views
+  if(m.total_interactions && m.total_interactions.total != null && m.views && m.views.total > 0){
+    MSE.ig.engRate = +(m.total_interactions.total / m.views.total * 100).toFixed(1);
+  }
+  // Re-render content stats (follower count, etc.) and charts
+  renderContentStats();
   if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
 }
 
@@ -4297,13 +4309,18 @@ function renderDemographics(){
 
 function renderPostingTimes(){
   var d = window._igDemographics;
-  if(!d || !d.onlineFollowers) return;
   var wrap = document.getElementById('posting-times-live');
   if(!wrap) return;
+  if(!d || !d.onlineFollowers || d.onlineFollowers.error){
+    console.warn('[RENDER] renderPostingTimes: no data or error', d ? d.onlineFollowers : 'no demographics');
+    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers data yet. Runs daily at 7:15 AM ET.</div>';
+    return;
+  }
   var of = d.onlineFollowers;
   var hourly = of.hourly || {};
   var hours = Object.keys(hourly).map(Number).sort(function(a,b){ return a-b; });
-  if(!hours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers data yet.</div>'; return; }
+  console.log('[RENDER] renderPostingTimes: hours=', hours.length, 'peak=', of.peakHour, 'window=', of.peakWindow);
+  if(!hours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers hourly data. The API may need 48h to populate after first scrape.</div>'; return; }
   var maxVal = Math.max.apply(null, hours.map(function(h){ return hourly[h]; }));
   var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE</div>';
   html += '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding:0 4px">';
@@ -4376,17 +4393,37 @@ function renderCommentTracker(){
   var html = '<div class="g" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">';
   html += '<div class="c"><div class="cl">TOTAL COMMENTS</div><div class="cv">'+d.totalComments+'</div></div>';
   html += '<div class="c"><div class="cl">UNIQUE COMMENTERS</div><div class="cv">'+d.uniqueCommenters+'</div></div>';
+  var hpc = d.highProfileContacts || [];
   html += '<div class="c"><div class="cl">WARM INTROS</div><div class="cv" style="color:var(--gn)">'+(d.warmIntros||[]).length+'</div></div>';
+  html += '<div class="c"><div class="cl">HIGH-PROFILE (15k+)</div><div class="cv" style="color:var(--am)">'+hpc.length+'</div></div>';
   html += '</div>';
+
+  // High-profile contacts section (15k+ followers)
+  if(hpc.length){
+    html += '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--am);letter-spacing:1.5px;margin:12px 0 8px">⭐ HIGH-PROFILE COMMENTERS (15k+ followers)</div>';
+    html += '<div style="padding:4px 8px;background:rgba(255,171,0,.05);border-radius:6px;border-left:3px solid var(--am);margin-bottom:12px;font-size:10px;color:var(--tx)">Potential marketing outreach or feedback contacts — these commenters have significant followings.</div>';
+    html += '<table class="tbl"><tr><th>Username</th><th>Followers</th><th>Comments</th><th>Bio</th></tr>';
+    hpc.forEach(function(h){
+      html += '<tr><td style="color:var(--am);font-weight:700"><a href="https://instagram.com/'+h.username+'" target="_blank" style="color:inherit;text-decoration:none">@'+h.username+'</a></td>';
+      html += '<td style="color:var(--am);font-weight:700">'+fmtK(h.followersCount||0)+'</td>';
+      html += '<td>'+h.commentCount+'</td>';
+      html += '<td style="font-size:9px;color:var(--dm);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+((h.bio||'').slice(0,60))+'</td></tr>';
+    });
+    html += '</table>';
+  }
+
   // Warm intros table
   var wi = d.warmIntros || [];
   if(wi.length){
     html += '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin:12px 0 8px">WARM INTRO CANDIDATES (2+ comments)</div>';
-    html += '<table class="tbl"><tr><th>Username</th><th>Comments</th><th>Tier</th><th>Last Active</th></tr>';
+    html += '<table class="tbl"><tr><th>Username</th><th>Comments</th><th>Tier</th><th>Followers</th><th>Last Active</th></tr>';
     wi.forEach(function(w){
       var tierBadge = w.tier === 'superfan' ? '<span class="tg" style="background:rgba(0,200,83,.15);color:var(--gn)">SUPERFAN</span>'
         : '<span class="tg" style="background:rgba(255,171,0,.15);color:var(--am)">REPEAT</span>';
+      var fcDisplay = w.followersCount ? fmtK(w.followersCount) : '—';
+      var fcStyle = w.isHighProfile ? 'color:var(--am);font-weight:700' : 'color:var(--dm)';
       html += '<tr><td style="color:var(--ac)">@'+w.username+'</td><td>'+w.commentCount+'</td><td>'+tierBadge+'</td>';
+      html += '<td style="'+fcStyle+'">'+fcDisplay+'</td>';
       html += '<td>'+new Date(w.lastCommentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
     });
     html += '</table>';

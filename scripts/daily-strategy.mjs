@@ -789,7 +789,7 @@ Return a JSON object with EXACTLY these fields:
   "captionTemplates": [
     {
       "caption": "full ready-to-use caption text",
-      "platform": "IG or TikTok",
+      "platform": "IG",
       "format": "Reel or Post or Story",
       "inspiration": "what this is based on (your data or competitor data)",
       "hashtags": ["tag1", "tag2", "tag3"]
@@ -817,7 +817,7 @@ Return a JSON object with EXACTLY these fields:
     {
       "day": "Monday",
       "time": "12:30 PM",
-      "platform": "IG or TikTok",
+      "platform": "IG",
       "reason": "reason referencing YOUR actual post timing data"
     }
   ]
@@ -839,7 +839,7 @@ RULES:
 - weeklyReview: 2-4 wins, 2-3 misses. Reference actual numbers from the data. Be honest about misses.
 - competitorInsights: 3-5 items, one per top competitor reel from the data. Explain WHY it worked.
 - captionTemplates: 5-8 items. Mix styles from the artist's top captions AND competitor top captions. Make them ready-to-post with hashtags.
-- smartSchedule: 5-7 items. Use the postTiming data to find patterns. If postTiming.ig has fewer than 8 posts OR postTiming.tt has fewer than 8 posts, add "(low confidence — small sample)" to that platform's reason fields.
+- smartSchedule: 5-7 items, INSTAGRAM ONLY (platform="IG"). TikTok is excluded from smart schedule until official TikTok API is integrated. Use the postTiming.ig data and online_followers hourly data to find optimal posting windows. If postTiming.ig has fewer than 8 posts, add "(low confidence — small sample)" to reason fields.
 - keyInsights: required. summary must be HQ-appropriate — specific numbers, not generic. Synthesize across all platforms and tracks.
 - trackPostMatches: USE the preMatchedTrackPosts data as the primary source — it already matched posts to tracks by caption keywords and audio names. Add your own matches ONLY if you spot a clear connection the keyword matcher missed (e.g., a post clearly about a track but using slang or indirect reference). For each track, add an "insight" sentence about that track's social media performance. engRate is pre-calculated. Only include tracks with at least 1 matched post. Omit tracks with zero matches.
 - Use ONLY the data provided. Do not invent metrics or track names.

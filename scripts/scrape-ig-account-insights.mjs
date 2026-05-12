@@ -232,6 +232,33 @@ async function main() {
     console.log(`  🎯 ALL bio-link taps CTR (28d): ${(ctr * 100).toFixed(2)}% (${summary.profileLinksTaps28d} taps / ${summary.profileViews28d} profile views)`);
   }
 
+  // ── Fetch IG Business Account basic info (followers, media count) ──
+  // This replaces the Apify-sourced follower count with a direct Graph API
+  // value, so the dashboard always has a fresh follower count even when
+  // Apify quota is exhausted.
+  console.log('\n  Fetching IG account basic info...');
+  try {
+    const acctUrl = `${GRAPH_BASE}/${IG_BUSINESS_ACCOUNT_ID}?fields=followers_count,media_count,name,biography,username&access_token=${FB_PAGE_ACCESS_TOKEN}`;
+    const acctRes = await fetch(acctUrl);
+    const acctJson = await acctRes.json();
+    if (acctJson.error) {
+      console.warn(`  ✗ Account info: ${acctJson.error.message}`);
+    } else {
+      const acctInfo = {
+        followers: acctJson.followers_count || 0,
+        posts: acctJson.media_count || 0,
+        username: acctJson.username || '',
+        name: acctJson.name || '',
+      };
+      // Write to analytics/latest/ig so loadAnalytics() picks it up
+      // and merges into MSE.ig.followers / MSE.ig.posts
+      await patchFirebase('analytics/latest/ig', acctInfo);
+      console.log(`  ✓ Account info: ${acctInfo.followers} followers, ${acctInfo.posts} posts (@${acctInfo.username})`);
+    }
+  } catch (err) {
+    console.warn(`  ✗ Account info fetch failed: ${err.message}`);
+  }
+
   console.log('\n✅ IG Account-Level Insights scrape complete\n');
 }
 

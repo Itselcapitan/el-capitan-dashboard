@@ -25,6 +25,8 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 const MEDIA_LIMIT = 25;
 const COMMENTS_LIMIT = 50;
+const HIGH_FOLLOWER_THRESHOLD = 15000;
+const MAX_PROFILE_LOOKUPS = 20; // cap API calls for follower count checks
 
 // Firebase keys can't contain . $ # [ ] /
 function sanitizeKey(str) {
@@ -122,6 +124,7 @@ async function main() {
   let totalComments = 0;
   const allComments = []; // for recentComments list
   const scrapeMap = {}; // username → { commentCount, posts, lastCommentAt, totalLikes }
+  const userIdMap = {}; // username → IG user ID (from `from` field) for profile lookups
 
   for (const item of items) {
     try {
@@ -163,6 +166,12 @@ async function main() {
         }
         entry.totalLikes += likeCount;
         entry.likeEntries += 1;
+
+        // Track user ID for high-follower profile lookups
+        const fromId = c.from?.id;
+        if (fromId && !userIdMap[key]) {
+          userIdMap[key] = fromId;
+        }
 
         // Collect for recentComments
         allComments.push({
@@ -226,6 +235,59 @@ async function main() {
     entry.tier = classifyTier(entry.commentCount);
   }
 
+  // 4b. High-follower profile lookups
+  // Check commenter follower counts via Graph API — only works for
+  // business/creator accounts, personal accounts silently fail.
+  // Prioritize repeat commenters (most likely to be relevant contacts).
+  console.log('\n  🔍 Checking commenter follower counts...');
+  const existingHighProfile = (await readFirebase('analytics/latest/igComments/highProfileCommenters')) || {};
+
+  // Sort by comment count desc, then only look up new/unchecked users
+  const lookupCandidates = Object.entries(userIdMap)
+    .filter(([key]) => !existingHighProfile[key]?.checkedAt) // skip already-checked
+    .sort((a, b) => (scrapeMap[b[0]]?.commentCount || 0) - (scrapeMap[a[0]]?.commentCount || 0))
+    .slice(0, MAX_PROFILE_LOOKUPS);
+
+  let highProfileCount = 0;
+  const highProfileMap = { ...existingHighProfile };
+
+  for (const [key, userId] of lookupCandidates) {
+    try {
+      const profile = await graphGet(userId, {
+        fields: 'username,followers_count,media_count,biography',
+      });
+      apiCalls += 1;
+      const fc = profile.followers_count || 0;
+      highProfileMap[key] = {
+        username: profile.username || key,
+        followersCount: fc,
+        mediaCount: profile.media_count || 0,
+        bio: (profile.biography || '').slice(0, 200),
+        isHighProfile: fc >= HIGH_FOLLOWER_THRESHOLD,
+        checkedAt: now,
+        commentCount: mergedMap[key]?.commentCount || 0,
+        tier: mergedMap[key]?.tier || 'new',
+      };
+      if (fc >= HIGH_FOLLOWER_THRESHOLD) {
+        highProfileCount += 1;
+        console.log(`  ⭐ ${profile.username}: ${fc.toLocaleString()} followers — HIGH PROFILE`);
+      }
+    } catch {
+      // Silently skip — likely a personal (non-business) account
+      highProfileMap[key] = {
+        username: key,
+        followersCount: 0,
+        isHighProfile: false,
+        checkedAt: now,
+        note: 'personal account (not queryable)',
+      };
+    }
+  }
+
+  // Count total high-profile across all time
+  const allHighProfile = Object.values(highProfileMap).filter(h => h.isHighProfile);
+  console.log(`  Checked ${lookupCandidates.length} profiles, ${highProfileCount} new high-profile (${allHighProfile.length} total all-time, ${apiCalls} API calls)`);
+
   // 5. Build warm intros list (2+ comments, sorted by commentCount desc)
   const warmIntros = Object.entries(mergedMap)
     .filter(([, e]) => e.commentCount >= 2)
@@ -235,12 +297,27 @@ async function main() {
       commentCount: e.commentCount,
       lastCommentAt: e.lastCommentAt,
       tier: e.tier,
+      followersCount: highProfileMap[key]?.followersCount || null,
+      isHighProfile: highProfileMap[key]?.isHighProfile || false,
     }));
 
   // 6. Build recent comments list (last 20, newest first)
   const recentComments = allComments
     .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))
     .slice(0, 20);
+
+  // 6b. Build high-profile contacts list (15k+ followers)
+  const highProfileContacts = allHighProfile
+    .sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0))
+    .map(h => ({
+      username: h.username,
+      followersCount: h.followersCount,
+      mediaCount: h.mediaCount || 0,
+      bio: h.bio || '',
+      commentCount: mergedMap[sanitizeKey(h.username)]?.commentCount || h.commentCount || 0,
+      tier: mergedMap[sanitizeKey(h.username)]?.tier || h.tier || 'new',
+      checkedAt: h.checkedAt,
+    }));
 
   // 7. Write full results to Firebase
   const fullPayload = {
@@ -251,6 +328,8 @@ async function main() {
     commenterMap: mergedMap,
     warmIntros,
     recentComments,
+    highProfileCommenters: highProfileMap,
+    highProfileContacts,
   };
 
   await patchFirebase('analytics/latest/igComments', fullPayload);
@@ -264,6 +343,7 @@ async function main() {
     totalComments,
     uniqueCommenters: Object.keys(mergedMap).length,
     warmIntros,
+    highProfileContacts,
   };
 
   await patchFirebase(`analytics/history/${dateKey}/igComments`, dailySnapshot);
@@ -286,12 +366,24 @@ async function main() {
     console.log(`  ${w.username.padEnd(25)} ${String(w.commentCount).padEnd(10)} ${w.tier.padEnd(10)} ${lastDate}`);
   }
 
+  // Print high-profile contacts
+  if (highProfileContacts.length) {
+    console.log('\n  ⭐ High-Profile Commenters (15k+ followers):');
+    console.log(`  ───────────────────────────────────────────────`);
+    console.log(`  ${'Username'.padEnd(25)} ${'Followers'.padEnd(12)} ${'Comments'.padEnd(10)} Bio`);
+    console.log(`  ───────────────────────────────────────────────`);
+    for (const h of highProfileContacts) {
+      console.log(`  ${h.username.padEnd(25)} ${String(h.followersCount.toLocaleString()).padEnd(12)} ${String(h.commentCount).padEnd(10)} ${(h.bio || '').slice(0, 40)}`);
+    }
+  }
+
   console.log(`\n  📈 Summary:`);
   console.log(`    Posts scanned: ${items.length}`);
   console.log(`    Total comments: ${totalComments}`);
   console.log(`    Unique commenters (all-time merged): ${Object.keys(mergedMap).length}`);
   console.log(`    Superfans (3+ posts): ${superfans.length}`);
   console.log(`    Repeat commenters (2 posts): ${repeats.length}`);
+  console.log(`    High-profile contacts (15k+): ${highProfileContacts.length}`);
   console.log(`    API calls used: ${apiCalls} of 200/hr limit`);
 
   console.log('\n✅ IG Comments scrape complete\n');
