@@ -27,6 +27,14 @@ function getMondayStartMs() {
   return monday.getTime();
 }
 
+// Convert a Date to Eastern Time — returns a new Date object in ET
+// Works on GitHub Actions (UTC) and local machines
+function toET(date) {
+  // Use Intl to get the actual ET offset (handles EDT/EST automatically)
+  const etStr = date.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  return new Date(etStr);
+}
+
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -281,7 +289,7 @@ function preMatchPostsToTracks(trackKeywords, igPosts, ttPosts, igFollowers) {
   return results;
 }
 
-function buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary) {
+function buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary, igDemographics) {
   const ig = latest?.ig || {};
   const tt = latest?.tiktok || {};
   const sc = latest?.sc || {};
@@ -404,8 +412,11 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool, igI
     .slice(0, 20)
     .map(p => {
       const d = new Date(p.timestamp);
+      // Convert to ET (GitHub Actions runs in UTC)
+      const etHour = toET(d).getHours();
+      const etDay = toET(d).getDay();
       const eng = ((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100;
-      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+      return { day: days[etDay], hour: etHour, engRate: +eng.toFixed(1) };
     });
 
   const ttPostTiming = (latest?.ttPosts || [])
@@ -414,8 +425,10 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool, igI
     .slice(0, 20)
     .map(p => {
       const d = new Date(p.createTimeISO);
+      const etHour = toET(d).getHours();
+      const etDay = toET(d).getDay();
       const eng = ((p.diggCount||0)+(p.commentCount||0)+(p.shareCount||0)) / Math.max(p.playCount||1, 1) * 100;
-      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+      return { day: days[etDay], hour: etHour, engRate: +eng.toFixed(1) };
     });
 
   // Top own captions for caption generation
@@ -685,6 +698,26 @@ function buildDataSummary(latest, history, competitors, state, allReelsPool, igI
       totalFollows: igInsightsSummary.totalFollows ?? 0,      // follows-FROM-posts
       fetchedAt: igInsightsSummary.fetchedAt || null,
     } : null,
+    // Online followers hourly data (converted UTC → ET for smart schedule)
+    onlineFollowersET: (() => {
+      const of = igDemographics?.onlineFollowers;
+      if (!of?.hourly) return null;
+      // Get current ET offset using toET helper
+      // On a UTC server: nowUTC - nowET = positive hours (UTC is ahead of ET)
+      const nowUTC = new Date();
+      const nowET = toET(nowUTC);
+      const utcAheadOfET = Math.round((nowUTC.getTime() - nowET.getTime()) / 3600000);
+      const hourlyET = {};
+      for (const [utcH, count] of Object.entries(of.hourly)) {
+        const etH = ((Number(utcH) - utcAheadOfET) % 24 + 24) % 24;
+        hourlyET[etH] = count;
+      }
+      let peakH = 0, peakV = 0;
+      for (const [h, v] of Object.entries(hourlyET)) {
+        if (v > peakV) { peakV = v; peakH = Number(h); }
+      }
+      return { hourlyET, peakHourET: peakH, note: 'Hours are in Eastern Time (ET). Use this to set smartSchedule posting times.' };
+    })(),
   };
 }
 
@@ -1348,7 +1381,7 @@ async function main() {
   await listAvailableModels();
 
   // Read all Firebase data + existing strategy
-  const [latest, history, competitors, allReelsPool, state, existingStrategy, igInsights, igInsightsSummary] = await Promise.all([
+  const [latest, history, competitors, allReelsPool, state, existingStrategy, igInsights, igInsightsSummary, igDemographics] = await Promise.all([
     readFirebase('analytics/latest'),
     readFirebase('analytics/history'),
     readFirebase('competitors/latest'),
@@ -1358,6 +1391,7 @@ async function main() {
     // NEW: Graph API insights data (skip rate, saves, shares, follows-from-post)
     readFirebase('analytics/latest/igInsights'),
     readFirebase('analytics/latest/igInsightsSummary'),
+    readFirebase('analytics/latest/igDemographics'),
   ]);
   const poolSize = allReelsPool ? Object.keys(allReelsPool).length : 0;
   console.log(`  Competitor pool: ${poolSize} accumulated reels`);
@@ -1384,7 +1418,7 @@ async function main() {
   console.log(`  Today: ${todayStr} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][todayDate.getUTCDay()]})`);
   console.log(`  Mode: ${needsWeekly ? 'WEEKLY + DAILY (Monday refresh)' : 'DAILY ONLY'}\n`);
 
-  const dataSummary = buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary);
+  const dataSummary = buildDataSummary(latest, history, competitors, state, allReelsPool, igInsights, igInsightsSummary, igDemographics);
   if (igInsightsSummary) {
     console.log(`  IG Insights loaded: ${igInsightsSummary.reelsAnalyzed} reels, avg skip ${igInsightsSummary.avgSkipRate}%`);
   } else {

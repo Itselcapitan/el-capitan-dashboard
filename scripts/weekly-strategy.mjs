@@ -10,6 +10,12 @@
  * Env vars: FIREBASE_DB_URL, FIREBASE_DB_SECRET, GEMINI_API_KEY
  */
 
+// Convert a Date to Eastern Time — returns a new Date object in ET
+function toET(date) {
+  const etStr = date.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  return new Date(etStr);
+}
+
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -134,8 +140,9 @@ function buildDataSummary(latest, history, competitors, state) {
     .slice(0, 20)
     .map(p => {
       const d = new Date(p.timestamp);
+      const etD = toET(d);
       const eng = ((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / Math.max(p.videoPlayCount||1, 1) * 100;
-      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+      return { day: days[etD.getDay()], hour: etD.getHours(), engRate: +eng.toFixed(1) };
     });
 
   const ttPostTiming = (latest?.ttPosts || [])
@@ -144,8 +151,9 @@ function buildDataSummary(latest, history, competitors, state) {
     .slice(0, 20)
     .map(p => {
       const d = new Date(p.createTimeISO);
+      const etD = toET(d);
       const eng = ((p.diggCount||0)+(p.commentCount||0)+(p.shareCount||0)) / Math.max(p.playCount||1, 1) * 100;
-      return { day: days[d.getDay()], hour: d.getHours(), engRate: +eng.toFixed(1) };
+      return { day: days[etD.getDay()], hour: etD.getHours(), engRate: +eng.toFixed(1) };
     });
 
   // Top own captions for caption generation

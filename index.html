@@ -2619,7 +2619,7 @@ function loadAnalytics(){
 
     // Update settings display
     var el = document.getElementById('last-scrape-time');
-    if(el) el.textContent = data.scrapedAt ? new Date(data.scrapedAt).toLocaleString() : 'Never';
+    if(el) el.textContent = data.scrapedAt ? new Date(data.scrapedAt).toLocaleString('en-US', {timeZone:'America/New_York', month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET' : 'Never';
 
     // Re-render if visible
     if(document.getElementById('t-hq').classList.contains('on')){
@@ -3485,7 +3485,7 @@ function renderDailyInsight(s){
     if(tsEl) tsEl.textContent = '';
     return;
   }
-  if(tsEl && di.generatedAt) tsEl.textContent = 'Updated ' + new Date(di.generatedAt).toLocaleString();
+  if(tsEl && di.generatedAt) tsEl.textContent = 'Updated ' + new Date(di.generatedAt).toLocaleString('en-US', {timeZone:'America/New_York', month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET';
 
   var moodColors = { fire: '#ff5722', steady: '#00e676', grind: '#ffab00', alert: '#ff1744' };
   var moodEmojis = { fire: '&#x1F525;', steady: '&#x2705;', grind: '&#x1F4AA;', alert: '&#x1F6A8;' };
@@ -3563,7 +3563,7 @@ function renderWeeklyOverview(s){
   if(s.weekOf) metaParts.push('Week of ' + s.weekOf);
   if(s.aiGenerated) metaParts.push('🤖 AI');
   else if(s.carriedOver) metaParts.push('↻ Carried over from ' + (s.carriedOverFrom ? new Date(s.carriedOverFrom).toLocaleDateString() : 'last run'));
-  if(s.generatedAt) metaParts.push('Generated ' + new Date(s.generatedAt).toLocaleString());
+  if(s.generatedAt) metaParts.push('Generated ' + new Date(s.generatedAt).toLocaleString('en-US', {timeZone:'America/New_York', month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET');
   if(meta) meta.textContent = metaParts.join(' · ');
 
   var html = '';
@@ -3637,7 +3637,7 @@ function loadWeeklyStrategy(){
     }
     // Update weekly strategy timestamp in header
     var wtsEl = document.getElementById('weekly-strategy-timestamp');
-    if(wtsEl && s.generatedAt) wtsEl.textContent = 'Generated ' + new Date(s.generatedAt).toLocaleString();
+    if(wtsEl && s.generatedAt) wtsEl.textContent = 'Generated ' + new Date(s.generatedAt).toLocaleString('en-US', {timeZone:'America/New_York', month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET';
 
     var aiTag = s.aiGenerated ? ' <span style="color:var(--ac);font-size:8px;background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;margin-left:4px">&#129302; AI</span>' : '';
     var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+aiTag+'</div>';
@@ -4307,6 +4307,25 @@ function renderDemographics(){
   if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
 }
 
+// Convert UTC hour (0-23) to Eastern Time hour (0-23)
+// Handles EDT (Mar-Nov, UTC-4) and EST (Nov-Mar, UTC-5) automatically
+function utcToET(utcHour){
+  // Check if current date is in EDT or EST
+  var now = new Date();
+  var jan = new Date(now.getFullYear(), 0, 1);
+  var jul = new Date(now.getFullYear(), 6, 1);
+  var stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+  var isDST = now.getTimezoneOffset() < stdOffset;
+  var offset = isDST ? 4 : 5; // EDT = UTC-4, EST = UTC-5
+  var et = ((utcHour - offset) % 24 + 24) % 24;
+  return et;
+}
+function formatHourET(h){
+  if(h === 0) return '12a';
+  if(h < 12) return h+'a';
+  if(h === 12) return '12p';
+  return (h-12)+'p';
+}
 function renderPostingTimes(){
   var d = window._igDemographics;
   var wrap = document.getElementById('posting-times-live');
@@ -4317,27 +4336,43 @@ function renderPostingTimes(){
     return;
   }
   var of = d.onlineFollowers;
-  var hourly = of.hourly || {};
-  var hours = Object.keys(hourly).map(Number).sort(function(a,b){ return a-b; });
-  console.log('[RENDER] renderPostingTimes: hours=', hours.length, 'peak=', of.peakHour, 'window=', of.peakWindow);
-  if(!hours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers hourly data. The API may need 48h to populate after first scrape.</div>'; return; }
-  var maxVal = Math.max.apply(null, hours.map(function(h){ return hourly[h]; }));
-  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE</div>';
+  var hourlyUTC = of.hourly || {};
+  var utcHours = Object.keys(hourlyUTC).map(Number);
+  console.log('[RENDER] renderPostingTimes: hours=', utcHours.length, 'peakUTC=', of.peakHour, 'window=', of.peakWindow);
+  if(!utcHours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers hourly data. The API may need 48h to populate after first scrape.</div>'; return; }
+
+  // Re-key hourly data from UTC to ET
+  var hourlyET = {};
+  utcHours.forEach(function(utcH){
+    var etH = utcToET(utcH);
+    hourlyET[etH] = hourlyUTC[utcH] || 0;
+  });
+  var etHours = Object.keys(hourlyET).map(Number).sort(function(a,b){ return a-b; });
+
+  // Find peak in ET
+  var peakHourET = 0, peakVal = 0;
+  etHours.forEach(function(h){
+    if(hourlyET[h] > peakVal){ peakVal = hourlyET[h]; peakHourET = h; }
+  });
+  var peakWindowET = formatHourET(peakHourET) + '-' + formatHourET((peakHourET + 3) % 24);
+
+  var maxVal = Math.max.apply(null, etHours.map(function(h){ return hourlyET[h]; }));
+  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE (ET)</div>';
   html += '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding:0 4px">';
-  hours.forEach(function(h){
-    var val = hourly[h] || 0;
+  etHours.forEach(function(h){
+    var val = hourlyET[h] || 0;
     var pct = maxVal > 0 ? (val / maxVal * 100) : 0;
-    var isPeak = h === of.peakHour;
+    var isPeak = h === peakHourET;
     var color = isPeak ? 'var(--gn)' : (pct > 70 ? 'var(--ac)' : 'rgba(136,136,170,.4)');
-    var label = h === 0 ? '12a' : h < 12 ? h+'a' : h === 12 ? '12p' : (h-12)+'p';
+    var label = formatHourET(h);
     html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">';
-    html += '<div style="width:100%;height:'+Math.max(pct, 3)+'%;background:'+color+';border-radius:2px 2px 0 0;min-height:2px" title="'+label+': '+val+' followers online"></div>';
+    html += '<div style="width:100%;height:'+Math.max(pct, 3)+'%;background:'+color+';border-radius:2px 2px 0 0;min-height:2px" title="'+label+' ET: '+val+' followers online"></div>';
     if(h % 3 === 0) html += '<div style="font-size:7px;color:var(--dm)">'+label+'</div>';
     else html += '<div style="font-size:7px;color:transparent">.</div>';
     html += '</div>';
   });
   html += '</div>';
-  if(of.peakWindow) html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+of.peakWindow+'</div>';
+  html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+peakWindowET+' ET</div>';
   wrap.innerHTML = html;
 }
 
@@ -4367,7 +4402,7 @@ function renderStoriesInsights(){
       var signalBadge = st.engagementSignal === 'rewatch' ? '<span class="tg" style="background:rgba(0,200,83,.15);color:var(--gn)">REWATCH</span>'
         : st.engagementSignal === 'reply' ? '<span class="tg" style="background:rgba(0,229,255,.15);color:var(--ac)">REPLY</span>'
         : '<span class="tg" style="background:rgba(136,136,170,.1);color:var(--dm)">PASSIVE</span>';
-      html += '<tr><td>'+new Date(st.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</td>';
+      html += '<tr><td>'+new Date(st.timestamp).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET</td>';
       html += '<td>'+(st.mediaType||'—')+'</td>';
       html += '<td>'+fmtK(st.reach||0)+'</td>';
       html += '<td>'+(st.exits||0)+'</td>';
