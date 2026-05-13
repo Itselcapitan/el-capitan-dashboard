@@ -554,7 +554,7 @@ var _uid = 1000;
 function uid(){ return 't'+(++_uid); }
 
 var STATE = { tracks:[], tasks:[], feedback:[], ads:[], venues:[], labels:[], scores:[], campaigns:[], pipeline:[], hooks:[], captionTemplatesUser:[], scenes:[] };
-var OUTREACH_STATUSES = ['Not Started','Researching','Contacted','Follow-Up Sent','Responded','Booked/Accepted','Rejected','On Hold'];
+var OUTREACH_STATUSES = ['Cold','Monitored','Warm Intro','Pitch Active','Feedback Loop','Converted','Rejected','On Hold'];
 var openVenueDetail = null;
 var openLabelDetail = null;
 
@@ -704,30 +704,70 @@ function defaultScenes(){
 
 function defaultVenues(){
   return [
-    {id:'v1',name:'lowercase',market:'Capital Region',contact:'DM @lowercase518',status:'Not Started',demoLink:'',notes:'Need 60-min mix first. Shane connection.',lastContacted:null,nextFollowUp:null,priority:'red'},
-    {id:'v2',name:'518 Craft',market:'Capital Region',contact:'troy@518craft.com',status:'Not Started',demoLink:'',notes:'Friday rotation. Email with mix link.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
-    {id:'v3',name:'No Fun (Troy)',market:'Capital Region',contact:'nofuntroybooking@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'yellow'},
-    {id:'v4',name:'Eastcoast UDM',market:'Boston',contact:'EastcoastUDM@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'yellow'},
-    {id:'v5',name:'All of Us Events',market:'Capital Region',contact:'shane@shanestiel.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
-    {id:'v6',name:'Keep On Boston',market:'Boston',contact:'DM @keeponboston',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
-    {id:'v7',name:'Flora Collective',market:'Boston',contact:'floramusiccollective@gmail.com',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'}
+    // NYC Tier 1 — Tech House Incubators (priority for July 2026 relocation)
+    {id:'v_bossa',name:'Bossa Nova Civic Club',market:'NYC — Bushwick',contact:'DM @bossanovacivicclub / show up in person',status:'Cold',demoLink:'',notes:'140-cap. Epicenter of Brooklyn underground. Networking via physical presence is the entry point. Cold emails fail.',lastContacted:null,nextFollowUp:null,priority:'red'},
+    {id:'v_nowadays',name:'Nowadays',market:'NYC — Ridgewood, Queens',contact:'bookings via Resident Advisor / in-person',status:'Cold',demoLink:'',notes:'Outdoor garden + indoor. Sunday daytime sets are critical networking hubs. Extended sets, discerning crowd. Show up to Sunday day events.',lastContacted:null,nextFollowUp:null,priority:'red'},
+    {id:'v_studio',name:'Studio (Basement)',market:'NYC — Maspeth, Queens',contact:'gatekeepers: Makadsi (Function), Jason Kendig',status:'Cold',demoLink:'',notes:'Basement\'s house-leaning second room. Berghain-style door. Target for late 2026 / Q1 2027 milestone booking. Build credibility first.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v_elsewhere',name:'Elsewhere — Zone One',market:'NYC — Brooklyn',contact:'bookings via website',status:'Cold',demoLink:'',notes:'Multi-room complex. Smaller Zone One room is realistic late-2026 target with localized draw.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v_pubrec',name:'Public Records',market:'NYC — Gowanus, Brooklyn',contact:'hello@publicrecords.nyc',status:'Cold',demoLink:'',notes:'Hi-fi listening bar + larger sound room. Forward-thinking electronic curation.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v_hoy',name:'House of Yes',market:'NYC — Bushwick',contact:'bookings@houseofyes.org',status:'Cold',demoLink:'',notes:'Larger venue with diverse programming. Strong queer/inclusive scene.',lastContacted:null,nextFollowUp:null,priority:'blue'},
+
+    // Capital Region / Boston — Current home market
+    {id:'v1',name:'lowercase',market:'Capital Region',contact:'DM @lowercase518',status:'Cold',demoLink:'',notes:'Need 60-min mix first. Shane connection.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v2',name:'518 Craft',market:'Capital Region',contact:'troy@518craft.com',status:'Cold',demoLink:'',notes:'Friday rotation. Email with mix link.',lastContacted:null,nextFollowUp:null,priority:'yellow'},
+    {id:'v3',name:'No Fun (Troy)',market:'Capital Region',contact:'nofuntroybooking@gmail.com',status:'Cold',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v4',name:'Eastcoast UDM',market:'Boston',contact:'EastcoastUDM@gmail.com',status:'Cold',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v5',name:'All of Us Events',market:'Capital Region',contact:'shane@shanestiel.com',status:'Cold',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v6',name:'Keep On Boston',market:'Boston',contact:'DM @keeponboston',status:'Cold',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'},
+    {id:'v7',name:'Flora Collective',market:'Boston',contact:'floramusiccollective@gmail.com',status:'Cold',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,priority:'blue'}
   ];
 }
 
 function defaultLabels(){
   return [
-    {id:'l1',name:'Votion Records',contact:'votionrecords@gmail.com',genre:'Tech House',status:'Contacted',demoLink:'',notes:'VO/founder responded to Pack Up Ya Bags EPK. Follow up.',lastContacted:'2026-03-17',nextFollowUp:'2026-03-21',trackSent:'Pack Up Ya Bags',priority:'red'},
-    {id:'l2',name:'Shall Not Fade',contact:'Linktree form',genre:'House / Garage',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
-    {id:'l3',name:'Yoshitoshi',contact:'demos@yoshitoshi.com',genre:'Tech House / Progressive',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
-    {id:'l4',name:'Ovum Recordings',contact:'joshwink.com form',genre:'Tech House / Minimal',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
-    {id:'l5',name:'Moon Harbour',contact:'demo@moonharbour.com',genre:'Tech House',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
-    {id:'l6',name:'Studio Barnhus',contact:'demo@studiobarnhus.se',genre:'House / Experimental',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
-    {id:'l7',name:'Lobster Theremin',contact:'demos@lobstertheremin.com',genre:'House / Breaks',status:'Not Started',demoLink:'',notes:'',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'}
+    // Tier 1 — Existing relationship / high priority
+    {id:'l1',name:'Votion Records',contact:'votionrecords@gmail.com / website portal',genre:'Tech House',status:'Warm Intro',demoLink:'',notes:'Vo closed BSMNT Boston with the Pack Up Ya Bags remix. Highest-priority lead — leverage that validation for an original pitch. Roster: Don Kon, Absee, Jay Sync.',lastContacted:'2026-03-17',nextFollowUp:'',trackSent:'Pack Up Ya Bags',priority:'red'},
+
+    // Tier 2 — Aligned, accessible labels
+    {id:'l_goodside',name:'Goodside Records',contact:'goodsiderecordsau@gmail.com / Trackstack portal',genre:'Tech House (quirky, bass-heavy, tribal)',status:'Monitored',demoLink:'',notes:'Founded by Carter (AU). Submit 1-3 unsigned tracks via PRIVATE SoundCloud link. 2-week review window. A&R: Carter.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'red'},
+    {id:'l_trace',name:'Trace Amounts Records',contact:'Westend (founder)',genre:'Tech House (underground)',status:'Monitored',demoLink:'',notes:'Founded 2023 by Westend. Explicitly takes risks on up-and-coming artists. Ideal for debut signing.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'red'},
+    {id:'l_rnt',name:'Razor-N-Tape',contact:'demos@Razor-N-Tape.com',genre:'Disco-edits / House (melodic, Brooklyn)',status:'Cold',demoLink:'',notes:'Run by JKriv and Aaron Dae. Brooklyn-based, sophisticated disco-edits and global funk. Aligns with melodic/coastal sound.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+    {id:'l_repop',name:'Repopulate Mars',contact:'demos@repopulatemars.com',genre:'Tech House',status:'Cold',demoLink:'',notes:'Lee Foss imprint. Max 4 tracks via PRIVATE SoundCloud or Dropbox link. Strongly prefers extended/full mixes over radio edits.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+    {id:'l_solotoko',name:'Solotoko',contact:'website portal',genre:'Tech House',status:'Cold',demoLink:'',notes:'London-based label, Sonny Fodera imprint. Submission via their site portal.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+
+    // Tier 3 — Institutional scale, long-term targets
+    {id:'l_catch',name:'Catch & Release',contact:'website portal',genre:'Tech House',status:'Cold',demoLink:'',notes:'Fisher\'s label. Dominant in global tech house. 2-4 week response window. Requires club-tested momentum. Long-term target.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'yellow'},
+    {id:'l_experts',name:'Experts Only',contact:'website portal (Darkroom Records)',genre:'Tech House (festival)',status:'Cold',demoLink:'',notes:'John Summit\'s imprint. Manager: Toby Andrews. Recent fast-tracked signings: Roddy Lima, Max Styler. Requires significant DJ support across touring circuit.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
+    {id:'l_defected',name:'Defected',contact:'LabelRadar portal',genre:'House (all 11 sub-labels)',status:'Cold',demoLink:'',notes:'Strictly uses LabelRadar for submissions across all 11 sub-labels (Glitterbox, D4 D4NCE, etc.). Head of A&R: Allan Nicoll.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'},
+    {id:'l_hotcreat',name:'Hot Creations',contact:'Trackstack demo box',genre:'Tech House',status:'Cold',demoLink:'',notes:'Jamie Jones imprint. A&R: Richy Ahmed. Uses Trackstack demo platform.',lastContacted:null,nextFollowUp:null,trackSent:'',priority:'blue'}
   ];
 }
 
 var _saveTimeout = null;
 var _firebaseReady = false;
+
+// Migrate legacy outreach statuses to new lifecycle enum
+function migrateOutreachStatus(s){
+  if(!s) return 'Cold';
+  var map = {
+    'Not Started':'Cold',
+    'Researching':'Monitored',
+    'Contacted':'Pitch Active',
+    'Follow-Up Sent':'Pitch Active',
+    'Responded':'Feedback Loop',
+    'Booked/Accepted':'Converted'
+  };
+  return map[s] || s;
+}
+function migrateOutreachStatuses(){
+  ['labels','venues'].forEach(function(t){
+    if(Array.isArray(STATE[t])){
+      STATE[t].forEach(function(item){
+        item.status = migrateOutreachStatus(item.status);
+      });
+    }
+  });
+}
 
 function loadState(){
   // Load from localStorage immediately for fast first paint
@@ -763,6 +803,8 @@ function loadState(){
   } catch(e){
     STATE = { tracks: defaultTracks(), tasks: defaultTasks(), feedback: [], ads: [], venues: defaultVenues(), labels: defaultLabels(), scores:[], campaigns:[], pipeline: defaultPipeline(), _uid: _uid };
   }
+  // Migrate any legacy outreach statuses to new lifecycle enum
+  migrateOutreachStatuses();
 
   // Then listen to Firebase for real-time sync
   db.ref('state').on('value', function(snapshot){
@@ -801,6 +843,8 @@ function loadState(){
         if(!STATE.scenes || !STATE.scenes.length) STATE.scenes = defaultScenes();
         if(!Array.isArray(STATE.scenes)) STATE.scenes = Object.values(STATE.scenes);
         _uid = STATE._uid || 1000;
+        // Migrate any legacy outreach statuses to new lifecycle enum
+        migrateOutreachStatuses();
         // Cache locally too
         try { localStorage.setItem('elcap_v6_state', JSON.stringify(STATE)); } catch(e){}
         _firebaseReady = true;
@@ -844,10 +888,10 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderWhenToPost(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
+  if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderWhenToPost(); renderPerformanceBenchmarks(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
   if(id==='content'){ renderContentStats(); renderCompetitorData(); setTimeout(renderContentCharts, 200); }
   if(id==='tracks'){ try{ renderTracks(); renderTrackScores(); }catch(e){ console.error('renderTracks error:',e); } }
-  if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
+  if(id==='outreach'){ try{ renderVenues(); renderLabels(); renderOutreachStaleAlerts(); }catch(e){ console.error('renderOutreach error:',e); } }
   if(id==='settings'){ loadJobsLog(); checkGeminiKey(); }
 }
 function showSub(tabId, subId){
@@ -1563,8 +1607,35 @@ function addNewTrack(){
 // OUTREACH SYSTEM — Venues + Labels
 // =====================================================
 function outreachStatusColor(s){
-  var m={'Not Started':'var(--dm)','Researching':'var(--ac)','Contacted':'var(--am)','Follow-Up Sent':'var(--am)','Responded':'var(--cy)','Booked/Accepted':'var(--gn)','Rejected':'var(--rd)','On Hold':'var(--dm)'};
+  var m={'Cold':'var(--dm)','Monitored':'var(--ac)','Warm Intro':'var(--am)','Pitch Active':'#ff9100','Feedback Loop':'#b388ff','Converted':'var(--gn)','Rejected':'var(--rd)','On Hold':'var(--dm)'};
   return m[s]||'var(--dm)';
+}
+
+function renderOutreachStaleAlerts(){
+  var banner = document.getElementById('outreach-stale-alerts');
+  var list = document.getElementById('outreach-stale-list');
+  if(!banner || !list) return;
+  var staleStatuses = ['Pitch Active','Warm Intro','Feedback Loop'];
+  var cutoff = Date.now() - 21*24*60*60*1000;
+  var stale = [];
+  ['labels','venues'].forEach(function(t){
+    if(!Array.isArray(STATE[t])) return;
+    STATE[t].forEach(function(item){
+      if(staleStatuses.indexOf(item.status) === -1) return;
+      if(!item.lastContacted) return;
+      var ts = new Date(item.lastContacted).getTime();
+      if(ts < cutoff){
+        var daysAgo = Math.floor((Date.now() - ts) / 86400000);
+        stale.push({type:t, item:item, daysAgo:daysAgo});
+      }
+    });
+  });
+  if(!stale.length){ banner.style.display='none'; return; }
+  banner.style.display='';
+  stale.sort(function(a,b){ return b.daysAgo - a.daysAgo; });
+  list.innerHTML = stale.map(function(s){
+    return '<div style="padding:3px 0"><strong>'+s.item.name+'</strong> <span style="color:var(--dm)">('+s.item.status+')</span> — last contacted '+s.daysAgo+' days ago</div>';
+  }).join('');
 }
 
 // ── CREATE TAB LIBRARIES ──────────────────────────────────────
@@ -4186,6 +4257,7 @@ function loadGraphAPIExtras(){
     renderDemographics();
     renderPostingTimes();
     renderWhenToPost();
+    renderPerformanceBenchmarks();
   });
   // Stories Insights
   db.ref('analytics/latest/igStories').once('value', function(snap){
@@ -4222,6 +4294,13 @@ function loadGraphAPIExtras(){
     window._igInsights = d || null;
     console.log('[DATA] igInsights loaded, posts:', d ? Object.keys(d).length : 0);
     updateChartsFromPostInsights();
+    renderPerformanceBenchmarks();
+  });
+  // Pre-computed summary (avgSkipRate, avgReach, totalSaves, totalShares)
+  db.ref('analytics/latest/igInsightsSummary').once('value', function(snap){
+    var d = snap.val();
+    window._igInsightsSummary = d || null;
+    renderPerformanceBenchmarks();
   });
   // Trial Reels data
   db.ref('analytics/latest/igTrialReels').once('value', function(snap){
@@ -4491,6 +4570,150 @@ function renderWhenToPost(){
   wrap.innerHTML = html;
 }
 
+function renderPerformanceBenchmarks(){
+  var wrap = document.getElementById('performance-benchmarks-area');
+  if(!wrap) return;
+
+  var GN = 'var(--gn)', AM = 'var(--am)', RD = 'var(--rd)', DM = 'var(--dm)';
+
+  // ---- Card A: Save Rate (saves / reach across posts) ----
+  var saveCard;
+  var totalSaves = 0, totalReach = 0;
+  var insights = window._igInsights || {};
+  Object.keys(insights).forEach(function(k){
+    var p = insights[k];
+    if(!p || typeof p !== 'object') return;
+    if(typeof p.saves === 'number') totalSaves += p.saves;
+    if(typeof p.reach === 'number') totalReach += p.reach;
+  });
+  if(totalReach > 0 && totalSaves >= 0){
+    var saveRate = (totalSaves / totalReach) * 100;
+    var color = saveRate < 2 ? RD : (saveRate < 4.5 ? AM : GN);
+    saveCard = '<div class="c" style="border-left:3px solid '+color+'">'
+      + '<div class="cl">SAVE RATE</div>'
+      + '<div class="cv" style="color:'+color+'">'+saveRate.toFixed(2)+'%</div>'
+      + '<div class="cs">Target: 4.5%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">'+totalSaves.toLocaleString()+' saves / '+totalReach.toLocaleString()+' reach</div>'
+      + '</div>';
+  } else {
+    saveCard = '<div class="c" style="border-left:3px solid '+DM+'">'
+      + '<div class="cl">SAVE RATE</div>'
+      + '<div class="cv" style="color:'+DM+'">—</div>'
+      + '<div class="cs">Target: 4.5%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Awaiting post insights</div>'
+      + '</div>';
+  }
+
+  // ---- Card B: Reels Skip Rate ----
+  var skipCard;
+  var summary = window._igInsightsSummary || null;
+  var skipRate = summary && typeof summary.avgSkipRate === 'number' ? summary.avgSkipRate : null;
+  if(skipRate == null){
+    // Fallback: compute from per-post skipRate values
+    var skSum = 0, skCount = 0;
+    Object.keys(insights).forEach(function(k){
+      var p = insights[k];
+      if(p && typeof p.skipRate === 'number'){ skSum += p.skipRate; skCount++; }
+    });
+    if(skCount > 0) skipRate = skSum / skCount;
+  }
+  if(skipRate != null){
+    var sColor = skipRate < 15 ? GN : (skipRate < 30 ? AM : RD);
+    skipCard = '<div class="c" style="border-left:3px solid '+sColor+'">'
+      + '<div class="cl">REELS SKIP RATE</div>'
+      + '<div class="cv" style="color:'+sColor+'">'+skipRate.toFixed(1)+'%</div>'
+      + '<div class="cs">Target: &lt;15%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">First 3 seconds · last 25 reels</div>'
+      + '</div>';
+  } else {
+    skipCard = '<div class="c" style="border-left:3px solid '+DM+'">'
+      + '<div class="cl">REELS SKIP RATE</div>'
+      + '<div class="cv" style="color:'+DM+'">—</div>'
+      + '<div class="cs">Target: &lt;15%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Awaiting reels insights</div>'
+      + '</div>';
+  }
+
+  // ---- Card C: Top-5 City Share ----
+  var geoCard;
+  var demo = window._igDemographics;
+  if(demo && Array.isArray(demo.topCities) && demo.topCities.length){
+    var cities = demo.topCities.slice(0, 5);
+    var top5 = cities.reduce(function(a,c){ return a + (c.pct || 0); }, 0);
+    var gColor = top5 < 20 ? RD : (top5 < 40 ? AM : GN);
+    var top3 = demo.topCities.slice(0, 3).map(function(c){
+      return c.name + ' ' + (c.pct||0).toFixed(0) + '%';
+    }).join(' · ');
+    geoCard = '<div class="c" style="border-left:3px solid '+gColor+'">'
+      + '<div class="cl">TOP-5 CITY SHARE</div>'
+      + '<div class="cv" style="color:'+gColor+'">'+top5.toFixed(1)+'%</div>'
+      + '<div class="cs">Target: 40-60% (concentrated)</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">'+top3+'</div>'
+      + '</div>';
+  } else {
+    geoCard = '<div class="c" style="border-left:3px solid '+DM+'">'
+      + '<div class="cl">TOP-5 CITY SHARE</div>'
+      + '<div class="cv" style="color:'+DM+'">—</div>'
+      + '<div class="cs">Target: 40-60% (concentrated)</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Awaiting demographics</div>'
+      + '</div>';
+  }
+
+  // ---- Card D: Weekly Velocity (IG followers WoW) ----
+  var velCard;
+  var hist = Array.isArray(window._analyticsHistory) ? window._analyticsHistory.slice() : [];
+  // Sort oldest→newest by date or scrapedAt
+  hist.sort(function(a,b){
+    var ad = a.date || a.scrapedAt || '';
+    var bd = b.date || b.scrapedAt || '';
+    return ad < bd ? -1 : (ad > bd ? 1 : 0);
+  });
+  function followersOf(rec){
+    if(!rec || !rec.ig) return null;
+    return typeof rec.ig.followers === 'number' ? rec.ig.followers : null;
+  }
+  var latest = null, weekAgo = null;
+  for(var i = hist.length - 1; i >= 0; i--){
+    if(followersOf(hist[i]) != null){ latest = hist[i]; break; }
+  }
+  if(latest){
+    var latestTs = new Date(latest.date || latest.scrapedAt).getTime();
+    var target = latestTs - 7*24*60*60*1000;
+    var bestDiff = Infinity;
+    for(var j = 0; j < hist.length; j++){
+      if(followersOf(hist[j]) == null) continue;
+      var ts = new Date(hist[j].date || hist[j].scrapedAt).getTime();
+      if(ts >= latestTs) continue;
+      var diff = Math.abs(ts - target);
+      if(diff < bestDiff){ bestDiff = diff; weekAgo = hist[j]; }
+    }
+  }
+  if(latest && weekAgo && followersOf(weekAgo) > 0){
+    var nowF = followersOf(latest);
+    var oldF = followersOf(weekAgo);
+    var vel = ((nowF - oldF) / oldF) * 100;
+    var vColor = vel < 0 ? RD : (vel < 2 ? AM : GN);
+    var arrow = vel >= 0 ? '▲' : '▼';
+    velCard = '<div class="c" style="border-left:3px solid '+vColor+'">'
+      + '<div class="cl">WEEKLY VELOCITY (IG)</div>'
+      + '<div class="cv" style="color:'+vColor+'">'+arrow+' '+Math.abs(vel).toFixed(2)+'%</div>'
+      + '<div class="cs">Target: 2-5% weekly</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">current '+nowF.toLocaleString()+' vs 7d ago '+oldF.toLocaleString()+'</div>'
+      + '</div>';
+  } else {
+    velCard = '<div class="c" style="border-left:3px solid '+DM+'">'
+      + '<div class="cl">WEEKLY VELOCITY (IG)</div>'
+      + '<div class="cv" style="color:'+DM+'">—</div>'
+      + '<div class="cs">Target: 2-5% weekly</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Insufficient history</div>'
+      + '</div>';
+  }
+
+  wrap.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'
+    + saveCard + skipCard + geoCard + velCard
+    + '</div>';
+}
+
 function renderStoriesInsights(){
   var wrap = document.getElementById('stories-insights-live');
   if(!wrap) return;
@@ -4694,6 +4917,7 @@ function init(){
     renderTrendCharts();
     // Re-render artist score now that 7-day growth velocity can be computed from history
     renderArtistScore();
+    renderPerformanceBenchmarks();
   });
   loadGrowingBrain();
   loadWeeklyStrategy();
@@ -4779,6 +5003,13 @@ function init(){
   <div id="scraped-alerts-area"></div>
 </div>
 
+<!-- Performance Benchmarks (industry threshold KPIs) -->
+<div class="sec" id="performance-benchmarks-section">
+  <div class="sh"><span class="sn">KPI</span><span class="st">Performance Benchmarks</span><span style="font-size:9px;color:var(--dm);margin-left:auto">Industry thresholds vs. your live data</span></div>
+  <div id="performance-benchmarks-area">
+    <div class="ds">Benchmarks will populate after the daily Graph API scrape.</div>
+  </div>
+</div>
 
 
 
@@ -5262,6 +5493,10 @@ function init(){
 <!--  OUTREACH — Venues + Labels                                   -->
 <!-- ============================================================ -->
 <div class="tc" id="t-outreach">
+<div id="outreach-stale-alerts" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(255,171,0,.08);border-left:3px solid var(--am)">
+  <div style="font:700 9px/1 'Space Mono',monospace;color:var(--am);letter-spacing:1.5px;margin-bottom:6px">&#9888; STALE LEADS (no follow-up in 21+ days)</div>
+  <div id="outreach-stale-list" style="font-size:11px;color:var(--tx);line-height:1.6"></div>
+</div>
 <div class="sub-tabs" id="outreach-tabs">
   <button class="sub-btn on" data-sub="o-venues" onclick="showSub('t-outreach','o-venues')">Venues</button>
   <button class="sub-btn" data-sub="o-labels" onclick="showSub('t-outreach','o-labels')">Labels</button>
