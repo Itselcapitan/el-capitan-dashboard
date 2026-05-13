@@ -844,10 +844,9 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderAgenda(); renderMasterTasks(); renderArtistScore(); renderAlerts(); renderTrackScores(); renderScrapedAlerts(); loadWeeklyStrategy(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
+  if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderWhenToPost(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
   if(id==='content'){ renderContentStats(); renderCompetitorData(); setTimeout(renderContentCharts, 200); }
-  if(id==='campaigns'){ renderCampaigns(); renderReleaseTimelines(); renderAds(); }
-  if(id==='tracks'){ try{ renderTracks(); }catch(e){ console.error('renderTracks error:',e); } }
+  if(id==='tracks'){ try{ renderTracks(); renderTrackScores(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); }catch(e){ console.error('renderOutreach error:',e); } }
   if(id==='settings'){ loadJobsLog(); checkGeminiKey(); }
 }
@@ -3119,7 +3118,14 @@ function renderScrapedAlerts(){
     shown++;
   });
 
-  area.innerHTML = html || '<div class="ds">No new alerts.</div>';
+  // Show or hide the smart-alerts-section based on content
+  var section = document.getElementById('smart-alerts-section');
+  if(section){
+    if(html){ section.style.display = ''; area.innerHTML = html; }
+    else { section.style.display = 'none'; }
+  } else {
+    area.innerHTML = html || '<div class="ds">No new alerts.</div>';
+  }
 }
 
 function dismissScrapedAlert(key){
@@ -3424,11 +3430,15 @@ function filterPlaybook(cat){
 }
 
 function renderSmartSchedule(schedule){
-  var area = document.getElementById('smart-schedule-area');
-  if(!area || !schedule || !schedule.length) return;
+  if(!schedule || !schedule.length) return;
   // Filter out TikTok entries until official TikTok API is integrated
   schedule = schedule.filter(function(s){ return s.platform !== 'TT' && s.platform !== 'TikTok'; });
   if(!schedule.length) return;
+  // Store for When to Post heatmap on HQ
+  window._smartScheduleItems = schedule;
+  renderWhenToPost();
+  var area = document.getElementById('smart-schedule-area');
+  if(!area) return;
   var section = document.getElementById('smart-schedule-section');
   if(section) section.style.display = '';
 
@@ -3629,74 +3639,7 @@ function loadWeeklyStrategy(){
     // Render comprehensive Weekly AI Overview (pulls from all 18+ AI fields)
     renderWeeklyOverview(s);
 
-    var area = document.getElementById('weekly-strategy-area');
-    if(!area) return;
-    if(!s){
-      area.innerHTML = '<div class="ds">Weekly strategy will appear after the first Monday run.</div>';
-      return;
-    }
-    // Update weekly strategy timestamp in header
-    var wtsEl = document.getElementById('weekly-strategy-timestamp');
-    if(wtsEl && s.generatedAt) wtsEl.textContent = 'Generated ' + new Date(s.generatedAt).toLocaleString('en-US', {timeZone:'America/New_York', month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ET';
-
-    var aiTag = s.aiGenerated ? ' <span style="color:var(--ac);font-size:8px;background:rgba(0,229,255,.1);padding:1px 5px;border-radius:3px;margin-left:4px">&#129302; AI</span>' : '';
-    var html = '<div style="font-size:9px;color:var(--dm);margin-bottom:8px">Week of '+s.weekOf+aiTag+'</div>';
-
-    // Priorities
-    if(s.priorities && s.priorities.length){
-      html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">TOP PRIORITIES</div>';
-      s.priorities.forEach(function(p,i){
-        html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(0,229,255,.06);display:flex;justify-content:space-between;align-items:center">';
-        html += '<div><span style="color:var(--ac);font-weight:700">'+(i+1)+'.</span> <span style="color:var(--fg)">'+p.priority+'</span><br><span style="font-size:10px;color:var(--dm)">'+p.reason+'</span></div>';
-        html += '<div style="font-size:9px;color:var(--dm)">U:'+p.urgency+' I:'+p.impact+'</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
-
-    // Post ideas
-    if(s.postIdeas && s.postIdeas.length){
-      html += '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">POST IDEAS</div>';
-      s.postIdeas.forEach(function(p){
-        html += '<div style="padding:6px 10px;margin-bottom:3px;border-radius:6px;background:rgba(225,48,108,.06)">';
-        html += '<span class="tg" style="background:rgba(225,48,108,.2);color:#E1306C;font-size:9px;padding:1px 5px;margin-right:6px">'+p.format+'</span>';
-        html += '<span style="color:var(--fg)">'+p.idea+'</span><br><span style="font-size:10px;color:var(--dm)">'+p.reason+'</span></div>';
-      });
-      html += '</div>';
-    }
-
-    // Track to push + Campaign action (side by side)
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">';
-    if(s.trackToPush){
-      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(0,230,118,.06)">';
-      html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:3px">TRACK TO PUSH</div>';
-      html += '<div style="color:var(--gn);font-weight:700">'+s.trackToPush.name+'</div>';
-      html += '<div style="font-size:10px;color:var(--dm)">M:'+s.trackToPush.momentum+' R:'+s.trackToPush.readiness+' &middot; '+s.trackToPush.reason+'</div></div>';
-    } else {
-      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(0,230,118,.06)"><div style="font-size:9px;color:var(--dm);font-weight:600">TRACK TO PUSH</div><div class="ds">None selected</div></div>';
-    }
-    if(s.campaignAction){
-      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(255,171,0,.06)">';
-      html += '<div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:3px">CAMPAIGN ACTION</div>';
-      html += '<div style="color:var(--am);font-weight:700">'+s.campaignAction.action.toUpperCase()+'</div>';
-      html += '<div style="font-size:10px;color:var(--dm)">'+s.campaignAction.suggestion+'</div></div>';
-    } else {
-      html += '<div style="padding:8px 10px;border-radius:6px;background:rgba(255,171,0,.06)"><div style="font-size:9px;color:var(--dm);font-weight:600">CAMPAIGN ACTION</div><div class="ds">No data</div></div>';
-    }
-    html += '</div>';
-
-    // Alerts to handle
-    if(s.alertsToHandle && s.alertsToHandle.length){
-      html += '<div><div style="font-size:9px;color:var(--dm);font-weight:600;margin-bottom:4px">ALERTS TO HANDLE</div>';
-      s.alertsToHandle.forEach(function(a){
-        var icon = a.level==='red'?'&#x1F534;':a.level==='amber'?'&#x1F7E1;':'&#x1F7E2;';
-        html += '<div style="padding:4px 10px;margin-bottom:2px;border-radius:6px;background:rgba(255,255,255,.03)">';
-        html += icon+' '+a.msg+'</div>';
-      });
-      html += '</div>';
-    }
-
-    area.innerHTML = html;
+    if(!s) return;
 
     // Render AI-powered Content Engine sections
     if(s.priorityFormats) renderPriorityFormats(s.priorityFormats);
@@ -4193,6 +4136,7 @@ function loadGraphAPIExtras(){
     console.log('[DATA] igDemographics loaded');
     renderDemographics();
     renderPostingTimes();
+    renderWhenToPost();
   });
   // Stories Insights
   db.ref('analytics/latest/igStories').once('value', function(snap){
@@ -4376,6 +4320,128 @@ function renderPostingTimes(){
   wrap.innerHTML = html;
 }
 
+// =====================================================
+// WHEN TO POST — Combined heatmap + smart schedule (HQ)
+// =====================================================
+function renderWhenToPost(){
+  var wrap = document.getElementById('when-to-post-area');
+  if(!wrap) return;
+
+  var d = window._igDemographics;
+  var hasOnline = d && d.onlineFollowers && !d.onlineFollowers.error && d.onlineFollowers.hourly;
+  var hourlyUTC = hasOnline ? (d.onlineFollowers.hourly || {}) : {};
+  var utcHours = Object.keys(hourlyUTC).map(Number);
+
+  if(!utcHours.length){
+    wrap.innerHTML = '<div class="ds">Posting data will appear after the daily scrape and Graph API data load.</div>';
+    return;
+  }
+
+  // Re-key hourly data from UTC to ET
+  var hourlyET = {};
+  utcHours.forEach(function(utcH){
+    var etH = utcToET(utcH);
+    hourlyET[etH] = hourlyUTC[utcH] || 0;
+  });
+
+  // Build time blocks: every 3 hours
+  var blocks = [
+    {label:'12a-3a', hours:[0,1,2]},
+    {label:'3a-6a', hours:[3,4,5]},
+    {label:'6a-9a', hours:[6,7,8]},
+    {label:'9a-12p', hours:[9,10,11]},
+    {label:'12p-3p', hours:[12,13,14]},
+    {label:'3p-6p', hours:[15,16,17]},
+    {label:'6p-9p', hours:[18,19,20]},
+    {label:'9p-12a', hours:[21,22,23]}
+  ];
+
+  // Compute average activity per block
+  var blockVals = blocks.map(function(b){
+    var sum = 0, cnt = 0;
+    b.hours.forEach(function(h){
+      if(hourlyET[h] !== undefined){ sum += hourlyET[h]; cnt++; }
+    });
+    return cnt > 0 ? sum / cnt : 0;
+  });
+  var maxBlock = Math.max.apply(null, blockVals);
+  if(!maxBlock) maxBlock = 1;
+
+  // Find peak block
+  var peakIdx = 0;
+  blockVals.forEach(function(v, i){ if(v > blockVals[peakIdx]) peakIdx = i; });
+
+  // Gather smart schedule items (stored when strategy loads)
+  var schedItems = window._smartScheduleItems || [];
+  var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  // Build smart schedule lookup: day -> [{time, platform, reason}]
+  var schedByDay = {};
+  dayNames.forEach(function(dn){ schedByDay[dn] = []; });
+  schedItems.forEach(function(s){
+    var dk = (s.day||'').slice(0,3);
+    if(schedByDay[dk]) schedByDay[dk].push(s);
+  });
+
+  var html = '';
+  // Heatmap grid: rows = time blocks, columns = days
+  html += '<div style="display:grid;grid-template-columns:60px repeat(7,1fr);gap:2px;margin-bottom:10px">';
+  // Header row
+  html += '<div></div>';
+  dayNames.forEach(function(dn){
+    html += '<div style="text-align:center;font-size:8px;font-weight:700;color:var(--dm);padding:3px 0">'+dn+'</div>';
+  });
+
+  blocks.forEach(function(b, bi){
+    html += '<div style="font-size:8px;color:var(--dm);text-align:right;padding:4px 4px 4px 0;line-height:20px">'+b.label+'</div>';
+    dayNames.forEach(function(dn, di){
+      var ratio = maxBlock > 0 ? blockVals[bi] / maxBlock : 0;
+      var bg, tx;
+      if(ratio > 0.7){ bg = 'rgba(0,230,118,'+Math.min(0.65, ratio*0.7)+')'; tx = '#fff'; }
+      else if(ratio > 0.35){ bg = 'rgba(255,171,0,'+Math.min(0.5, ratio*0.6)+')'; tx = 'var(--fg)'; }
+      else { bg = 'rgba(136,136,170,'+Math.min(0.2, ratio*0.3)+')'; tx = 'var(--dm)'; }
+
+      // Check for smart schedule slots in this day/block
+      var dayScheds = schedByDay[dn] || [];
+      var badges = '';
+      dayScheds.forEach(function(sc){
+        // Parse the time to see if it falls in this block
+        var timeParts = sc.time ? sc.time.match(/(\d+)/) : null;
+        var hr = timeParts ? parseInt(timeParts[1]) : -1;
+        var isPM = sc.time && sc.time.toLowerCase().indexOf('pm') > -1;
+        if(isPM && hr < 12) hr += 12;
+        if(!isPM && hr === 12) hr = 0;
+        if(b.hours.indexOf(hr) > -1){
+          var dotColor = sc.platform === 'IG' ? '#E1306C' : sc.platform === 'SC' ? '#ff5500' : '#00f2ea';
+          badges += '<div style="width:6px;height:6px;border-radius:50%;background:'+dotColor+';display:inline-block;margin:0 1px" title="'+sc.platform+' '+sc.time+' - '+(sc.reason||'').replace(/"/g,'&quot;')+'"></div>';
+        }
+      });
+
+      var isPeak = bi === peakIdx;
+      var border = isPeak ? 'border:1px solid var(--gn);' : '';
+      html += '<div style="text-align:center;padding:3px 2px;border-radius:3px;background:'+bg+';min-height:20px;position:relative;'+border+'">';
+      if(badges) html += '<div style="position:absolute;top:1px;right:1px;display:flex;gap:1px">'+badges+'</div>';
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+
+  // Legend
+  html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:9px;color:var(--dm);margin-bottom:6px">';
+  html += '<span>&#9632; <span style="color:var(--gn)">Green</span> = peak activity</span>';
+  html += '<span>&#9632; <span style="color:var(--am)">Amber</span> = moderate</span>';
+  html += '<span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#E1306C;vertical-align:middle"></span> IG schedule</span>';
+  html += '<span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff5500;vertical-align:middle"></span> SC schedule</span>';
+  html += '</div>';
+
+  // Peak window text
+  var peakBlock = blocks[peakIdx];
+  html += '<div style="font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+peakBlock.label+' ET (all days)</div>';
+  html += '<div style="font-size:9px;color:var(--dm);margin-top:2px">Hourly data from Graph API (single day) — duplicated across weekdays. Smart schedule slots shown as colored dots.</div>';
+
+  wrap.innerHTML = html;
+}
+
 function renderStoriesInsights(){
   var wrap = document.getElementById('stories-insights-live');
   if(!wrap) return;
@@ -4421,10 +4487,25 @@ function renderCommentTracker(){
   var wrap = document.getElementById('comment-tracker-live');
   if(!wrap) return;
   var d = window._igComments;
-  if(!d || !d.totalComments){
+  console.log('[DEBUG] renderCommentTracker called, data:', d ? JSON.stringify({
+    totalComments: d.totalComments,
+    uniqueCommenters: d.uniqueCommenters,
+    warmIntrosCount: (d.warmIntros||[]).length,
+    recentCommentsCount: (d.recentComments||[]).length,
+    highProfileCount: (d.highProfileContacts||[]).length,
+    keys: Object.keys(d||{})
+  }) : 'null');
+  // Check multiple possible data shapes from Firebase
+  var totalComments = d ? (d.totalComments || d.total_comments || d.commentCount || 0) : 0;
+  var uniqueCommenters = d ? (d.uniqueCommenters || d.unique_commenters || 0) : 0;
+  if(!d || !totalComments){
+    console.warn('[DEBUG] renderCommentTracker: no data or zero comments. Raw d:', d);
     wrap.innerHTML = '<div style="color:var(--dm);font-size:10px;padding:8px">No comment data yet. Runs daily at 9:15 AM ET.</div>';
     return;
   }
+  // Normalize onto d for downstream use
+  d.totalComments = totalComments;
+  d.uniqueCommenters = uniqueCommenters;
   var html = '<div class="g" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px">';
   html += '<div class="c"><div class="cl">TOTAL COMMENTS</div><div class="cv">'+d.totalComments+'</div></div>';
   html += '<div class="c"><div class="cl">UNIQUE COMMENTERS</div><div class="cv">'+d.uniqueCommenters+'</div></div>';
@@ -4568,8 +4649,6 @@ function init(){
   loadGrowingBrain();
   loadWeeklyStrategy();
   loadStrategyHistory();
-  renderAgenda();
-  renderMasterTasks();
   renderPipeline();
   renderArtistScore();
   renderAlerts();
@@ -4596,7 +4675,6 @@ function init(){
   <button class="t-btn on" onclick="showTab('hq')">HQ</button>
   <button class="t-btn" onclick="showTab('content')">CONTENT ENGINE</button>
   <button class="t-btn" onclick="showTab('tracks')">TRACKS</button>
-  <button class="t-btn" onclick="showTab('campaigns')">CAMPAIGNS</button>
   <button class="t-btn" onclick="showTab('outreach')">OUTREACH</button>
   <button class="t-btn" onclick="showTab('settings')">SETTINGS</button>
 </div></div>
@@ -4626,87 +4704,35 @@ function init(){
   </div>
 </div>
 
-<!-- Weekly AI Overview — flowing paragraph briefing, the only thing on HQ. Detail views live on other tabs. -->
-<div class="sec" id="weekly-overview-section">
-  <div class="sh">
-    <span class="sn">&#128202;</span>
-    <span class="st">Weekly AI Overview</span>
-    <span id="brain-counter" style="font-size:9px;color:var(--ac);margin-left:12px;padding:2px 8px;border-radius:10px;background:rgba(0,229,255,.08);font-weight:600"></span>
-    <span id="weekly-overview-meta" style="font-size:9px;color:var(--dm);margin-left:auto"></span>
-  </div>
-  <div id="weekly-overview-area">
-    <div class="ds">Weekly AI overview will appear after the first Monday run.</div>
-  </div>
-</div>
 
 <!-- growth-alerts-area merged into scraped-alerts-area below -->
 <div id="growth-alerts-area" style="display:none"></div>
 
-<!-- Track Scores Summary -->
-<div class="sec">
-  <div class="sh"><span class="sn">&#127925;</span><span class="st">Track Scores</span></div>
-  <div id="track-scores-area"></div>
-</div>
-
-<!-- Smart Alerts (from daily scrape) -->
-<div class="sec">
+<!-- Smart Alerts (from daily scrape) — hidden until alerts exist -->
+<div class="sec" id="smart-alerts-section" style="display:none">
   <div class="sh"><span class="sn">AI</span><span class="st">Smart Alerts</span><span id="scrape-alerts-timestamp" style="font-size:9px;color:var(--dm);margin-left:auto"></span></div>
-  <div id="scraped-alerts-area">
-    <div class="ds">Smart alerts will appear after the first daily scrape runs.</div>
+  <div id="scraped-alerts-area"></div>
+</div>
+
+
+
+
+<!-- When to Post (combined heatmap + smart schedule) -->
+<div class="sec" id="when-to-post-section">
+  <div class="sh"><span class="sn">&#128197;</span><span class="st">When to Post</span></div>
+  <div id="when-to-post-area">
+    <div class="ds">Posting data will appear after the daily scrape and Graph API data load.</div>
   </div>
-</div>
-
-<!-- Weekly Strategy (refreshes every 7+ days) -->
-<div class="sec">
-  <div class="sh"><span class="sn">STRATEGY</span><span class="st">This Week</span><span id="weekly-strategy-timestamp" style="font-size:9px;color:var(--dm);margin-left:auto"></span></div>
-  <div id="weekly-strategy-area">
-    <div class="ds">Weekly strategy will appear after the first Monday run.</div>
-  </div>
-</div>
-
-<!-- Actionable AI Alerts -->
-<div class="sec" id="ai-actions-section" style="display:none">
-  <div class="sh"><span class="sn">&#129302;</span><span class="st">AI Suggestions</span></div>
-  <div id="ai-actions-area"></div>
-</div>
-
-<!-- Weekly Performance Review (paginated) -->
-<div class="sec" id="weekly-review-section" style="display:none">
-  <div class="sh"><span class="sn">&#128200;</span><span class="st">Weekly Review</span></div>
-  <div id="weekly-review-area"></div>
 </div>
 
 <!-- Trend Charts (powered by daily scrape) -->
 <div class="sec">
   <div class="sh"><span class="sn">TRENDS</span><span class="st">30-Day Trends</span></div>
   <div id="trend-charts-area">
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start">
-      <div>
-        <div class="cl" style="margin-bottom:6px">Best Posting Times — Avg Engagement by Day &amp; Slot</div>
-        <div id="posting-heatmap"><div class="ds">Post data loads after daily scrape.</div></div>
-      </div>
-      <div>
-        <div class="cl" style="margin-bottom:4px">Follower Growth (IG / TT / SC)</div>
-        <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-followers-combined" height="180"></canvas></div>
-      </div>
-    </div>
+    <div class="cl" style="margin-bottom:4px">Follower Growth (IG / TT / SC)</div>
+    <div class="chart-wrap" style="margin-bottom:0"><canvas id="trend-followers-combined" height="180"></canvas></div>
   </div>
-  <div id="trend-analysis-text" style="margin-top:12px;padding:10px 12px;border-radius:6px;background:rgba(0,230,118,.05);border-left:3px solid var(--gn);font-size:11px;color:var(--tx);line-height:1.5;display:none"></div>
 </div>
-
-<!-- Daily Agenda -->
-<div class="sec">
-  <div class="sh"><span class="sn">&#9733;</span><span class="st">Daily Agenda</span></div>
-  <div class="agenda-card" id="daily-agenda"></div>
-</div>
-
-<!-- Master Task Tracker -->
-<div class="sec">
-  <div class="sh"><span class="sn">TASKS</span><span class="st">Master Task Tracker</span></div>
-  <div id="master-tasks"></div>
-</div>
-
-<div class="ds">All derived from MASTER_STRATEGY_ENGINE + live STATE data + daily automated scrapes.</div>
 </div>
 
 <!-- ============================================================ -->
@@ -4760,13 +4786,6 @@ function init(){
   </div></div>
 </div>
 
-<!-- Smart Schedule (AI-powered) -->
-<div class="sec" id="smart-schedule-section" style="display:none">
-  <div class="sh"><span class="sn">&#129302;</span><span class="st">Smart Schedule (AI-powered)</span></div>
-  <div id="smart-schedule-area">
-    <div class="ds">Smart scheduling will appear after the weekly strategy runs.</div>
-  </div>
-</div>
 
 <!-- INSTAGRAM DEEP REPORT -->
 <div class="acc-panel">
@@ -4906,19 +4925,6 @@ function init(){
   </div></div>
 </div>
 
-<!-- BEST POSTING TIMES -->
-<div class="acc-panel">
-  <div class="acc-hdr" style="border-left:3px solid var(--gn)" onclick="toggleAcc('acc-posting-times')">
-    <span class="acc-chevron" id="acc-posting-times-chevron">&#9654;</span>
-    <span class="acc-title" style="color:var(--gn)">Best Posting Times</span>
-    <span class="acc-badge" style="color:var(--gn);background:rgba(0,200,83,.08)">via Graph API</span>
-  </div>
-  <div class="acc-body" id="acc-posting-times-body"><div class="acc-body-inner">
-    <div id="posting-times-live">
-      <div style="color:var(--dm);font-size:10px;padding:8px">Loading online_followers data... Runs daily at 7:15 AM ET.</div>
-    </div>
-  </div></div>
-</div>
 
 <!-- STORIES INSIGHTS -->
 <div class="acc-panel">
@@ -4948,25 +4954,6 @@ function init(){
   </div></div>
 </div>
 
-<!-- KEY INSIGHTS & STRATEGIC POSITION -->
-<div class="acc-panel">
-  <div class="acc-hdr acc-hdr-insights" onclick="toggleAcc('acc-insights')">
-    <span class="acc-chevron" id="acc-insights-chevron">&#9654;</span>
-    <span class="acc-title" style="color:var(--am)">Key Insights &amp; Strategic Position</span>
-  </div>
-  <div class="acc-body" id="acc-insights-body"><div class="acc-body-inner">
-    <div class="nb" style="line-height:2">
-      <strong style="color:var(--gn)">&#9650;</strong> Reach is exploding: 11,003 reached (+1,056%), 45,344 impressions (+1,625%)<br>
-      <strong style="color:var(--gn)">&#9650;</strong> Non-follower discovery: 97.3% of reach from non-followers<br>
-      <strong style="color:var(--am)">&#9660;</strong> Conversion gap: 23% visit profile, only 1% click link<br>
-      <strong style="color:var(--am)">&#9660;</strong> Low save rate (7 saves / 90d): shares are social, not value-driven
-    </div>
-    <div style="margin-top:10px;padding:10px;background:rgba(123,47,247,.06);border:1px solid rgba(123,47,247,.15);border-radius:5px;font-size:10px;color:#b388ff;line-height:1.8">
-      <strong>Strategic Position:</strong> "Algorithm Exposure + Attention Spike" &rarr; next: "Audience Conversion + Brand Lock-In." Focus: bio CTA, link-in-bio, "save this" hooks, identity-building content.
-    </div>
-    <div style="margin-top:6px;font-size:9px;color:var(--dm)">&#129302; This section updates with AI-powered analysis on each weekly strategy run.</div>
-  </div></div>
-</div>
 
 <!-- Add Task -->
 <div class="mini-add-task" style="margin-top:14px">
@@ -5205,50 +5192,6 @@ function init(){
 
 </div><!-- end t-content -->
 
-<!-- ============================================================ -->
-<!--  CAMPAIGNS — Campaign Builder + Release Timing + Paid Media   -->
-<!-- ============================================================ -->
-<div class="tc" id="t-campaigns">
-<div class="sub-tabs" id="campaigns-tabs">
-  <button class="sub-btn on" data-sub="cmp-builder" onclick="showSub('t-campaigns','cmp-builder')">Campaigns</button>
-  <button class="sub-btn" data-sub="cmp-releases" onclick="showSub('t-campaigns','cmp-releases');renderReleaseTimelines()">Release Timing</button>
-  <button class="sub-btn" data-sub="cmp-ads" onclick="showSub('t-campaigns','cmp-ads');renderAds()">Paid Media</button>
-</div>
-
-<!-- CAMPAIGN BUILDER -->
-<div class="sub-c on" id="cmp-builder">
-<div class="sec">
-  <div class="sh"><span class="sn" style="background:rgba(123,47,247,.1);color:#b388ff">&#128640;</span><span class="st">Campaign Builder</span></div>
-  <div class="nb" style="margin-bottom:12px"><strong>Plan and execute multi-step campaigns.</strong> For track releases: album cover &rarr; SC release info &rarr; release on SC &rarr; reel + TikTok + HypedIt &rarr; update bios. All steps are trackable.</div>
-  <div id="campaigns-area"></div>
-</div>
-</div>
-
-<!-- RELEASE TIMING -->
-<div class="sub-c" id="cmp-releases">
-<div class="sec">
-  <div class="sh"><span class="sn" style="background:rgba(0,188,212,.1);color:var(--cy)">&#128197;</span><span class="st">Release Timing Engine</span></div>
-  <div class="nb" style="margin-bottom:12px"><strong>Release logistics calendar — different from the Tracks tab.</strong> Tracks tab = production status (score, momentum, next action). This tab = date-anchored pre/post release checklist (what to do D-14 through D+7). Set a release date on any FINISH-status track to activate its timeline. Click each step to mark it done.</div>
-  <div id="release-timelines-area"></div>
-</div>
-</div>
-
-<!-- PAID MEDIA -->
-<div class="sub-c" id="cmp-ads">
-<div class="sec">
-  <div class="sh"><span class="sn">&#128176;</span><span class="st">Paid Media Command Center</span></div>
-  <div id="live-ads-data" style="margin-bottom:14px"></div>
-  <div id="ads-command-center"></div>
-</div>
-<div class="mini-add-task">
-  <div style="display:flex;gap:6px;align-items:center">
-    <input class="add-task-input" id="ads-task-input" placeholder="Add campaign task..." style="font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')addTaskFromTab('ads-task-input','Analytics')">
-    <button class="add-task-btn" onclick="addTaskFromTab('ads-task-input','Analytics')" style="font-size:9px;padding:5px 10px">+ ADD</button>
-  </div>
-</div>
-</div>
-
-</div><!-- end t-campaigns -->
 
 <!-- ============================================================ -->
 <!--  OUTREACH — Venues + Labels                                   -->
@@ -5314,6 +5257,12 @@ function init(){
 <!--  TRACKS — Production Pipeline + Rollout + Execution          -->
 <!-- ============================================================ -->
 <div class="tc" id="t-tracks">
+
+<!-- Track Scores Summary (moved from HQ) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#127925;</span><span class="st">Track Scores</span></div>
+  <div id="track-scores-area"></div>
+</div>
 
 <div id="trk-table">
 <div class="sec">
