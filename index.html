@@ -805,6 +805,8 @@ function loadState(){
   }
   // Migrate any legacy outreach statuses to new lifecycle enum
   migrateOutreachStatuses();
+  // Recompute readiness scores from real completion data (one-shot migration)
+  recomputeAllReadiness();
 
   // Then listen to Firebase for real-time sync
   db.ref('state').on('value', function(snapshot){
@@ -944,12 +946,22 @@ function toggleTask(taskId){
       getSubtasks(taskId).forEach(function(st){ st.status='active'; st.completedAt=null; });
     }
   }
+  // If this task belongs to a track, recompute that track's readiness
+  if(task.trackId){
+    var parentTrack = STATE.tracks.find(function(t){ return t.id===task.trackId; });
+    if(parentTrack) recomputeTrackReadiness(parentTrack);
+  }
   saveState();
   renderMasterTasks();
   renderAgenda();
   // Also refresh score and alerts since they depend on task counts
   renderArtistScore();
   renderScrapedAlerts();
+  // If Tracks tab is showing, refresh the track scores too
+  if(document.getElementById('t-tracks') && document.getElementById('t-tracks').classList.contains('on')){
+    renderTracks();
+    renderTrackScores();
+  }
 }
 
 function toggleTaskCollapse(taskId){
@@ -1314,11 +1326,26 @@ function renderTracks(){
     if(!tr.liveTests) tr.liveTests=[]; if(!Array.isArray(tr.liveTests)) tr.liveTests=Object.values(tr.liveTests);
     if(!tr.versions) tr.versions=[]; if(!Array.isArray(tr.versions)) tr.versions=Object.values(tr.versions);
 
-    // Calculate completion percentage from production stage (1-16)
-    // Stage is the source of truth — not dependent on subtask data
+    // Calculate completion percentage from REAL data:
+    //   40% production subtasks + 20% translation checks + 40% content assets
+    // Falls back to stage-based estimate if a track has no subtasks at all.
     var maxStage = PRODUCTION_STAGES.length; // 16
     var curStage = Math.max(1, Math.min(maxStage, tr.stage || 1));
-    var pct = tr.status === 'DONE' || tr.status === 'KILL' ? 100 : Math.round(((curStage - 1) / (maxStage - 1)) * 100);
+    var pct;
+    if(tr.status === 'DONE' || tr.status === 'KILL'){
+      pct = 100;
+    } else {
+      var hasSubtasks = (STATE.tasks||[]).some(function(t){ return t.trackId === tr.id && t.parentId; });
+      var hasAnyData = hasSubtasks
+        || (tr.translationChecks && Object.values(tr.translationChecks).some(function(v){ return v; }))
+        || (tr.contentAssets && Object.values(tr.contentAssets).some(function(v){ return v; }));
+      if(hasAnyData){
+        pct = computeTrackReadiness(tr);
+      } else {
+        // Brand new track — fall back to stage-based estimate
+        pct = Math.round(((curStage - 1) / (maxStage - 1)) * 100);
+      }
+    }
     var pctColor = pct>=80?'var(--gn)':pct>=40?'var(--am)':'var(--rd)';
 
     var stageIdx = (tr.stage||1)-1; if(stageIdx<0) stageIdx=0; if(stageIdx>=PRODUCTION_STAGES.length) stageIdx=PRODUCTION_STAGES.length-1;
@@ -1549,11 +1576,49 @@ function updateTrackField(trackId, path, value){
 }
 function toggleTranslation(trackId, key){
   var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
-  if(tr){ tr.translationChecks[key] = !tr.translationChecks[key]; saveState(); }
+  if(tr){ tr.translationChecks[key] = !tr.translationChecks[key]; recomputeTrackReadiness(tr); saveState(); renderTracks(); renderTrackScores(); }
 }
 function toggleAsset(trackId, key){
   var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
-  if(tr){ tr.contentAssets[key] = !tr.contentAssets[key]; saveState(); }
+  if(tr){ tr.contentAssets[key] = !tr.contentAssets[key]; recomputeTrackReadiness(tr); saveState(); renderTracks(); renderTrackScores(); }
+}
+
+// Compute a track's readiness score (0-100) from real completion data.
+// Weights:  40% production subtasks  +  20% translation checks  +  40% content assets
+// Stage >=15 (Released) always = 100. Returns the number; also stores it on tr.
+function computeTrackReadiness(tr){
+  if(!tr) return 0;
+  if((tr.stage||0) >= 15) return 100;
+
+  // 1. Production subtasks — stored in STATE.tasks where parentId != null && trackId == tr.id
+  var subtasks = (STATE.tasks||[]).filter(function(t){ return t.trackId === tr.id && t.parentId; });
+  var subDone  = subtasks.filter(function(t){ return t.status === 'completed'; }).length;
+  var subPct   = subtasks.length > 0 ? (subDone / subtasks.length) * 100 : 0;
+
+  // 2. Translation checks (5 boolean fields)
+  var tc = tr.translationChecks || {};
+  var tcKeys = ['phone','headphones','car','speakers','mono'];
+  var tcDone = tcKeys.filter(function(k){ return tc[k]; }).length;
+  var tcPct  = (tcDone / tcKeys.length) * 100;
+
+  // 3. Content assets (8 boolean fields)
+  var ca = tr.contentAssets || {};
+  var caKeys = ['studioClip','teaserClip','dropClip','crowdClip','reactionClip','artwork','releasePost','followUp'];
+  var caDone = caKeys.filter(function(k){ return ca[k]; }).length;
+  var caPct  = (caDone / caKeys.length) * 100;
+
+  var weighted = (subPct * 0.40) + (tcPct * 0.20) + (caPct * 0.40);
+  return Math.round(weighted);
+}
+function recomputeTrackReadiness(tr){
+  if(!tr) return;
+  tr.readinessScore = computeTrackReadiness(tr);
+}
+// Recompute all tracks' readiness on load (one-shot migration so existing
+// static readinessScore values get replaced with live computed values).
+function recomputeAllReadiness(){
+  if(!Array.isArray(STATE.tracks)) return;
+  STATE.tracks.forEach(recomputeTrackReadiness);
 }
 function setTrackStatus(trackId, status){
   var tr = STATE.tracks.find(function(t){ return t.id===trackId; });
