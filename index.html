@@ -3246,6 +3246,10 @@ function dismissAIAction(id){
 var _reviewPages = [];
 var _reviewPageIdx = 0;
 
+// Strategy history navigation (for Weekly AI Overview on HQ)
+var _overviewPages = []; // [{weekOf, strategy}] newest first
+var _overviewPageIdx = 0; // 0 = current/latest week
+
 function loadStrategyHistory(){
   db.ref('strategy/history').orderByKey().limitToLast(20).once('value', function(snap){
     var data = snap.val() || {};
@@ -3255,7 +3259,33 @@ function loadStrategyHistory(){
       .filter(function(p){ return p.review; });
     _reviewPageIdx = 0;
     renderWeeklyReview();
+
+    // Build _overviewPages list — full strategy objects newest first, including current
+    var historyArr = Object.keys(data)
+      .sort(function(a,b){ return b.localeCompare(a); }) // newest first
+      .map(function(k){ return { weekOf: k, strategy: data[k] }; })
+      .filter(function(p){ return p.strategy && (p.strategy.weeklyNarrative || p.strategy.weeklyReview || p.strategy.keyInsights); });
+
+    // Prepend current strategy if it exists and isn't already in history (latest snapshot may not be saved to history yet)
+    if(window._strategyData){
+      var currentKey = window._strategyData.weekOf || 'current';
+      var hasCurrent = historyArr.some(function(p){ return p.weekOf === currentKey; });
+      if(!hasCurrent){
+        historyArr.unshift({ weekOf: currentKey, strategy: window._strategyData });
+      }
+    }
+
+    _overviewPages = historyArr;
+    _overviewPageIdx = 0;
+    renderWeeklyOverview(_overviewPages[0] ? _overviewPages[0].strategy : window._strategyData);
   });
+}
+
+function navigateOverview(direction){
+  // direction: +1 = older, -1 = newer
+  if(!_overviewPages.length) return;
+  _overviewPageIdx = Math.max(0, Math.min(_overviewPages.length - 1, _overviewPageIdx + direction));
+  renderWeeklyOverview(_overviewPages[_overviewPageIdx].strategy);
 }
 
 function renderWeeklyReview(){
@@ -3561,11 +3591,30 @@ function renderDailyInsight(s){
 function renderWeeklyOverview(s){
   var area = document.getElementById('weekly-overview-area');
   var meta = document.getElementById('weekly-overview-meta');
+  var nav = document.getElementById('weekly-overview-nav');
+  var pageEl = document.getElementById('weekly-overview-page');
+  var prevBtn = document.getElementById('weekly-overview-prev');
+  var nextBtn = document.getElementById('weekly-overview-next');
   if(!area) return;
   if(!s){
     area.innerHTML = '<div class="ds">Weekly AI overview will appear after the first Monday run.</div>';
     if(meta) meta.textContent = '';
+    if(nav) nav.style.display = 'none';
     return;
+  }
+
+  // Navigation UI — show if we have more than 1 week of history
+  if(nav){
+    if(_overviewPages.length > 1){
+      nav.style.display = 'flex';
+      var total = _overviewPages.length;
+      var currentLabel = _overviewPageIdx === 0 ? 'CURRENT WEEK' : 'WEEK ' + (_overviewPageIdx) + ' AGO';
+      if(pageEl) pageEl.textContent = currentLabel + ' · ' + (_overviewPageIdx + 1) + ' of ' + total;
+      if(prevBtn) prevBtn.style.color = _overviewPageIdx < total - 1 ? 'var(--ac)' : 'var(--bd)';
+      if(nextBtn) nextBtn.style.color = _overviewPageIdx > 0 ? 'var(--ac)' : 'var(--bd)';
+    } else {
+      nav.style.display = 'none';
+    }
   }
 
   // Meta line: week of, AI status, carried-over flag
@@ -4704,6 +4753,22 @@ function init(){
   </div>
 </div>
 
+<!-- Weekly AI Overview — long-form narrative with arrow navigation to prior weeks -->
+<div class="sec" id="weekly-overview-section">
+  <div class="sh">
+    <span class="sn">&#128202;</span>
+    <span class="st">Weekly AI Overview</span>
+    <span id="weekly-overview-meta" style="font-size:9px;color:var(--dm);margin-left:auto"></span>
+  </div>
+  <div id="weekly-overview-nav" style="display:none;justify-content:space-between;align-items:center;margin-bottom:10px;padding:6px 10px;background:rgba(255,255,255,.02);border-radius:6px">
+    <button id="weekly-overview-prev" onclick="navigateOverview(1)" style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:14px;padding:4px 10px">&lsaquo; Older</button>
+    <span id="weekly-overview-page" style="font-size:10px;color:var(--dm);font-weight:600"></span>
+    <button id="weekly-overview-next" onclick="navigateOverview(-1)" style="background:none;border:none;color:var(--ac);cursor:pointer;font-size:14px;padding:4px 10px">Newer &rsaquo;</button>
+  </div>
+  <div id="weekly-overview-area">
+    <div class="ds">Weekly AI overview will appear after the first Monday run.</div>
+  </div>
+</div>
 
 <!-- growth-alerts-area merged into scraped-alerts-area below -->
 <div id="growth-alerts-area" style="display:none"></div>
