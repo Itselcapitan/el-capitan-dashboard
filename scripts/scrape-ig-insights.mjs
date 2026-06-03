@@ -46,7 +46,10 @@ const REEL_METRICS = [
   'follows',
   'profile_visits',
   'ig_reels_avg_watch_time',
-  'plays',
+  // 'plays' removed — Meta deprecated it for Reels in Graph API v25.0
+  // (the entire batch was 400-ing on metric[7], which silently zeroed
+  // out every reel's insights INCLUDING the trial-reel snapshot).
+  // 'views' below is the replacement.
   'total_interactions',
   'comments',
   'likes',
