@@ -367,23 +367,43 @@ async function main() {
   console.log(`    Total shares (all media): ${totalShares}`);
   console.log(`    Total follows-from-post: ${totalFollows}`);
 
-  // Trial vs graduated skip rate comparison
-  if (trialReelInsights.length > 0 && graduatedReels.length > 0) {
-    const trialAvgSkip = +(trialReelInsights.reduce((s, x) => s + (x.skipRate || 0), 0) / trialReelInsights.length).toFixed(1);
-    const gradAvgSkip = +(graduatedReels.reduce((s, x) => s + (x.skipRate || 0), 0) / graduatedReels.length).toFixed(1);
-    console.log(`    Trial Reels avg skip: ${trialAvgSkip}% vs Graduated avg skip: ${gradAvgSkip}%`);
+  // Trial vs graduated skip rate — these MUST stay segmented.
+  // Graduated reels are seen by Reid's existing followers (~54% Union
+  // College, a captive-but-passive audience whose baseline skip rate
+  // is high and normal). Trial reels are pushed ONLY to non-followers,
+  // so the algorithm is still searching for the niche audience and
+  // skip rate is expected to look worse in the first 72h. Averaging
+  // the two together produces a number that describes neither.
+  const avgSkipRateGraduated = graduatedReels.length
+    ? +(graduatedReels.reduce((s, x) => s + (x.skipRate || 0), 0) / graduatedReels.length).toFixed(1)
+    : null;
+  const avgSkipRateTrial = trialReelInsights.length
+    ? +(trialReelInsights.reduce((s, x) => s + (x.skipRate || 0), 0) / trialReelInsights.length).toFixed(1)
+    : null;
+  // follows-from-post is the REAL conversion KPI — segment it too so we
+  // can tell whether trial reels are finding niche (non-follower) audience.
+  const trialFollows = trialReelInsights.reduce((s, x) => s + (x.follows || 0), 0);
+  const graduatedFollows = graduatedReels.reduce((s, x) => s + (x.follows || 0), 0);
+
+  if (avgSkipRateTrial !== null && avgSkipRateGraduated !== null) {
+    console.log(`    Trial Reels avg skip: ${avgSkipRateTrial}% vs Graduated avg skip: ${avgSkipRateGraduated}%`);
   }
+  console.log(`    Follows-from-post: ${graduatedFollows} graduated + ${trialFollows} trial = ${totalFollows} total`);
 
   // 5. Write aggregate summary
   await patchFirebase('analytics/latest/igInsightsSummary', {
     reelsAnalyzed: reels.length,
     trialReelsCount: trialReelInsights.length,
     graduatedReelsCount: graduatedReels.length,
-    avgSkipRate,
+    avgSkipRate, // overall (all reels) — kept for debugging, do NOT display as headline
+    avgSkipRateGraduated, // headline skip rate — what Reid's followers actually do
+    avgSkipRateTrial,     // niche-search skip rate — judge trials by follows, not this
     avgReach,
     totalSaves,
     totalShares,
     totalFollows,
+    trialFollows,
+    graduatedFollows,
     apiCallsUsed: apiCalls,
     fetchedAt: new Date().toISOString(),
   });

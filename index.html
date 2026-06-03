@@ -890,7 +890,7 @@ function showTab(id){
   var tab = document.getElementById('t-'+id);
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
-  if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderWhenToPost(); renderPerformanceBenchmarks(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
+  if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderPostingTimes(); renderWhenToPost(); renderPerformanceBenchmarks(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
   if(id==='content'){ renderContentStats(); renderCompetitorData(); setTimeout(renderContentCharts, 200); }
   if(id==='tracks'){ try{ renderTracks(); renderTrackScores(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); renderOutreachStaleAlerts(); }catch(e){ console.error('renderOutreach error:',e); } }
@@ -2869,9 +2869,16 @@ function renderContentStats(){
     // Build a caption-based lookup of Graph API insights so we can join
     // them onto Apify posts. Apify and Graph API use different post-ID
     // formats, but the caption text is shared.
+    // Prefer insights merged into the daily data node; fall back to the
+    // standalone igInsights node (loaded separately into window._igInsights).
+    // Without the fallback, per-post enrichment (reach/saves/skip/follows AND
+    // the isTrialReel flag) never reached the table when the daily scrape
+    // node lacked igInsights.
+    var insightsSource = data.igInsights || window._igInsights || null;
     var insightsByCaption = {};
-    if (data.igInsights) {
-      Object.values(data.igInsights).forEach(function(ins){
+    if (insightsSource) {
+      Object.values(insightsSource).forEach(function(ins){
+        if (!ins || typeof ins !== 'object') return;
         var key = (ins.caption || '').slice(0, 60).trim();
         if (key) insightsByCaption[key] = ins;
       });
@@ -2895,6 +2902,7 @@ function renderContentStats(){
       var reach = ins && ins.reach != null ? ins.reach : null;
       var skipRate = ins && ins.skipRate != null ? ins.skipRate : null;
       var follows = ins && ins.follows != null ? ins.follows : null;
+      var isTrial = !!(ins && ins.isTrialReel);
 
       var engRate = views > 0 ? ((likes + comments + saves) / views * 100) : (igFollowers > 0 ? ((likes + comments) / igFollowers * 100) : 0);
       var pid = p.id || p.shortCode || '';
@@ -2903,19 +2911,34 @@ function renderContentStats(){
       var badge = getRatingBadge(engRate, promoted);
       var cb = '<input type="checkbox" title="Mark as promoted/ad" ' + (promoted?'checked ':'') + 'onchange="togglePromoted(\'' + pid.replace(/'/g,"\\'") + '\', this.checked)" style="cursor:pointer">';
 
-      // Color skip rate by quality bucket (lower = better hook)
+      // Skip-rate coloring is audience-aware.
+      // GRADUATED reels are seen by the captive Union College follower base,
+      // whose baseline skip is ~60% and NORMAL — so thresholds are calibrated
+      // to that reality (not generic <15% benchmarks that would paint
+      // everything red). TRIAL reels go to non-followers while the algo is
+      // still searching, so skip rate is NOT a quality signal — render it
+      // neutral grey and judge trials by follows-from-post instead.
       var skipColor = '#666';
-      if (skipRate != null) {
-        if (skipRate <= 40) skipColor = 'var(--ac)';       // strong hook
-        else if (skipRate <= 60) skipColor = '#f5a623';    // okay
-        else skipColor = '#e85a4f';                        // weak hook
+      if (skipRate != null && !isTrial) {
+        if (skipRate <= 55) skipColor = 'var(--ac)';       // strong hook for his audience
+        else if (skipRate <= 75) skipColor = '#f5a623';    // normal range
+        else skipColor = '#e85a4f';                        // genuinely weak
       }
-      var skipCell = skipRate != null ? '<td style="color:' + skipColor + ';font-weight:600">' + skipRate.toFixed(0) + '%</td>' : '<td style="color:#444">—</td>';
+      var skipCell;
+      if (skipRate == null) {
+        skipCell = '<td style="color:#444">—</td>';
+      } else if (isTrial) {
+        skipCell = '<td style="color:#888aa6" title="Trial reel — shown to non-followers while the algorithm searches for your niche. Skip rate is not a quality signal here; judge by Follows.">' + skipRate.toFixed(0) + '%<span style="font-size:8px;color:#888aa6"> (search)</span></td>';
+      } else {
+        skipCell = '<td style="color:' + skipColor + ';font-weight:600">' + skipRate.toFixed(0) + '%</td>';
+      }
       var reachCell = reach != null ? '<td>' + fmtK(reach) + '</td>' : '<td style="color:#444">—</td>';
       var sharesCell = shares != null ? '<td>' + shares.toLocaleString() + '</td>' : '<td style="color:#444">—</td>';
       var followsCell = follows != null ? '<td style="color:' + (follows > 0 ? 'var(--ac)' : '#666') + ';font-weight:600">' + follows + '</td>' : '<td style="color:#444">—</td>';
 
-      rows += '<tr><td>' + captionHtml + '</td><td>' + type + '</td><td>' + date + '</td>' +
+      var trialChip = isTrial ? ' <span style="font-size:8px;font-weight:700;color:#ffab00;background:rgba(255,171,0,.14);border:1px solid rgba(255,171,0,.3);border-radius:3px;padding:1px 4px;vertical-align:middle">🧪 TRIAL</span>' : '';
+      var rowStyle = isTrial ? ' style="border-left:2px solid rgba(255,171,0,.5)"' : '';
+      rows += '<tr' + rowStyle + '><td>' + captionHtml + trialChip + '</td><td>' + type + '</td><td>' + date + '</td>' +
         '<td>' + fmtK(views) + '</td>' +
         reachCell +
         '<td>' + likes.toLocaleString() + '</td>' +
@@ -4360,6 +4383,9 @@ function loadGraphAPIExtras(){
     console.log('[DATA] igInsights loaded, posts:', d ? Object.keys(d).length : 0);
     updateChartsFromPostInsights();
     renderPerformanceBenchmarks();
+    // Re-render the posts table so per-post enrichment + trial-reel markers
+    // appear once insights arrive (they load after the main data node).
+    if(window._latestData) renderContentStats();
   });
   // Pre-computed summary (avgSkipRate, avgReach, totalSaves, totalShares)
   db.ref('analytics/latest/igInsightsSummary').once('value', function(snap){
@@ -4510,6 +4536,11 @@ function renderPostingTimes(){
   });
   html += '</div>';
   html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+peakWindowET+' ET</div>';
+  // Audience-composition caveat: online_followers reflects EXISTING followers
+  // only (~54% Union College). These times are right for graduated posts the
+  // school crowd sees, but Trial Reels go to non-followers, so this curve does
+  // NOT predict their best post time.
+  html += '<div style="margin-top:4px;font-size:9px;color:var(--dm);line-height:1.4">Based on your <strong>current followers</strong> (~54% Union College). Good for graduated posts; Trial Reels reach non-followers, so this curve doesn\'t apply to them.</div>';
   wrap.innerHTML = html;
 }
 
@@ -4669,32 +4700,70 @@ function renderPerformanceBenchmarks(){
       + '</div>';
   }
 
-  // ---- Card B: Reels Skip Rate ----
+  // ---- Card B: Reels Skip Rate (GRADUATED only, audience-aware) ----
+  // Reid's followers are ~54% Union College — a captive but passive crowd
+  // whose baseline skip is high and normal. We show GRADUATED skip rate
+  // (what followers actually do) and calibrate thresholds to that reality.
+  // Trial skip is shown as a small secondary line, framed as the algorithm
+  // searching for niche audience — NOT a quality grade.
   var skipCard;
   var summary = window._igInsightsSummary || null;
-  var skipRate = summary && typeof summary.avgSkipRate === 'number' ? summary.avgSkipRate : null;
-  if(skipRate == null){
-    // Fallback: compute from per-post skipRate values
+  var gradSkip = summary && typeof summary.avgSkipRateGraduated === 'number' ? summary.avgSkipRateGraduated : null;
+  var trialSkip = summary && typeof summary.avgSkipRateTrial === 'number' ? summary.avgSkipRateTrial : null;
+  if(gradSkip == null){
+    // Fallback: compute graduated-only from per-post values (skip trials)
     var skSum = 0, skCount = 0;
     Object.keys(insights).forEach(function(k){
       var p = insights[k];
-      if(p && typeof p.skipRate === 'number'){ skSum += p.skipRate; skCount++; }
+      if(p && typeof p.skipRate === 'number' && !p.isTrialReel){ skSum += p.skipRate; skCount++; }
     });
-    if(skCount > 0) skipRate = skSum / skCount;
+    if(skCount > 0) gradSkip = skSum / skCount;
   }
-  if(skipRate != null){
-    var sColor = skipRate < 15 ? GN : (skipRate < 30 ? AM : RD);
+  if(gradSkip != null){
+    // Calibrated to a captive-but-passive school audience, not generic benchmarks
+    var sColor = gradSkip <= 55 ? GN : (gradSkip <= 75 ? AM : RD);
+    var trialLine = trialSkip != null
+      ? 'Trial reels: '+trialSkip.toFixed(0)+'% (algo searching — judge by follows)'
+      : 'Followers only · last 25 reels';
     skipCard = '<div class="c" style="border-left:3px solid '+sColor+'">'
-      + '<div class="cl">REELS SKIP RATE</div>'
-      + '<div class="cv" style="color:'+sColor+'">'+skipRate.toFixed(1)+'%</div>'
-      + '<div class="cs">Target: &lt;15%</div>'
-      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">First 3 seconds · last 25 reels</div>'
+      + '<div class="cl">SKIP RATE (FOLLOWERS)</div>'
+      + '<div class="cv" style="color:'+sColor+'">'+gradSkip.toFixed(1)+'%</div>'
+      + '<div class="cs">Normal for your audience: 55-75%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">'+trialLine+'</div>'
       + '</div>';
   } else {
     skipCard = '<div class="c" style="border-left:3px solid '+DM+'">'
-      + '<div class="cl">REELS SKIP RATE</div>'
+      + '<div class="cl">SKIP RATE (FOLLOWERS)</div>'
       + '<div class="cv" style="color:'+DM+'">—</div>'
-      + '<div class="cs">Target: &lt;15%</div>'
+      + '<div class="cs">Normal for your audience: 55-75%</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Awaiting reels insights</div>'
+      + '</div>';
+  }
+
+  // ---- Card E: Follows From Posts (the REAL conversion KPI) ----
+  // For Reid this matters more than skip/engagement: his school audience
+  // won't publicly engage, so the truest signal of growth is how many
+  // NEW follows each post drives — especially from trial reels, which
+  // reach non-followers and indicate the algo found niche audience.
+  var followsCard;
+  var totFollows = summary && typeof summary.totalFollows === 'number' ? summary.totalFollows : null;
+  var trFollows = summary && typeof summary.trialFollows === 'number' ? summary.trialFollows : null;
+  if(totFollows != null){
+    var fColor = totFollows > 0 ? GN : AM;
+    var trialFollowLine = (trFollows != null && trFollows > 0)
+      ? '<span style="color:var(--gn)">'+trFollows+' from trial reels (niche found!)</span>'
+      : 'From your last 25 posts';
+    followsCard = '<div class="c" style="border-left:3px solid '+fColor+'">'
+      + '<div class="cl">FOLLOWS FROM POSTS</div>'
+      + '<div class="cv" style="color:'+fColor+'">'+totFollows.toLocaleString()+'</div>'
+      + '<div class="cs">Your truest growth signal</div>'
+      + '<div style="font-size:9px;color:var(--dm);margin-top:4px">'+trialFollowLine+'</div>'
+      + '</div>';
+  } else {
+    followsCard = '<div class="c" style="border-left:3px solid '+DM+'">'
+      + '<div class="cl">FOLLOWS FROM POSTS</div>'
+      + '<div class="cv" style="color:'+DM+'">—</div>'
+      + '<div class="cs">Your truest growth signal</div>'
       + '<div style="font-size:9px;color:var(--dm);margin-top:4px">Awaiting reels insights</div>'
       + '</div>';
   }
@@ -4775,7 +4844,7 @@ function renderPerformanceBenchmarks(){
   }
 
   wrap.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'
-    + saveCard + skipCard + geoCard + velCard
+    + followsCard + saveCard + skipCard + geoCard + velCard
     + '</div>';
 }
 
@@ -5081,6 +5150,11 @@ function init(){
 <!-- When to Post (combined heatmap + smart schedule) -->
 <div class="sec" id="when-to-post-section">
   <div class="sh"><span class="sn">&#128197;</span><span class="st">When to Post</span></div>
+  <!-- Hourly "followers online" bar chart (renderPostingTimes). This div was
+       missing, which is why the posting-times chart silently never rendered. -->
+  <div id="posting-times-live" style="margin-bottom:14px">
+    <div class="ds">Loading follower-online times…</div>
+  </div>
   <div id="when-to-post-area">
     <div class="ds">Posting data will appear after the daily scrape and Graph API data load.</div>
   </div>
