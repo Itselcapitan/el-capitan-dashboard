@@ -84,6 +84,22 @@ async function patchFirebase(path, data) {
   }
 }
 
+// PUT fully replaces the node (vs PATCH which merges) — use when the node
+// must reflect ONLY the current set, e.g. trial reels that age out.
+async function putFirebase(path, data) {
+  const auth = FIREBASE_DB_SECRET ? `?auth=${FIREBASE_DB_SECRET}` : '';
+  const url = `${FIREBASE_DB_URL}/${path}.json${auth}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Firebase PUT ${path} failed: ${res.status} ${text}`);
+  }
+}
+
 // ─── Graph API helpers ──────────────────────────────────────────
 
 async function graphGet(path, params = {}) {
@@ -409,20 +425,22 @@ async function main() {
   });
   console.log(`  ✓ Wrote summary to analytics/latest/igInsightsSummary`);
 
-  // 6. Write Trial Reels snapshot if any exist
-  if (trialReelInsights.length > 0) {
-    const trialData = {};
-    for (const tr of trialReelInsights) {
-      const id = Object.entries(insightsByMediaId).find(([, v]) => v === tr)?.[0];
-      if (id) trialData[id] = tr;
-    }
-    await patchFirebase('analytics/latest/igTrialReels', {
-      count: trialReelInsights.length,
-      reels: trialData,
-      fetchedAt: new Date().toISOString(),
-    });
-    console.log(`  ✓ Wrote ${trialReelInsights.length} trial reel(s) to analytics/latest/igTrialReels`);
+  // 6. Write Trial Reels snapshot. ALWAYS write (PUT) so the node reflects
+  // the CURRENT trial set — trials age out of the 72h window, and if we only
+  // wrote when count>0 the dashboard would show stale, long-expired trials
+  // forever. When none are active we write count:0 with empty reels so the
+  // UI can show an honest "no active trials" state.
+  const trialData = {};
+  for (const tr of trialReelInsights) {
+    const id = Object.entries(insightsByMediaId).find(([, v]) => v === tr)?.[0];
+    if (id) trialData[id] = tr;
   }
+  await putFirebase('analytics/latest/igTrialReels', {
+    count: trialReelInsights.length,
+    reels: trialData,
+    fetchedAt: new Date().toISOString(),
+  });
+  console.log(`  ✓ Wrote ${trialReelInsights.length} trial reel(s) to analytics/latest/igTrialReels`);
 
   console.log('\n✅ IG Insights scrape complete\n');
 }

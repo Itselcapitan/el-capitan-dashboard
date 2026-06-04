@@ -4239,17 +4239,72 @@ function updateChartsFromPostInsights(){
   if(document.getElementById('t-content').classList.contains('on')) renderContentCharts();
 }
 
-function renderTrialReelsBadge(){
+function renderTrialReelsBadge(){ renderTrialReels(); } // back-compat alias
+
+function renderTrialReels(){
+  var wrap = document.getElementById('trial-reels-section');
+  if(!wrap) return;
   var tr = window._igTrialReels;
-  if(!tr || !tr.count) return;
-  // Add a Trial Reels badge to the content stats area if it exists
-  var statsArea = document.getElementById('content-live-badges');
-  if(!statsArea) return;
-  var badge = document.createElement('div');
-  badge.className = 'metric-badge';
-  badge.style.cssText = 'background:rgba(255,171,0,.12);border:1px solid rgba(255,171,0,.3);border-radius:8px;padding:6px 12px;display:inline-block;margin:4px;font-size:11px;';
-  badge.innerHTML = '<span style="color:#ffab00;font-weight:700;">🧪 ' + tr.count + ' Trial Reel' + (tr.count > 1 ? 's' : '') + '</span> in testing phase';
-  statsArea.appendChild(badge);
+  var AM = '#ffab00';
+
+  // No trial reels currently in testing — explain the state instead of
+  // rendering nothing (which reads as "broken").
+  if(!tr || !tr.count || !tr.reels){
+    wrap.innerHTML = '<div style="border:1px solid rgba(255,171,0,.25);border-radius:10px;padding:12px 14px;background:rgba(255,171,0,.05)">'
+      + '<div style="font-weight:700;color:'+AM+';font-size:12px;margin-bottom:4px">🧪 Trial Reels</div>'
+      + '<div style="font-size:10px;color:var(--dm);line-height:1.5">No reels in the trial window right now. Trial Reels appear here for ~72h after you post one (they\'re shown to non-followers while Instagram searches for your niche audience). Post a Trial Reel from the IG app to populate this.</div>'
+      + '</div>';
+    return;
+  }
+
+  var reels = Object.keys(tr.reels).map(function(id){
+    var r = tr.reels[id] || {}; r._id = id; return r;
+  });
+  // Newest first
+  reels.sort(function(a,b){ return new Date(b.timestamp||0) - new Date(a.timestamp||0); });
+
+  var summary = window._igInsightsSummary || {};
+  var trialSkip = typeof summary.avgSkipRateTrial === 'number' ? summary.avgSkipRateTrial : null;
+  var gradSkip = typeof summary.avgSkipRateGraduated === 'number' ? summary.avgSkipRateGraduated : null;
+  var trialFollows = typeof summary.trialFollows === 'number' ? summary.trialFollows : reels.reduce(function(s,r){ return s + (r.follows||0); }, 0);
+
+  var html = '<div style="border:1px solid rgba(255,171,0,.3);border-radius:10px;padding:12px 14px;background:rgba(255,171,0,.05)">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px">';
+  html += '<span style="font-weight:700;color:'+AM+';font-size:12px">🧪 '+tr.count+' Trial Reel'+(tr.count>1?'s':'')+' — niche-audience search</span>';
+  if(trialFollows > 0) html += '<span style="font-size:10px;color:var(--gn);font-weight:700">+'+trialFollows+' follow'+(trialFollows>1?'s':'')+' from trials — niche found! 🎯</span>';
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--dm);line-height:1.5;margin-bottom:10px">These go to <strong>non-followers only</strong>, so skip rate looks high while the algorithm hunts for your DJ/producer audience — that\'s expected. <strong style="color:var(--fg)">Judge them by Follows &amp; Profile Visits, not skip rate.</strong></div>';
+
+  html += '<table class="tbl" style="width:100%"><tr>'
+    + '<th>Reel</th><th>Posted</th><th>Reach</th><th>Skip</th><th>Saves</th><th>Shares</th><th>Profile Visits</th><th>Follows</th></tr>';
+  reels.forEach(function(r){
+    var cap = (r.caption||'(no caption)').slice(0,42).replace(/\n/g,' ');
+    var capHtml = r.permalink ? '<a href="'+r.permalink+'" target="_blank" style="color:inherit;text-decoration:none">'+cap+'</a>' : cap;
+    var posted = r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    var reach = r.reach != null ? fmtK(r.reach) : '—';
+    // Skip rate is NOT a quality signal for trials → neutral grey + "(search)"
+    var skip = r.skipRate != null ? '<span style="color:#888aa6">'+r.skipRate.toFixed(0)+'%</span>' : '—';
+    var pv = r.profileVisits != null ? r.profileVisits : '—';
+    var fol = r.follows != null ? r.follows : 0;
+    var folColor = fol > 0 ? 'var(--gn)' : '#888aa6';
+    html += '<tr>'
+      + '<td>'+capHtml+'</td>'
+      + '<td>'+posted+'</td>'
+      + '<td>'+reach+'</td>'
+      + '<td>'+skip+'</td>'
+      + '<td>'+(r.saves!=null?r.saves:'—')+'</td>'
+      + '<td>'+(r.shares!=null?r.shares:'—')+'</td>'
+      + '<td style="color:'+(pv>0?'var(--ac)':'#888aa6')+'">'+pv+'</td>'
+      + '<td style="font-weight:700;color:'+folColor+'">'+fol+'</td>'
+      + '</tr>';
+  });
+  html += '</table>';
+
+  if(trialSkip != null && gradSkip != null){
+    html += '<div style="font-size:9px;color:var(--dm);margin-top:8px;line-height:1.5">Trial skip avg <strong>'+trialSkip.toFixed(0)+'%</strong> vs your graduated reels <strong>'+gradSkip.toFixed(0)+'%</strong> — the gap is the algorithm calibrating, not a hook problem. Watch the Follows column: the first non-Schenectady follow means it found your people.</div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
 }
 
 // =====================================================
@@ -4395,13 +4450,14 @@ function loadGraphAPIExtras(){
     var d = snap.val();
     window._igInsightsSummary = d || null;
     renderPerformanceBenchmarks();
+    renderTrialReels(); // skip-comparison line depends on the summary
   });
   // Trial Reels data
   db.ref('analytics/latest/igTrialReels').once('value', function(snap){
     var d = snap.val();
     window._igTrialReels = d || null;
-    if(d && d.count > 0) console.log('[DATA] igTrialReels loaded, count:', d.count);
-    renderTrialReelsBadge();
+    console.log('[DATA] igTrialReels loaded, count:', d && d.count ? d.count : 0);
+    renderTrialReels();
   });
 }
 
@@ -5256,6 +5312,7 @@ function init(){
 <div class="sub-c on" id="cs-analytics">
 <div class="ds"><span id="last-scraped-date">Last scraped: loading...</span> &middot; IG deep report: Dec 27 &ndash; Mar 26 (90 days)</div>
 <div id="content-live-badges" style="margin:6px 0;"></div>
+<div id="trial-reels-section" style="margin:6px 0 14px;"></div>
 
 <!-- CROSS-PLATFORM OVERVIEW -->
 <div class="acc-panel">
