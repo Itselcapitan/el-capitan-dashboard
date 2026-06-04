@@ -125,15 +125,38 @@ function parseOnlineFollowers(json) {
   const values = data.values || [];
   if (!values.length) return { error: 'empty values array' };
 
-  // Use the latest day's hourly breakdown
-  const latest = values[values.length - 1];
-  const hourly = latest.value || {};
+  // The most recent day's value is often empty or still accumulating.
+  // Scan ALL returned days and pick the one with the highest total
+  // activity (most real signal), rather than blindly taking the last.
+  let best = null;
+  let bestSum = -1;
+  for (const v of values) {
+    const hv = v.value || {};
+    const sum = Object.values(hv).reduce((s, c) => s + (Number(c) || 0), 0);
+    if (sum > bestSum) {
+      bestSum = sum;
+      best = hv;
+    }
+  }
+  const hourly = best || {};
+
+  const nonZeroHours = Object.values(hourly).filter(c => (Number(c) || 0) > 0).length;
+  const total = Object.values(hourly).reduce((s, c) => s + (Number(c) || 0), 0);
+  console.log(`    online_followers diag: ${values.length} day(s) returned, best day total=${total}, non-zero hours=${nonZeroHours}/24`);
+
+  // If every hour across every day is zero, Meta has not computed this
+  // metric for the account yet (common under ~100 active followers or
+  // for very new business accounts). Report it honestly so the UI shows
+  // a clear message instead of a flat, empty-looking chart.
+  if (total === 0) {
+    return { error: 'online_followers returned all zeros — Meta has not computed hourly activity for this account yet (needs more follower activity over ~30 days)' };
+  }
 
   let peakHour = 0;
   let peakCount = 0;
   for (const [h, count] of Object.entries(hourly)) {
-    if (count > peakCount) {
-      peakCount = count;
+    if ((Number(count) || 0) > peakCount) {
+      peakCount = Number(count);
       peakHour = Number(h);
     }
   }
