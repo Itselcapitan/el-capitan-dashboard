@@ -2766,6 +2766,9 @@ function loadAnalytics(){
     }
     // Always render content stats when data arrives (badges etc.)
     renderContentStats();
+    // Posting-times widget falls back to post-performance data (which lives
+    // in _latestData), so refresh it once the daily data has loaded.
+    renderPostingTimes();
   }, function(err){ console.error('[DATA] analytics/latest FAILED:', err.message); });
 }
 
@@ -4490,57 +4493,124 @@ function formatHourET(h){
   return (h-12)+'p';
 }
 function renderPostingTimes(){
-  var d = window._igDemographics;
   var wrap = document.getElementById('posting-times-live');
   if(!wrap) return;
-  if(!d || !d.onlineFollowers || d.onlineFollowers.error){
-    console.warn('[RENDER] renderPostingTimes: no data or error', d ? d.onlineFollowers : 'no demographics');
-    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers data yet. Runs daily at 7:15 AM ET.</div>';
+  var d = window._igDemographics;
+  var of = d && d.onlineFollowers;
+  var hasOnline = of && !of.error && of.hourly && Object.keys(of.hourly).length > 0
+    && Object.values(of.hourly).some(function(v){ return (Number(v)||0) > 0; });
+
+  if(hasOnline){
+    // ── Primary: Meta online_followers hourly bar chart (when populated) ──
+    var hourlyUTC = of.hourly || {};
+    var utcHours = Object.keys(hourlyUTC).map(Number);
+    var hourlyET = {};
+    utcHours.forEach(function(utcH){ hourlyET[utcToET(utcH)] = hourlyUTC[utcH] || 0; });
+    var etHours = Object.keys(hourlyET).map(Number).sort(function(a,b){ return a-b; });
+    var peakHourET = 0, peakVal = 0;
+    etHours.forEach(function(h){ if(hourlyET[h] > peakVal){ peakVal = hourlyET[h]; peakHourET = h; } });
+    var peakWindowET = formatHourET(peakHourET) + '-' + formatHourET((peakHourET + 3) % 24);
+    var maxVal = Math.max.apply(null, etHours.map(function(h){ return hourlyET[h]; }));
+    var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE (ET)</div>';
+    html += '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding:0 4px">';
+    etHours.forEach(function(h){
+      var val = hourlyET[h] || 0;
+      var pct = maxVal > 0 ? (val / maxVal * 100) : 0;
+      var isPeak = h === peakHourET;
+      var color = isPeak ? 'var(--gn)' : (pct > 70 ? 'var(--ac)' : 'rgba(136,136,170,.4)');
+      var label = formatHourET(h);
+      html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">';
+      html += '<div style="width:100%;height:'+Math.max(pct, 3)+'%;background:'+color+';border-radius:2px 2px 0 0;min-height:2px" title="'+label+' ET: '+val+' followers online"></div>';
+      html += (h % 3 === 0) ? '<div style="font-size:7px;color:var(--dm)">'+label+'</div>' : '<div style="font-size:7px;color:transparent">.</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+peakWindowET+' ET</div>';
+    html += '<div style="margin-top:4px;font-size:9px;color:var(--dm);line-height:1.4">Based on your <strong>current followers</strong> (~54% Union College). Good for graduated posts; Trial Reels reach non-followers, so this curve doesn\'t apply to them.</div>';
+    wrap.innerHTML = html;
     return;
   }
-  var of = d.onlineFollowers;
-  var hourlyUTC = of.hourly || {};
-  var utcHours = Object.keys(hourlyUTC).map(Number);
-  console.log('[RENDER] renderPostingTimes: hours=', utcHours.length, 'peakUTC=', of.peakHour, 'window=', of.peakWindow);
-  if(!utcHours.length){ wrap.innerHTML = '<div style="color:var(--dm);font-size:10px">No online_followers hourly data. The API may need 48h to populate after first scrape.</div>'; return; }
 
-  // Re-key hourly data from UTC to ET
-  var hourlyET = {};
-  utcHours.forEach(function(utcH){
-    var etH = utcToET(utcH);
-    hourlyET[etH] = hourlyUTC[utcH] || 0;
-  });
-  var etHours = Object.keys(hourlyET).map(Number).sort(function(a,b){ return a-b; });
+  // ── Fallback: derive best times from YOUR OWN post performance ──
+  // Meta's online_followers metric is empty for this account (it needs
+  // sustained follower engagement over ~30 days, which the passive
+  // school audience doesn't generate). So instead of a dead chart, we
+  // compute when your real posts have historically performed best.
+  renderPostingTimesFromPosts(wrap, of && of.error);
+}
 
-  // Find peak in ET
-  var peakHourET = 0, peakVal = 0;
-  etHours.forEach(function(h){
-    if(hourlyET[h] > peakVal){ peakVal = hourlyET[h]; peakHourET = h; }
+// Day-of-week × time-block engagement grid built from actual IG+TT posts.
+function renderPostingTimesFromPosts(wrap, metaErrored){
+  var latestData = window._latestData || {};
+  var posts = [];
+  (latestData.igPosts || []).forEach(function(p){
+    if(!p.timestamp) return;
+    var dt = new Date(p.timestamp);
+    var views = p.videoPlayCount || 0;
+    var eng = views > 0 ? ((p.likesCount||0)+(p.commentsCount||0)+(p.savesCount||0)) / views * 100 : 0;
+    posts.push({ day: dt.getDay(), hour: dt.getHours(), eng: eng, plat: 'IG' });
   });
-  var peakWindowET = formatHourET(peakHourET) + '-' + formatHourET((peakHourET + 3) % 24);
+  (latestData.ttPosts || []).forEach(function(p){
+    var iso = p.createTimeISO || (p.createTime ? p.createTime*1000 : null);
+    if(!iso) return;
+    var dt = new Date(iso);
+    var views = p.playCount || 0;
+    var eng = views > 0 ? ((p.diggCount||0)+(p.commentCount||0)) / views * 100 : 0;
+    posts.push({ day: dt.getDay(), hour: dt.getHours(), eng: eng, plat: 'TT' });
+  });
 
-  var maxVal = Math.max.apply(null, etHours.map(function(h){ return hourlyET[h]; }));
-  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:10px">WHEN YOUR FOLLOWERS ARE ONLINE (ET)</div>';
-  html += '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding:0 4px">';
-  etHours.forEach(function(h){
-    var val = hourlyET[h] || 0;
-    var pct = maxVal > 0 ? (val / maxVal * 100) : 0;
-    var isPeak = h === peakHourET;
-    var color = isPeak ? 'var(--gn)' : (pct > 70 ? 'var(--ac)' : 'rgba(136,136,170,.4)');
-    var label = formatHourET(h);
-    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">';
-    html += '<div style="width:100%;height:'+Math.max(pct, 3)+'%;background:'+color+';border-radius:2px 2px 0 0;min-height:2px" title="'+label+' ET: '+val+' followers online"></div>';
-    if(h % 3 === 0) html += '<div style="font-size:7px;color:var(--dm)">'+label+'</div>';
-    else html += '<div style="font-size:7px;color:transparent">.</div>';
-    html += '</div>';
+  if(!posts.length){
+    wrap.innerHTML = '<div style="color:var(--dm);font-size:10px;line-height:1.5">Not enough data yet to compute best posting times. Meta hasn\'t populated follower-online hours for this account, and there aren\'t enough scraped posts yet to derive them from your own performance.</div>';
+    return;
+  }
+
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var bucketLabels = ['12–4a','4–8a','8a–12p','12–4p','4–8p','8p–12a'];
+  var grid = {};
+  posts.forEach(function(p){
+    var b = Math.floor(p.hour / 4);
+    var key = p.day+'_'+b;
+    if(!grid[key]) grid[key] = { total:0, count:0 };
+    grid[key].total += p.eng;
+    grid[key].count++;
   });
-  html += '</div>';
-  html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Peak window:</strong> '+peakWindowET+' ET</div>';
-  // Audience-composition caveat: online_followers reflects EXISTING followers
-  // only (~54% Union College). These times are right for graduated posts the
-  // school crowd sees, but Trial Reels go to non-followers, so this curve does
-  // NOT predict their best post time.
-  html += '<div style="margin-top:4px;font-size:9px;color:var(--dm);line-height:1.4">Based on your <strong>current followers</strong> (~54% Union College). Good for graduated posts; Trial Reels reach non-followers, so this curve doesn\'t apply to them.</div>';
+  var maxEng = 0, best = null;
+  Object.keys(grid).forEach(function(k){
+    var v = grid[k]; var avg = v.count ? v.total/v.count : 0;
+    if(avg > maxEng){ maxEng = avg; best = k; }
+  });
+  if(!maxEng) maxEng = 1;
+
+  var html = '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1.5px;margin-bottom:8px">BEST TIMES — FROM YOUR POST PERFORMANCE (ET)</div>';
+  html += '<table style="border-collapse:collapse;width:100%;font-size:9px"><tr><th style="min-width:40px"></th>';
+  days.forEach(function(dn){ html += '<th style="padding:3px 2px;color:var(--dm);font-weight:600;text-align:center">'+dn+'</th>'; });
+  html += '</tr>';
+  bucketLabels.forEach(function(bl,b){
+    html += '<tr><td style="padding:2px 4px;color:var(--dm);text-align:right;white-space:nowrap">'+bl+'</td>';
+    days.forEach(function(dn,di){
+      var cell = grid[di+'_'+b];
+      var avg = cell && cell.count ? cell.total/cell.count : 0;
+      var ratio = avg / maxEng;
+      var bg, tx;
+      if(!cell || !cell.count){ bg='rgba(255,255,255,.03)'; tx='transparent'; }
+      else if(ratio>0.6){ bg='rgba(0,230,118,'+Math.min(.75,ratio*.8)+')'; tx='var(--fg)'; }
+      else if(ratio>0.25){ bg='rgba(255,171,0,'+Math.min(.6,ratio*.7)+')'; tx='var(--fg)'; }
+      else { bg='rgba(0,229,255,'+Math.min(.3,ratio*.4)+')'; tx='var(--dm)'; }
+      var lbl = cell && cell.count ? cell.count+'p' : '';
+      var titleTxt = cell && cell.count ? avg.toFixed(1)+'% avg eng · '+cell.count+' post'+(cell.count>1?'s':'') : 'no posts here yet';
+      html += '<td title="'+titleTxt+'" style="padding:4px 2px;background:'+bg+';border-radius:3px;text-align:center"><span style="color:'+tx+';font-size:8px">'+lbl+'</span></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  if(best){
+    var bp = best.split('_');
+    html += '<div style="margin-top:8px;font-size:10px;color:var(--gn)"><strong>Your best slot:</strong> '+days[+bp[0]]+' '+bucketLabels[+bp[1]]+' ET</div>';
+  }
+  var note = metaErrored
+    ? 'Meta hasn\'t computed follower-online hours for this account yet (needs more follower engagement over ~30 days), so this is derived from when your own posts performed best. Numbers = posts in that slot.'
+    : 'Derived from when your own posts performed best. Numbers = posts in that slot.';
+  html += '<div style="margin-top:5px;font-size:9px;color:var(--dm);line-height:1.4">'+note+'</div>';
   wrap.innerHTML = html;
 }
 
