@@ -1,18 +1,25 @@
 /**
- * Daily Multi-Platform Scrape — Apify → Firebase
+ * Daily Multi-Platform Scrape — Graph API (IG) + Apify (TT/SC) → Firebase
  *
- * Scrapes IG profile + posts, TikTok profile + posts, SC public profile.
- * Diff-based: only deeply processes new/changed content.
- * Computes deltas, generates categorized alerts, logs job metadata.
+ * IG profile + posts now come from the Meta Graph API (free, official) —
+ * Apify is no longer used for Instagram. TikTok + SoundCloud still use Apify
+ * but are wrapped so an Apify outage (e.g. monthly hard-limit) degrades to
+ * last-known values instead of crashing the entire daily run.
  *
- * Env vars: APIFY_TOKEN, FIREBASE_DB_URL, FIREBASE_DB_SECRET
+ * Env vars: FB_PAGE_ACCESS_TOKEN, IG_BUSINESS_ACCOUNT_ID (IG via Graph API),
+ *           APIFY_TOKEN (TT/SC — optional), FIREBASE_DB_URL, FIREBASE_DB_SECRET
  */
 
 import { ApifyClient } from 'apify-client';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
+const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
+const IG_BUSINESS_ACCOUNT_ID = process.env.IG_BUSINESS_ACCOUNT_ID;
 const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://el-capitan-dashboard-default-rtdb.firebaseio.com';
 const FIREBASE_DB_SECRET = process.env.FIREBASE_DB_SECRET || '';
+
+const GRAPH_API_VERSION = 'v25.0';
+const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 const IG_USERNAME = 'itselcapitan_';
 const TT_USERNAME = 'itselcapitan';
@@ -20,12 +27,46 @@ const SC_URL = 'https://soundcloud.com/itselcapitan';
 
 const POSTS_PER_WEEK_TARGET = 5;
 
-if (!APIFY_TOKEN) {
-  console.error('Missing APIFY_TOKEN environment variable');
+// IG now requires Graph API creds (not Apify). Apify is optional — if its
+// token is missing or the account is over its limit, TT/SC degrade gracefully.
+if (!FB_PAGE_ACCESS_TOKEN || !IG_BUSINESS_ACCOUNT_ID) {
+  console.error('Missing FB_PAGE_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID (required for IG via Graph API)');
   process.exit(1);
 }
+if (!APIFY_TOKEN) {
+  console.warn('⚠️  No APIFY_TOKEN — TikTok/SoundCloud will fall back to last-known values.');
+}
 
-const client = new ApifyClient({ token: APIFY_TOKEN });
+const client = APIFY_TOKEN ? new ApifyClient({ token: APIFY_TOKEN }) : null;
+
+// ─── Graph API helper ───────────────────────────────────────────
+
+async function graphGet(path, params = {}) {
+  const qs = new URLSearchParams({ ...params, access_token: FB_PAGE_ACCESS_TOKEN }).toString();
+  const res = await fetch(`${GRAPH_BASE}/${path}?${qs}`);
+  const json = await res.json();
+  if (json.error) throw new Error(`Graph API error: ${json.error.message} (code ${json.error.code})`);
+  return json;
+}
+
+// Pull `views` for reel media via a single batch insights call so avgReelViews
+// stays populated. Best-effort: returns {} on any failure.
+async function fetchReelViews(reelIds) {
+  if (!reelIds.length) return {};
+  try {
+    const out = {};
+    // Meta caps batch ids; 25 is safe and we only request ~12.
+    const json = await graphGet('', { ids: reelIds.join(','), fields: 'insights.metric(views)' });
+    for (const id of Object.keys(json)) {
+      const v = json[id]?.insights?.data?.find(d => d.name === 'views');
+      out[id] = v?.values?.[0]?.value || 0;
+    }
+    return out;
+  } catch (err) {
+    console.warn('  (reel views insights unavailable:', err.message, ')');
+    return {};
+  }
+}
 
 // ─── Firebase helpers ───────────────────────────────────────────
 
@@ -54,55 +95,73 @@ async function writeFirebase(path, data) {
 
 // ─── Scrapers ───────────────────────────────────────────────────
 
+// Extract the shortcode from an IG permalink (…/p/<code>/, …/reel/<code>/).
+function shortCodeFromPermalink(permalink) {
+  if (!permalink) return null;
+  const m = permalink.match(/\/(?:p|reel|tv)\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
 async function scrapeIG() {
-  console.log('\n📸 Scraping Instagram...');
-  const profileRun = await client.actor('apify/instagram-profile-scraper').call({ usernames: [IG_USERNAME] });
-  const postsRun = await client.actor('apify/instagram-post-scraper').call({ username: [IG_USERNAME], resultsLimit: 12 });
+  console.log('\n📸 Scraping Instagram (Meta Graph API)...');
 
-  const { items: profiles } = await client.dataset(profileRun.defaultDatasetId).listItems();
-  const { items: posts } = await client.dataset(postsRun.defaultDatasetId).listItems();
+  // 1. Profile counts
+  const profile = await graphGet(IG_BUSINESS_ACCOUNT_ID, {
+    fields: 'followers_count,follows_count,media_count',
+  });
 
-  if (!profiles.length) throw new Error('No IG profile data');
-  const p = profiles[0];
+  // 2. Recent media (likes/comments/caption/type live on the media object)
+  const mediaRes = await graphGet(`${IG_BUSINESS_ACCOUNT_ID}/media`, {
+    fields: 'id,caption,media_type,media_product_type,like_count,comments_count,timestamp,permalink',
+    limit: '12',
+  });
+  const media = mediaRes.data || [];
 
-  const totalLikes = posts.reduce((s, x) => s + (x.likesCount || 0), 0);
-  const totalComments = posts.reduce((s, x) => s + (x.commentsCount || 0), 0);
-  // Reels-only view counts. Carousels/images don't have videoPlayCount.
-  // We compute avgViews against ONLY the reels so the metric is comparable
-  // to TikTok's avgPlays (which is also video-only).
-  const reelPosts = posts.filter(x => (x.videoPlayCount || 0) > 0);
-  const totalReelViews = reelPosts.reduce((s, x) => s + (x.videoPlayCount || 0), 0);
-  const engRate = p.followersCount > 0
-    ? ((totalLikes + totalComments) / posts.length / p.followersCount * 100)
+  // 3. Reel view counts via a batch insights call (best-effort)
+  const reelIds = media.filter(m => m.media_product_type === 'REELS' || m.media_type === 'VIDEO').map(m => m.id);
+  const viewsById = await fetchReelViews(reelIds);
+
+  const igPosts = media.map(m => {
+    const isReel = m.media_product_type === 'REELS' || m.media_type === 'VIDEO';
+    const type = isReel ? 'Reel' : (m.media_type === 'CAROUSEL_ALBUM' ? 'Sidecar' : 'Image');
+    return {
+      id: m.id,
+      shortCode: shortCodeFromPermalink(m.permalink),
+      caption: (m.caption || '').slice(0, 200),
+      likesCount: m.like_count || 0,
+      commentsCount: m.comments_count || 0,
+      videoPlayCount: viewsById[m.id] || 0,
+      savesCount: 0, // saves come from scrape-ig-insights.mjs (joined by caption in UI)
+      type,
+      timestamp: m.timestamp,
+      url: m.permalink,
+      hashtags: [],
+    };
+  });
+
+  const totalLikes = igPosts.reduce((s, x) => s + x.likesCount, 0);
+  const totalComments = igPosts.reduce((s, x) => s + x.commentsCount, 0);
+  const reelPosts = igPosts.filter(x => x.videoPlayCount > 0);
+  const totalReelViews = reelPosts.reduce((s, x) => s + x.videoPlayCount, 0);
+  const followers = profile.followers_count || 0;
+  const engRate = (followers > 0 && igPosts.length)
+    ? ((totalLikes + totalComments) / igPosts.length / followers * 100)
     : 0;
 
-  console.log(`  IG: ${p.followersCount} followers, ${posts.length} posts scraped, ${engRate.toFixed(1)}% eng, ${reelPosts.length} reels avg ${reelPosts.length ? Math.round(totalReelViews/reelPosts.length) : 0} views`);
+  console.log(`  IG: ${followers} followers, ${igPosts.length} posts, ${engRate.toFixed(1)}% eng, ${reelPosts.length} reels avg ${reelPosts.length ? Math.round(totalReelViews/reelPosts.length) : 0} views`);
 
   return {
     ig: {
-      followers: p.followersCount || 0,
-      following: p.followsCount || 0,
-      posts: p.postsCount || 0,
+      followers,
+      following: profile.follows_count || 0,
+      posts: profile.media_count || 0,
       engRate: parseFloat(engRate.toFixed(1)),
-      avgLikes: posts.length ? Math.round(totalLikes / posts.length) : 0,
-      avgComments: posts.length ? Math.round(totalComments / posts.length) : 0,
-      // NEW: reel-only avg views — directly comparable to tiktok.avgPlays
+      avgLikes: igPosts.length ? Math.round(totalLikes / igPosts.length) : 0,
+      avgComments: igPosts.length ? Math.round(totalComments / igPosts.length) : 0,
       avgReelViews: reelPosts.length ? Math.round(totalReelViews / reelPosts.length) : 0,
       reelsScraped: reelPosts.length,
     },
-    igPosts: posts.map(x => ({
-      id: x.id || x.shortCode,
-      shortCode: x.shortCode,
-      caption: (x.caption || '').slice(0, 200),
-      likesCount: x.likesCount || 0,
-      commentsCount: x.commentsCount || 0,
-      videoPlayCount: x.videoPlayCount || 0,
-      savesCount: x.savesCount || 0,
-      type: x.type || x.productType || 'unknown',
-      timestamp: x.timestamp,
-      url: x.url,
-      hashtags: x.hashtags || [],
-    })),
+    igPosts,
   };
 }
 
@@ -372,12 +431,9 @@ function generateAlerts(data, deltas, previousData, igDiff, ttDiff) {
 // ─── Cost estimation ────────────────────────────────────────────
 
 function estimateCost(igData, ttData) {
-  // Apify pricing (approximate):
-  // IG profile scraper: ~$0.003/profile
-  // IG post scraper: ~$0.0017/post
+  // IG is now free (Meta Graph API). Only TikTok still costs Apify credits.
   // TikTok profile scraper: ~$0.004/result
-  // SC scraper: free
-  const igCost = 0.003 + (igData.igPosts?.length || 0) * 0.0017;
+  const igCost = 0;
   const ttCost = (ttData.ttPosts?.length || 0) * 0.004;
   return parseFloat((igCost + ttCost).toFixed(4));
 }
@@ -394,10 +450,29 @@ async function main() {
   // Get previous data for diffs + deltas
   const previousData = await readFirebase('analytics/latest');
 
-  // Run scrapers sequentially to stay within Apify free-tier memory limit (8 GB)
+  // IG via Graph API — required; if this fails the run should fail.
   const igData = await scrapeIG();
-  const ttData = await scrapeTikTok();
-  const scData = await scrapeSoundCloud();
+
+  // TikTok + SoundCloud via Apify — OPTIONAL. If Apify is missing or over its
+  // limit, keep last-known values from the previous write so the dashboard
+  // shows the freshly-pulled IG data instead of crashing the whole job.
+  let ttData;
+  try {
+    if (!client) throw new Error('Apify disabled (no token)');
+    ttData = await scrapeTikTok();
+  } catch (err) {
+    console.warn(`  ⚠️  TikTok scrape skipped (${err.message}) — preserving last-known.`);
+    ttData = { tiktok: previousData?.tiktok || { followers: 0, hearts: 0, videos: 0, avgPlays: 0, avgLikes: 0 }, ttPosts: previousData?.ttPosts || [], _stale: true };
+  }
+
+  let scData;
+  try {
+    if (!client) throw new Error('Apify disabled (no token)');
+    scData = await scrapeSoundCloud();
+  } catch (err) {
+    console.warn(`  ⚠️  SoundCloud scrape skipped (${err.message}) — preserving last-known.`);
+    scData = { sc: previousData?.sc || { followers: 0, following: 0, tracks: 0 } };
+  }
 
   // Diff-based processing
   const igDiff = diffPosts(igData.igPosts, previousData?.igPosts, 'id');
