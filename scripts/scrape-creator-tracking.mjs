@@ -62,6 +62,12 @@ async function readFirebase(path) {
   return res.json();
 }
 
+// Firebase RTDB keys can't contain . # $ [ ] / — usernames like "duer.wav"
+// must be sanitized for use as a key. The real username stays in the value.
+function keyOf(username) {
+  return username.replace(/[.#$/[\]]/g, '_');
+}
+
 function detectFormat(m) {
   if (m.media_product_type === 'REELS' || m.media_type === 'VIDEO') return 'Reel';
   if (m.media_type === 'CAROUSEL_ALBUM') return 'Carousel';
@@ -121,20 +127,21 @@ async function main() {
   const creators = {};
   const historyTrend = {};
   for (const username of TRACKED_CREATORS) {
+    const key = keyOf(username);
     try {
       const c = await fetchCreator(username);
       // Compute deltas vs last write if available.
-      const prevC = prev?.creators?.[username];
+      const prevC = prev?.creators?.[key];
       c.followerDelta = prevC ? (c.followers - prevC.followers) : null;
-      creators[username] = c;
-      historyTrend[username] = { followers: c.followers, mediaCount: c.mediaCount, avgEngagement: c.avgEngagement };
+      creators[key] = c;
+      historyTrend[key] = { followers: c.followers, mediaCount: c.mediaCount, avgEngagement: c.avgEngagement };
       const dStr = c.followerDelta != null ? ` (${c.followerDelta >= 0 ? '+' : ''}${c.followerDelta} since last)` : '';
       console.log(`  ✓ ${username}: ${c.followers} followers${dStr}, ${c.recentPosts.length} posts, ${c.engRatePct}% eng rate`);
       if (c.topPost) console.log(`     top post (${c.topPost.engagement} eng, ${c.topPost.format}): "${c.topPost.caption.slice(0, 50)}"`);
     } catch (err) {
       console.warn(`  ✗ ${username}: ${err.message}`);
       // Preserve last-known so a transient error doesn't blank the card.
-      if (prev?.creators?.[username]) creators[username] = { ...prev.creators[username], _stale: true };
+      if (prev?.creators?.[key]) creators[key] = { ...prev.creators[key], _stale: true };
     }
   }
 
