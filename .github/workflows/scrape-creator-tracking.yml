@@ -1,0 +1,24 @@
+name: Creator Tracking (Business Discovery)
+
+# Tracks public creators (e.g. duer.wav) via the IG Graph API Business
+# Discovery endpoint — free, no Apify. Runs daily so follower growth and
+# top-performing posts accumulate over time.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '30 10 * * *' # 6:30 AM ET daily (after the main scrape)
+
+jobs:
+  track-creators:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/scrape-creator-tracking.mjs
+        env:
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FIREBASE_DB_URL: https://el-capitan-dashboard-default-rtdb.firebaseio.com
+          FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
