@@ -891,7 +891,7 @@ function showTab(id){
   if(tab) tab.classList.add('on');
   document.querySelectorAll('.t-btn').forEach(function(b){ if(b.getAttribute('onclick').indexOf("'"+id+"'")>-1) b.classList.add('on'); });
   if(id==='hq'){ renderArtistScore(); renderAlerts(); renderScrapedAlerts(); loadWeeklyStrategy(); renderPostingTimes(); renderWhenToPost(); renderPerformanceBenchmarks(); setTimeout(function(){ renderHQCharts(); renderTrendCharts(); }, 100); }
-  if(id==='content'){ renderContentStats(); renderCompetitorData(); setTimeout(renderContentCharts, 200); }
+  if(id==='content'){ renderContentStats(); renderCompetitorData(); renderCreatorTracking(); setTimeout(renderContentCharts, 200); }
   if(id==='tracks'){ try{ renderTracks(); renderTrackScores(); }catch(e){ console.error('renderTracks error:',e); } }
   if(id==='outreach'){ try{ renderVenues(); renderLabels(); renderOutreachStaleAlerts(); }catch(e){ console.error('renderOutreach error:',e); } }
   if(id==='settings'){ loadJobsLog(); checkGeminiKey(); }
@@ -4459,6 +4459,63 @@ function loadGraphAPIExtras(){
     console.log('[DATA] igTrialReels loaded, count:', d && d.count ? d.count : 0);
     renderTrialReels();
   });
+  // Creator tracking (duer.wav etc. via Business Discovery)
+  db.ref('analytics/latest/creatorTracking').once('value', function(snap){
+    var d = snap.val();
+    window._creatorTracking = d || null;
+    console.log('[DATA] creatorTracking loaded, creators:', d && d.creators ? Object.keys(d.creators).length : 0);
+    renderCreatorTracking();
+  });
+}
+
+function renderCreatorTracking(){
+  var wrap = document.getElementById('creators-watching');
+  if(!wrap) return;
+  var d = window._creatorTracking;
+  if(!d || !d.creators || !Object.keys(d.creators).length){
+    wrap.innerHTML = '<div class="ds">No creator data yet. Tracking runs daily at 6:30 AM ET.</div>';
+    return;
+  }
+  var html = '';
+  Object.keys(d.creators).forEach(function(key){
+    var c = d.creators[key];
+    if(!c) return;
+    var delta = (typeof c.followerDelta === 'number' && c.followerDelta !== 0)
+      ? ' <span style="font-size:10px;color:'+(c.followerDelta>0?'var(--gn)':'var(--rd)')+'">'+(c.followerDelta>0?'▲ +':'▼ ')+c.followerDelta+'</span>'
+      : '';
+    var stale = c._stale ? ' <span style="font-size:9px;color:var(--am)">(cached)</span>' : '';
+    html += '<div style="border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:10px">';
+    // Header row
+    html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
+    if(c.profilePic) html += '<img src="'+c.profilePic+'" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">';
+    html += '<div style="flex:1;min-width:140px">';
+    html += '<a href="https://instagram.com/'+(c.username||'')+'" target="_blank" style="font-weight:700;color:var(--fg);text-decoration:none">@'+(c.username||key)+'</a>'+stale;
+    html += '<div style="font-size:9px;color:var(--dm)">'+(c.name||'')+'</div>';
+    html += '</div>';
+    html += '<div style="text-align:right"><div style="font-weight:700;font-size:15px">'+(c.followers||0).toLocaleString()+delta+'</div><div style="font-size:9px;color:var(--dm)">followers · '+(c.engRatePct||0)+'% eng rate</div></div>';
+    html += '</div>';
+    // Top posts (what's working for them) — sorted by engagement
+    var posts = (c.recentPosts||[]).slice().sort(function(a,b){ return (b.engagement||0)-(a.engagement||0); }).slice(0,5);
+    if(posts.length){
+      html += '<div style="font:700 8px/1 \'Space Mono\',monospace;color:var(--dm);letter-spacing:1px;margin:4px 0 6px">WHAT\'S LANDING FOR THEM (top posts by engagement)</div>';
+      html += '<table class="tbl" style="width:100%"><tr><th>Post</th><th>Format</th><th>Likes</th><th>Comments</th><th>Posted</th></tr>';
+      posts.forEach(function(p){
+        var cap = (p.caption||'(no caption)').slice(0,46).replace(/\n/g,' ');
+        var capHtml = p.permalink ? '<a href="'+p.permalink+'" target="_blank" style="color:inherit;text-decoration:none">'+cap+'</a>' : cap;
+        var posted = p.timestamp ? new Date(p.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+        var fmtColor = p.format==='Reel' ? 'var(--ac)' : (p.format==='Carousel' ? '#ffab00' : 'var(--dm)');
+        html += '<tr><td>'+capHtml+'</td>'
+          + '<td style="color:'+fmtColor+'">'+(p.format||'—')+'</td>'
+          + '<td>'+(p.likes||0).toLocaleString()+'</td>'
+          + '<td>'+(p.comments||0).toLocaleString()+'</td>'
+          + '<td>'+posted+'</td></tr>';
+      });
+      html += '</table>';
+    }
+    html += '<div style="font-size:9px;color:var(--dm);margin-top:6px;line-height:1.4">Public likes + comments only (Instagram doesn\'t share other accounts\' view counts). Watch which <strong>formats</strong> and <strong>hooks</strong> top his engagement — that\'s the signal to borrow.</div>';
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
 }
 
 function renderDemographics(){
@@ -5554,6 +5611,12 @@ function init(){
 
 <!-- competitor-insights-area removed — AI breakdowns now inline in top-reels-table -->
 <div id="competitor-insights-area" style="display:none"></div>
+</div>
+
+<!-- CREATORS I'M WATCHING (free Business Discovery API) -->
+<div class="sec">
+  <div class="sh"><span class="sn">&#128064;</span><span class="st">Creators I'm Watching</span><span style="font-size:9px;color:var(--dm);margin-left:8px">public data · updates daily</span></div>
+  <div id="creators-watching"><div class="ds">Loading…</div></div>
 </div>
 
 <!-- REELS INTEL -->
