@@ -257,7 +257,8 @@ function velocity(){
   var hf = historyFollowers();
   if(hf.length<2) return { weekly:null, accel:null, latest: (DATA.latest&&DATA.latest.ig&&DATA.latest.ig.followers)||null };
   var latest = hf[hf.length-1];
-  function nearest(daysAgo){ var target=new Date(latest.date).getTime()-daysAgo*864e5, best=null, bd=1e15; hf.forEach(function(p){ var d=Math.abs(new Date(p.date).getTime()-target); if(new Date(p.date).getTime()<latest.date && d<bd){bd=d;best=p;} }); return best; }
+  var latestMs=new Date(latest.date).getTime();
+  function nearest(daysAgo){ var target=latestMs-daysAgo*864e5, best=null, bd=1e15; hf.forEach(function(p){ var pm=new Date(p.date).getTime(); var d=Math.abs(pm-target); if(pm<latestMs && d<bd){bd=d;best=p;} }); return best; }
   var wk = nearest(7), wk2 = nearest(14);
   var weekly = wk ? latest.f-wk.f : null;
   var prev = (wk && wk2) ? wk.f-wk2.f : null;
